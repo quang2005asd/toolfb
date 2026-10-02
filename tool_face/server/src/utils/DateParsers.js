@@ -16,11 +16,16 @@ function parseSo9Schedule(scheduleStr) {
   const startTimeStr = rangeMatch ? rangeMatch[1] : value;
   const parsedMoment = moment(startTimeStr, [
     'D/M/YYYY_HH:mm',
+    'DD/MM/YYYY_HH:mm',
     'D/M/YYYY HH:mm',
+    'DD/MM/YYYY HH:mm',
     'YYYY-MM-DD HH:mm:ss',
     'YYYY-MM-DD HH:mm',
     'YYYY-MM-DDTHH:mm:ss',
-    'YYYY-MM-DDTHH:mm'
+    'YYYY-MM-DDTHH:mm',
+    'YYYY/MM/DD HH:mm',
+    'DD-MM-YYYY HH:mm',
+    'DD-MM-YYYY HH:mm:ss'
   ], true);
 
   if (!parsedMoment.isValid()) {

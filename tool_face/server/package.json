@@ -5,9 +5,9 @@
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
-    "dev": "nodemon src/app.js",
-    "worker": "node queues/post.worker.js",
-    "worker:comments": "node queues/comment.worker.js"
+    "dev": "nodemon --watch src --watch .env --ext js,json,env src/app.js",
+    "worker": "nodemon --watch queues --watch src --watch .env queues/post.worker.js",
+    "worker:comments": "nodemon --watch queues --watch src --watch .env queues/comment.worker.js"
   },
   "dependencies": {
     "axios": "^1.7.0",

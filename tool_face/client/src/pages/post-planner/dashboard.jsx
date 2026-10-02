@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import MainLayout from '../../components/layout/MainLayout';
 import postApi from '../../services/postApi';
 import { CalendarDays, Eye, FileSpreadsheet, Send, UsersRound } from 'lucide-react';
@@ -80,16 +81,16 @@ export default function DashboardPage() {
       </section>
       <div className="home-columns">
         <section className="panel"><div className="panel-heading"><h2>Trạng thái lịch đăng</h2></div><div className="panel-body">
-          <div style={{ display: 'flex', height: 11, overflow: 'hidden', borderRadius: 8, background: '#edf1f6' }}>
+          <div style={{ display: 'flex', height: 10, overflow: 'hidden', borderRadius: 8, background: 'rgba(255, 255, 255, 0.06)', border: '1px solid var(--line)' }}>
             <span style={{ width: `${stats.total ? stats.published / stats.total * 100 : 0}%`, background: 'var(--green)' }} />
-            <span style={{ width: `${stats.total ? stats.pending / stats.total * 100 : 0}%`, background: '#eab34b' }} />
+            <span style={{ width: `${stats.total ? stats.pending / stats.total * 100 : 0}%`, background: '#f59e0b' }} />
             <span style={{ width: `${stats.total ? stats.failed / stats.total * 100 : 0}%`, background: 'var(--red)' }} />
           </div>
           <p className="muted">{stats.total ? Math.round(stats.published / stats.total * 100) : 0}% bài đăng đã xuất bản</p>
         </div></section>
         <section className="panel"><div className="panel-heading"><h2>Tác vụ nhanh</h2></div><div className="panel-body quick-links">
-          <a className="quick-link" href="/post-planner/compose"><span className="quick-icon"><Send size={17} /></span><span><strong>Viết bài</strong><small>Tạo nội dung mới</small></span></a>
-          <a className="quick-link" href="/post-planner/bulk-upload"><span className="quick-icon"><FileSpreadsheet size={17} /></span><span><strong>Tải Excel</strong><small>Lên lịch hàng loạt</small></span></a>
+          <Link className="quick-link" href="/post-planner/compose" prefetch={true}><span className="quick-icon"><Send size={17} /></span><span><strong>Viết bài</strong><small>Tạo nội dung mới</small></span></Link>
+          <Link className="quick-link" href="/post-planner/bulk-upload" prefetch={true}><span className="quick-icon"><FileSpreadsheet size={17} /></span><span><strong>Tải Excel</strong><small>Lên lịch hàng loạt</small></span></Link>
         </div></section>
       </div>
     </MainLayout>

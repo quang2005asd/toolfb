@@ -74,9 +74,11 @@ function signSession(user) {
   if (!secret) throw new Error('SESSION_SECRET must contain at least 32 characters.');
 
   const now = Math.floor(Date.now() / 1000);
+  const avatar = user.picture?.data?.url || user.avatar || null;
   const payload = Buffer.from(JSON.stringify({
     sub: String(user.id),
     name: String(user.name || 'Facebook user').slice(0, 120),
+    avatar: avatar ? String(avatar).slice(0, 1000) : null,
     role: adminIds().has(String(user.id)) ? 'admin' : 'user',
     iat: now,
     exp: now + SESSION_TTL_SECONDS

@@ -76,8 +76,13 @@ function parseBulkExcel(fileBuffer) {
     if (!content && mediaLinks.length === 0) return;
 
     let pageId = null;
-    const channelMatch = String(channel || '').match(/\|\s*([a-f0-9]+)/i);
-    if (channelMatch) pageId = channelMatch[1];
+    const channelStr = String(channel || '').trim();
+    const channelMatch = channelStr.match(/\|\s*([0-9a-zA-Z_]+)/);
+    if (channelMatch) {
+      pageId = channelMatch[1].trim();
+    } else if (/^\d+$/.test(channelStr)) {
+      pageId = channelStr;
+    }
 
     const comments = [];
     for (let commentIndex = 1; commentIndex <= 5; commentIndex++) {

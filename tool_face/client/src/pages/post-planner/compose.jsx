@@ -1,17 +1,347 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, AtSign, ImagePlus, MapPin, MessageCircle, Plus, Send, Smile, Trash2, Type } from 'lucide-react';
+import { useRouter } from 'next/router';
+import {
+  ArrowLeft,
+  ArrowRight,
+  AtSign,
+  Check,
+  CheckCircle2,
+  CheckSquare,
+  Hash,
+  ImagePlus,
+  MapPin,
+  MessageCircle,
+  Plus,
+  Send,
+  Smile,
+  Sparkles,
+  Square,
+  Trash2,
+  Type,
+  X,
+  XCircle,
+  Film,
+  Clock,
+  Globe,
+  Layers,
+  ThumbsUp,
+  Share2,
+  Upload,
+  Zap,
+  AlertCircle,
+  Eye,
+  Play
+} from 'lucide-react';
 import MainLayout from '../../components/layout/MainLayout';
 import postApi from '../../services/postApi';
+import aiApi from '../../services/aiApi';
+import channelGroupApi from '../../services/channelGroupApi';
+
+// ── Toast popup (fixed top-right, auto-dismiss) ──────────────────────────
+function Toast({ toast, onClose }) {
+  if (!toast) return null;
+  const ok = toast.type === 'success';
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 24,
+        right: 24,
+        zIndex: 9999,
+        maxWidth: 420,
+        minWidth: 280,
+        background: ok ? 'rgba(4,20,10,0.97)' : 'rgba(20,4,4,0.97)',
+        border: `1.5px solid ${ok ? 'rgba(16,185,129,0.6)' : 'rgba(239,68,68,0.6)'}`,
+        borderRadius: 14,
+        padding: '14px 18px',
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 12,
+        boxShadow: `0 8px 36px ${ok ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.22)'}`,
+        animation: 'toastIn 0.3s cubic-bezier(.22,.68,0,1.2)',
+      }}
+    >
+      <div style={{ flexShrink: 0, marginTop: 2 }}>
+        {ok ? <CheckCircle2 size={20} color="#10b981" /> : <XCircle size={20} color="#ef4444" />}
+      </div>
+      <span style={{ flex: 1, fontSize: 13.5, lineHeight: 1.55, color: ok ? '#6ee7b7' : '#fca5a5', fontWeight: 500 }}>
+        {toast.message}
+      </span>
+      <button type="button" onClick={onClose}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'rgba(255,255,255,0.35)', flexShrink: 0 }}
+      >
+        <X size={15} />
+      </button>
+    </div>
+  );
+}
+
+// ── Realistic Facebook Mockup Component ───────────────────────────────────
+function FacebookMockupPreview({
+  postType,
+  pageName,
+  content,
+  title,
+  mediaPreviewUrl,
+  uploadedMedia,
+  mediaList = [],
+  scheduledAt
+}) {
+  const renderFormattedContent = (text) => {
+    if (!text) return 'Chưa nhập nội dung bài viết.';
+    const parts = text.split(/(#[\w\p{L}]+)/gu);
+    return parts.map((part, i) =>
+      part.startsWith('#') ? (
+        <span key={i} className="fb-hashtag">{part}</span>
+      ) : (
+        part
+      )
+    );
+  };
+
+  const formattedTime = scheduledAt
+    ? `Lên lịch: ${new Date(scheduledAt).toLocaleString('vi-VN')}`
+    : 'Vừa xong';
+
+  if (postType === 'reel') {
+    return (
+      <div className="fb-reels-mockup">
+        {/* Top Overlay */}
+        <div className="fb-reels-overlay-top">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 13, fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Film size={15} color="#00f2fe" /> Thước phim Reels
+            </span>
+          </div>
+          <span style={{ fontSize: 11, background: 'rgba(0,0,0,0.6)', padding: '2px 8px', borderRadius: 10, color: '#fff' }}>
+            9:16 HD
+          </span>
+        </div>
+
+        {/* Media */}
+        {mediaPreviewUrl ? (
+          <video
+            src={mediaPreviewUrl}
+            className="fb-reels-media"
+            controls
+            loop
+            muted
+            playsInline
+          />
+        ) : (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#888', gap: 8, padding: 20, textAlign: 'center' }}>
+            <Film size={42} color="#555" />
+            <span style={{ fontSize: 12 }}>Đính kèm video dọc (9:16) để xem trước Reels</span>
+          </div>
+        )}
+
+        {/* Right Side Buttons */}
+        <div className="fb-reels-overlay-side">
+          <div className="fb-reels-side-btn">
+            <span style={{ fontSize: 22 }}>❤️</span>
+            <span>24.5K</span>
+          </div>
+          <div className="fb-reels-side-btn">
+            <span style={{ fontSize: 20 }}>💬</span>
+            <span>890</span>
+          </div>
+          <div className="fb-reels-side-btn">
+            <span style={{ fontSize: 20 }}>↗️</span>
+            <span>120</span>
+          </div>
+          <div className="fb-reels-side-btn">
+            <span style={{ fontSize: 20 }}>🎵</span>
+          </div>
+        </div>
+
+        {/* Bottom Overlay */}
+        <div className="fb-reels-overlay-bottom">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <div className="fb-mockup-avatar" style={{ width: 30, height: 30, fontSize: 13 }}>
+              f
+            </div>
+            <strong style={{ fontSize: 13, color: '#fff' }}>{pageName}</strong>
+            <span style={{ fontSize: 11, background: '#1877f2', color: '#fff', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>
+              Theo dõi
+            </span>
+          </div>
+          <p style={{ fontSize: 12.5, lineHeight: 1.4, margin: '0 0 6px', maxHeight: 42, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {content || 'Mô tả thước phim Reels...'}
+          </p>
+          <div style={{ fontSize: 11, opacity: 0.85, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span>🎵 Âm thanh gốc - {pageName}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (postType === 'story') {
+    return (
+      <div className="fb-story-mockup">
+        {/* Story Progress */}
+        <div className="fb-story-progress">
+          <div className="fb-story-bar active" />
+          <div className="fb-story-bar" />
+        </div>
+
+        {/* Header */}
+        <div style={{ position: 'relative', zIndex: 2, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="fb-mockup-avatar" style={{ width: 32, height: 32, fontSize: 14 }}>
+            f
+          </div>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{pageName}</div>
+            <div style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.7)' }}>Tin 24 giờ · 🌐 Công khai</div>
+          </div>
+        </div>
+
+        {/* Media or Text Content */}
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          {mediaPreviewUrl ? (
+            uploadedMedia?.mediaType === 'video' ? (
+              <video src={mediaPreviewUrl} className="fb-reels-media" controls autoPlay loop muted />
+            ) : (
+              <img src={mediaPreviewUrl} alt="Story Media" className="fb-reels-media" />
+            )
+          ) : (
+            <div style={{ textAlign: 'center', color: '#fff', fontSize: 16, fontWeight: 600, padding: 20 }}>
+              {content || 'Tin 24h của Fanpage'}
+            </div>
+          )}
+        </div>
+
+        {/* Bottom Reply Bar */}
+        <div style={{ position: 'relative', zIndex: 2, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ flex: 1, background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, padding: '8px 14px', fontSize: 12, color: 'rgba(255,255,255,0.8)' }}>
+            Gửi tin nhắn…
+          </div>
+          <span style={{ fontSize: 18 }}>❤️</span>
+          <span style={{ fontSize: 18 }}>👍</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Default: Feed Post
+  return (
+    <div className="fb-mockup">
+      <div className="fb-mockup-header">
+        <div className="fb-mockup-avatar">f</div>
+        <div className="fb-mockup-user-info">
+          <div className="fb-mockup-author">
+            {pageName}
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 14, height: 14, borderRadius: '50%', backgroundColor: '#1877f2', color: '#fff', fontSize: 9 }}>
+              ✓
+            </span>
+          </div>
+          <div className="fb-mockup-meta">
+            <span>{formattedTime}</span>
+            <span>·</span>
+            <Globe size={11} />
+            <span>·</span>
+            <span style={{ color: '#00f2fe' }}>Bài viết</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="fb-mockup-content">
+        {title && <div style={{ fontWeight: 700, color: '#00f2fe', marginBottom: 6 }}>{title}</div>}
+        {renderFormattedContent(content)}
+      </div>
+
+      {mediaList.length > 1 ? (
+        <div style={{ borderRadius: 8, overflow: 'hidden', margin: '8px 0', border: '1px solid rgba(255,255,255,0.08)' }}>
+          {mediaList.length === 2 ? (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, height: 240 }}>
+              <img src={mediaList[0]?.previewUrl} alt="Album 1" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src={mediaList[1]?.previewUrl} alt="Album 2" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+          ) : mediaList.length === 3 ? (
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 2, height: 260 }}>
+              <img src={mediaList[0]?.previewUrl} alt="Album 1" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr', gap: 2, height: '100%' }}>
+                <img src={mediaList[1]?.previewUrl} alt="Album 2" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={mediaList[2]?.previewUrl} alt="Album 3" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 2, height: 270 }}>
+              <img src={mediaList[0]?.previewUrl} alt="Album 1" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <div style={{ display: 'grid', gridTemplateRows: 'repeat(3, 1fr)', gap: 2, height: '100%' }}>
+                <img src={mediaList[1]?.previewUrl} alt="Album 2" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={mediaList[2]?.previewUrl} alt="Album 3" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                  <img src={mediaList[3]?.previewUrl} alt="Album 4" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  {mediaList.length > 4 && (
+                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.65)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 800 }}>
+                      +{mediaList.length - 3}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          <div style={{ padding: '6px 12px', background: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: '#38bdf8' }}>
+            <span>📸 Album Facebook ({mediaList.length} ảnh)</span>
+            <span className="muted" style={{ fontSize: 10 }}>Tự động ghép layout</span>
+          </div>
+        </div>
+      ) : mediaPreviewUrl ? (
+        <div className="fb-mockup-media-container">
+          {uploadedMedia?.mediaType === 'video' ? (
+            <video src={mediaPreviewUrl} controls />
+          ) : (
+            <img src={mediaPreviewUrl} alt="Facebook Post Media" />
+          )}
+        </div>
+      ) : null}
+
+      <div className="fb-mockup-stats">
+        <div className="fb-mockup-reactions-icons">
+          <span style={{ fontSize: 15 }}>👍</span>
+          <span style={{ fontSize: 15, marginLeft: -5 }}>❤️</span>
+          <span style={{ fontSize: 15, marginLeft: -5 }}>😮</span>
+          <span style={{ marginLeft: 4, fontWeight: 500 }}>1.4K</span>
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <span>48 bình luận</span>
+          <span>·</span>
+          <span>12 lượt chia sẻ</span>
+        </div>
+      </div>
+
+      <div className="fb-mockup-action-bar">
+        <button type="button" className="fb-mockup-btn">
+          <ThumbsUp size={16} /> Thích
+        </button>
+        <button type="button" className="fb-mockup-btn">
+          <MessageCircle size={16} /> Bình luận
+        </button>
+        <button type="button" className="fb-mockup-btn">
+          <Share2 size={16} /> Chia sẻ
+        </button>
+      </div>
+    </div>
+  );
+}
 
 const steps = ['Viết bài', 'Chọn kênh', 'Xem lại & xuất bản'];
 
+const popularEmojis = ['🔥', '✨', '❤️', '👍', '🚀', '📌', '💡', '🎉', '👇', '👉', '📢', '🎯', '⭐', '💥', '✅', '💯', '😍', '👏', '🎁', '⚡', '☕', '🌟', '💪', '💬'];
+
+const popularHashtags = ['#kinhdoanh', '#viral', '#facebook', '#marketing', '#xuhuong', '#contentcreator', '#story'];
+
 export default function ComposePage() {
+  const router = useRouter();
   const [step, setStep] = useState(0);
+  const [postType, setPostType] = useState('feed'); // 'feed' | 'reel' | 'story'
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [channels, setChannels] = useState([]);
-  const [selectedPageId, setSelectedPageId] = useState('');
+  const [groups, setGroups] = useState([]);
+  const [selectedPageIds, setSelectedPageIds] = useState([]);
   const [channelLoading, setChannelLoading] = useState(true);
   const [channelError, setChannelError] = useState('');
   const [scheduledAt, setScheduledAt] = useState(() => {
@@ -20,141 +350,1394 @@ export default function ComposePage() {
     return date.toISOString().slice(0, 16);
   });
   const [uploadedMedia, setUploadedMedia] = useState(null);
+  const [mediaList, setMediaList] = useState([]);
   const [comments, setComments] = useState([]);
   const [mediaPreviewUrl, setMediaPreviewUrl] = useState('');
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [notice, setNotice] = useState('');
   const [saving, setSaving] = useState(false);
-  const [createdPostId, setCreatedPostId] = useState(null);
+  const [createdPostIds, setCreatedPostIds] = useState([]);
+
+  // Toast
+  const [toast, setToast] = useState(null);
+  const toastTimerRef = useRef(null);
+  const showToast = useCallback((type, message) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToast({ type, message });
+    toastTimerRef.current = setTimeout(() => setToast(null), 6000);
+  }, []);
+
+  // Emoji / AI state
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiTone, setAiTone] = useState('Bán hàng hấp dẫn');
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiResult, setAiResult] = useState('');
+  const [aiError, setAiError] = useState('');
+
+  const contentRef = useRef(null);
 
   useEffect(() => () => {
     if (mediaPreviewUrl) URL.revokeObjectURL(mediaPreviewUrl);
-  }, [mediaPreviewUrl]);
+    mediaList.forEach((m) => m.previewUrl && URL.revokeObjectURL(m.previewUrl));
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+  }, [mediaPreviewUrl, mediaList]);
 
   useEffect(() => {
-    postApi.getChannels()
-      .then((result) => {
-        const availableChannels = result.channels || [];
-        setChannels(availableChannels);
-        setSelectedPageId(availableChannels[0]?.id || '');
-      })
-      .catch((error) => setChannelError(error.response?.data?.message || 'Không tải được kênh Facebook.'))
-      .finally(() => setChannelLoading(false));
-  }, []);
+    Promise.allSettled([
+      postApi.getChannels(),
+      channelGroupApi.list()
+    ])
+      .then(([chanRes, groupRes]) => {
+        let availableChannels = [];
+        let availableGroups = [];
 
-  const createScheduledPost = async () => {
-    if (!selectedPageId) {
-      setNotice('Chọn một Fanpage trước khi lên lịch.');
+        if (chanRes.status === 'fulfilled') {
+          availableChannels = chanRes.value.channels || [];
+          setChannels(availableChannels);
+        } else {
+          setChannelError(chanRes.reason?.response?.data?.message || 'Không tải được kênh Facebook.');
+        }
+
+        if (groupRes.status === 'fulfilled') {
+          availableGroups = groupRes.value.groups || [];
+          setGroups(availableGroups);
+        }
+
+        // Pre-select group or page from URL query
+        const queryGroupId = router.query.groupId;
+        const queryPageId = router.query.pageId;
+
+        if (queryGroupId) {
+          const matchedGroup = availableGroups.find((g) => g.id === queryGroupId);
+          if (matchedGroup && Array.isArray(matchedGroup.pageIds) && matchedGroup.pageIds.length > 0) {
+            setSelectedPageIds(matchedGroup.pageIds);
+            return;
+          }
+        }
+
+        if (queryPageId && availableChannels.some((c) => c.id === queryPageId)) {
+          setSelectedPageIds([queryPageId]);
+        } else if (availableChannels.length > 0) {
+          setSelectedPageIds([availableChannels[0].id]);
+        }
+      })
+      .finally(() => setChannelLoading(false));
+  }, [router.query.pageId, router.query.groupId]);
+
+
+  useEffect(() => {
+    if (router.query.content && typeof router.query.content === 'string') {
+      setContent(router.query.content);
+    }
+  }, [router.query.content]);
+
+  const togglePageSelection = (pageId) => {
+    setSelectedPageIds((prev) =>
+      prev.includes(pageId) ? prev.filter((id) => id !== pageId) : [...prev, pageId]
+    );
+  };
+
+  const selectAllPages = () => {
+    setSelectedPageIds(channels.map((c) => c.id));
+  };
+
+  const deselectAllPages = () => {
+    setSelectedPageIds([]);
+  };
+
+  const insertEmoji = (emoji) => {
+    setContent((prev) => prev + emoji);
+  };
+
+  const insertHashtag = (tag) => {
+    setContent((prev) => (prev ? `${prev} ${tag}` : tag));
+  };
+
+  const removeMedia = () => {
+    if (mediaPreviewUrl) URL.revokeObjectURL(mediaPreviewUrl);
+    mediaList.forEach((m) => m.previewUrl && URL.revokeObjectURL(m.previewUrl));
+    setMediaPreviewUrl('');
+    setUploadedMedia(null);
+    setMediaList([]);
+  };
+
+  const removeImageFromAlbum = (index) => {
+    setMediaList((prev) => {
+      const target = prev[index];
+      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
+      const updated = prev.filter((_, i) => i !== index);
+      if (updated.length === 0) {
+        setMediaPreviewUrl('');
+        setUploadedMedia(null);
+      } else {
+        setMediaPreviewUrl(updated[0].previewUrl);
+        setUploadedMedia(updated[0]);
+      }
+      return updated;
+    });
+  };
+
+  const setQuickPresetTime = (preset) => {
+    const now = new Date();
+    let target = new Date();
+    if (preset === 'now') {
+      target = new Date(now.getTime() + 60 * 1000);
+    } else if (preset === 'plus1h') {
+      target = new Date(now.getTime() + 60 * 60 * 1000);
+    } else if (preset === 'tonight') {
+      target.setHours(20, 0, 0, 0);
+      if (target <= now) {
+        target.setDate(target.getDate() + 1);
+      }
+    } else if (preset === 'tomorrowMorning') {
+      target.setDate(target.getDate() + 1);
+      target.setHours(8, 0, 0, 0);
+    }
+    target.setMinutes(target.getMinutes() - target.getTimezoneOffset());
+    setScheduledAt(target.toISOString().slice(0, 16));
+  };
+
+  const handleGenerateAi = async () => {
+    if (!aiPrompt.trim()) {
+      setAiError('Vui lòng nhập chủ đề bài viết.');
       return;
     }
+    setAiGenerating(true);
+    setAiError('');
+    setAiResult('');
+    try {
+      const fullPrompt = `Hãy viết một bài đăng Facebook hấp dẫn theo phong cách "${aiTone}".\nChủ đề: ${aiPrompt.trim()}\nYêu cầu: Có tiêu đề ngắn gọn thu hút, nội dung chia đoạn dễ đọc, chèn emoji phù hợp và kèm 3-5 hashtag ở cuối.`;
+      const res = await aiApi.chat(fullPrompt);
+      if (res.reply) {
+        setAiResult(res.reply);
+      } else {
+        setAiError('Không nhận được nội dung từ AI.');
+      }
+    } catch (err) {
+      setAiError(err.response?.data?.message || 'Lỗi khi gọi AI. Hãy kiểm tra cấu hình AI_API_KEY trong server/.env.');
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
+  const applyAiResult = () => {
+    if (aiResult) {
+      setContent(aiResult);
+      setShowAiModal(false);
+      setAiResult('');
+      setAiPrompt('');
+    }
+  };
+
+  const createScheduledPost = async () => {
+    if (!content.trim()) {
+      showToast('error', 'Nội dung bài đăng không được để trống.');
+      return;
+    }
+    if (selectedPageIds.length === 0) {
+      showToast('error', 'Vui lòng chọn ít nhất một Fanpage trước khi lên lịch.');
+      return;
+    }
+    if (uploadingMedia) {
+      showToast('error', 'Đợi ảnh/video tải lên xong trước khi lưu lịch.');
+      return;
+    }
+    if (postType === 'reel' && (!uploadedMedia || uploadedMedia.mediaType !== 'video')) {
+      showToast('error', 'Facebook Reels bắt buộc phải đính kèm tệp Video (tỷ lệ chuẩn 9:16).');
+      return;
+    }
+    const parsedDate = scheduledAt ? new Date(scheduledAt) : new Date();
+    if (Number.isNaN(parsedDate.getTime())) {
+      showToast('error', 'Thời gian đăng bài không hợp lệ, vui lòng kiểm tra lại.');
+      return;
+    }
+
     setSaving(true);
     setNotice('');
     try {
-      if (uploadingMedia) throw new Error('Đợi ảnh/video tải lên xong trước khi lưu lịch.');
+      const finalMediaType = postType === 'reel'
+        ? 'reel'
+        : postType === 'story'
+        ? 'story'
+        : mediaList.length > 0
+        ? 'image'
+        : (uploadedMedia?.mediaType || 'text');
+
+      const finalMediaLinks = mediaList.length > 0
+        ? mediaList.map((m) => m.mediaLink)
+        : (uploadedMedia ? [uploadedMedia.mediaLink] : []);
+
       const result = await postApi.createPost({
-        pageId: selectedPageId,
+        pageIds: selectedPageIds,
         content: content.trim(),
-        mediaType: uploadedMedia?.mediaType || 'text',
-        mediaLinks: uploadedMedia ? [uploadedMedia.mediaLink] : [],
+        mediaType: finalMediaType,
+        mediaLinks: finalMediaLinks,
         comments,
-        scheduledAt: new Date(scheduledAt).toISOString()
+        scheduledAt: parsedDate.toISOString()
       });
-      setCreatedPostId(result.postId);
-      setNotice(result.message || 'Đã lên lịch bài đăng.');
+
+      if (!result.success) throw new Error(result.message || 'Máy chủ trả về lỗi không xác định.');
+
+      const ids = Array.isArray(result.postIds) && result.postIds.length > 0
+        ? result.postIds
+        : [result.postId].filter(Boolean);
+
+      setCreatedPostIds(ids);
+      const msg = result.message || `Đã lên lịch thành công cho ${ids.length} Fanpage!`;
+      setNotice(msg);
+      showToast('success', msg);
     } catch (error) {
-      setNotice(error.response?.data?.message || 'Không thể tạo lịch đăng.');
+      const errMsg = error.response?.data?.message || error.message || 'Không thể tạo lịch đăng. Vui lòng thử lại.';
+      setNotice(errMsg);
+      showToast('error', errMsg);
     } finally {
       setSaving(false);
     }
   };
 
-  const handleMediaChange = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const uploadSingleFile = async (file) => {
     if (mediaPreviewUrl) URL.revokeObjectURL(mediaPreviewUrl);
-    setMediaPreviewUrl(URL.createObjectURL(file));
+    mediaList.forEach((m) => m.previewUrl && URL.revokeObjectURL(m.previewUrl));
+    setMediaList([]);
+
+    const previewUrl = URL.createObjectURL(file);
+    setMediaPreviewUrl(previewUrl);
     setUploadedMedia(null);
     setUploadingMedia(true);
     setNotice('');
+
     const formData = new FormData();
     formData.append('file', file);
     try {
       const uploaded = await postApi.uploadMedia(formData);
-      setUploadedMedia(uploaded);
-      setNotice(`Đã tải lên ${uploaded.fileName}.`);
+      setUploadedMedia({ ...uploaded, previewUrl });
+      const uploadMsg = `Đã tải lên ${uploaded.fileName} thành công.`;
+      setNotice(uploadMsg);
+      showToast('success', uploadMsg);
     } catch (error) {
-      setNotice(error.response?.data?.message || 'Không tải được tệp media lên máy chủ.');
+      const errMsg = error.response?.data?.message || 'Không tải được tệp media lên máy chủ.';
+      setNotice(errMsg);
+      showToast('error', errMsg);
       setMediaPreviewUrl('');
     } finally {
       setUploadingMedia(false);
-      event.target.value = '';
     }
   };
 
+  const handleMediaChange = async (event) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+
+    // Reels mode
+    if (postType === 'reel') {
+      const file = files[0];
+      if (!file.type.startsWith('video/')) {
+        showToast('error', 'Facebook Reels chỉ hỗ trợ Video (tỷ lệ 9:16), không hỗ trợ ảnh tĩnh.');
+        event.target.value = '';
+        return;
+      }
+      if (file.size > 50 * 1024 * 1024) {
+        showToast('error', `Video vượt quá dung lượng tối đa 50MB (${(file.size / (1024 * 1024)).toFixed(2)}MB).`);
+        event.target.value = '';
+        return;
+      }
+      uploadSingleFile(file);
+      event.target.value = '';
+      return;
+    }
+
+    // Story mode
+    if (postType === 'story') {
+      const file = files[0];
+      if (file.type.startsWith('image/') && file.size > 1024 * 1024) {
+        showToast('error', `Ảnh Story vượt quá dung lượng tối đa 1MB (${(file.size / (1024 * 1024)).toFixed(2)}MB).`);
+        event.target.value = '';
+        return;
+      }
+      if (file.type.startsWith('video/') && file.size > 50 * 1024 * 1024) {
+        showToast('error', `Video Story vượt quá dung lượng tối đa 50MB (${(file.size / (1024 * 1024)).toFixed(2)}MB).`);
+        event.target.value = '';
+        return;
+      }
+      uploadSingleFile(file);
+      event.target.value = '';
+      return;
+    }
+
+    // Feed mode:
+    const hasVideo = files.some((f) => f.type.startsWith('video/'));
+    if (hasVideo) {
+      const videoFile = files.find((f) => f.type.startsWith('video/'));
+      if (videoFile.size > 50 * 1024 * 1024) {
+        showToast('error', `Video vượt quá dung lượng tối đa 50MB (${(videoFile.size / (1024 * 1024)).toFixed(2)}MB).`);
+        event.target.value = '';
+        return;
+      }
+      if (files.length > 1 || mediaList.length > 0) {
+        showToast('error', 'Không thể kết hợp Video với Album ảnh. Chuyển sang chế độ đăng Video.');
+      }
+      uploadSingleFile(videoFile);
+      event.target.value = '';
+      return;
+    }
+
+    // Upload các ảnh vào Album
+    const validImages = [];
+    for (const f of files) {
+      if (f.size > 1024 * 1024) {
+        showToast('error', `Ảnh "${f.name}" vượt quá 1MB (${(f.size / (1024 * 1024)).toFixed(2)}MB). Bỏ qua ảnh này.`);
+      } else {
+        validImages.push(f);
+      }
+    }
+    if (validImages.length === 0) {
+      event.target.value = '';
+      return;
+    }
+
+    setUploadingMedia(true);
+    setNotice('');
+    const newItems = [];
+    for (const img of validImages) {
+      const previewUrl = URL.createObjectURL(img);
+      const formData = new FormData();
+      formData.append('file', img);
+      try {
+        const uploaded = await postApi.uploadMedia(formData);
+        newItems.push({
+          file: img,
+          previewUrl,
+          mediaLink: uploaded.mediaLink,
+          fileName: uploaded.fileName,
+          mediaType: 'image'
+        });
+      } catch (err) {
+        URL.revokeObjectURL(previewUrl);
+        showToast('error', `Không thể tải lên ảnh "${img.name}": ` + (err.response?.data?.message || err.message));
+      }
+    }
+
+    if (newItems.length > 0) {
+      setMediaList((prev) => {
+        const combined = [...prev, ...newItems];
+        setMediaPreviewUrl(combined[0]?.previewUrl || '');
+        setUploadedMedia(combined[0] || null);
+        return combined;
+      });
+      showToast('success', `Đã tải lên ${newItems.length} ảnh vào Album.`);
+    }
+    setUploadingMedia(false);
+    event.target.value = '';
+  };
+
+
   return (
     <MainLayout title="Viết bài">
+      <Toast toast={toast} onClose={() => setToast(null)} />
       <div className="step-strip" role="tablist" aria-label="Các bước tạo bài">
-        {steps.map((label, index) => <button className={`step-button${step === index ? ' is-current' : ''}${step > index ? ' is-done' : ''}`} key={label} onClick={() => setStep(index)} role="tab" aria-selected={step === index} disabled={index > step} type="button"><span className="step-number">{index + 1}</span>{label}</button>)}
+        {steps.map((label, index) => (
+          <button
+            className={`step-button${step === index ? ' is-current' : ''}${step > index ? ' is-done' : ''}`}
+            key={label}
+            onClick={() => setStep(index)}
+            role="tab"
+            aria-selected={step === index}
+            disabled={index > step}
+            type="button"
+          >
+            <span className="step-number">{index + 1}</span>
+            {label}
+          </button>
+        ))}
       </div>
 
-      {step === 0 && <div className="panel">
-        <div className="panel-heading"><h2>Soạn nội dung</h2><span className="muted">Bản nháp cục bộ</span></div>
-        <div className="panel-body">
-          <label className="field-label" htmlFor="post-title">Tiêu đề</label>
-          <input id="post-title" className="field" placeholder="Nhập tiêu đề bài viết" value={title} onChange={(event) => setTitle(event.target.value)} />
-          <div className="panel" style={{ marginTop: 14, padding: 15, background: '#fbfcfe' }}>
-            <span className="muted" style={{ fontSize: 11 }}>XEM TRƯỚC TÌM KIẾM</span>
-            <div style={{ color: '#254fad', fontWeight: 700, marginTop: 8 }}>{title || 'Tiêu đề bài viết'}</div>
-            <div className="muted" style={{ marginTop: 5 }}>https://facebook.com · Bản xem trước</div>
-          </div>
-          <label className="field-label" htmlFor="post-content" style={{ marginTop: 17 }}>Nội dung</label>
-          <div className="compose-toolbar"><button className="tool-chip" type="button" title="Kiểu chữ"><Type size={15} /></button><button className="tool-chip" type="button" title="Emoji"><Smile size={15} /></button><button className="tool-chip" type="button" title="Gắn thẻ"><AtSign size={15} /></button><button className="tool-chip" type="button" title="Vị trí"><MapPin size={15} /></button></div>
-          <textarea id="post-content" className="compose-editor" placeholder="Bạn đang nghĩ gì?" value={content} onChange={(event) => setContent(event.target.value)} />
-          <div className="compose-bottom"><span className="muted">{content.length} ký tự</span><label className="button button-secondary"><ImagePlus size={15} />{uploadingMedia ? 'Đang tải…' : 'Thêm ảnh/video'}<input type="file" accept="image/*,video/*" hidden onChange={handleMediaChange} /></label></div>
-        </div>
-      </div>}
+      {/* BƯỚC 1: VIẾT BÀI - BỐ CỤC SPLIT GRID 2 CỘT TƯƠNG TÁC THỜI GIAN THỰC */}
+      {step === 0 && (
+        <div className="compose-split-grid">
+          {/* CỘT TRÁI: WORKSPACE SOẠN BÀI CHUYÊN BIỆT */}
+          <div className="panel" style={{ margin: 0 }}>
+            <div className="panel-heading">
+              <div>
+                <h2>Soạn nội dung</h2>
+                <p className="muted" style={{ fontSize: 12, margin: '2px 0 0' }}>
+                  Thiết lập nội dung và định dạng xuất bản lên Fanpage
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  className="tool-chip rgb-led-chip"
+                  type="button"
+                  style={{ minHeight: 30, padding: '0 12px', fontSize: 12 }}
+                  onClick={() => setShowAiModal(true)}
+                >
+                  <Sparkles size={13} style={{ marginRight: 4, color: '#00f2fe' }} /> Viết bằng AI
+                </button>
+              </div>
+            </div>
 
-      {step === 1 && <div className="compose-grid">
-        <section className="panel compose-panel"><div className="panel-heading"><h2>Chọn kênh</h2><span className="muted">{selectedPageId ? '1' : '0'}/{channels.length}</span></div><div className="panel-body">
-          {channelLoading && <p className="muted">Đang tải kênh…</p>}
-          {channelError && <div className="notice">{channelError}</div>}
-          {channels.map((channel) => <label className={`channel-option${selectedPageId === channel.id ? ' is-selected' : ''}`} key={channel.id}>
-            <input type="radio" name="channel" checked={selectedPageId === channel.id} onChange={() => setSelectedPageId(channel.id)} />
-            <span className="fb-mark">f</span><span><strong>{channel.name}</strong><small>Facebook · {channel.category || 'Fanpage'}</small></span>
-          </label>)}
-          {!channelLoading && channels.length === 0 && !channelError && <p className="muted">Chưa có Fanpage kết nối.</p>}
-        </div></section>
-        <section className="panel compose-panel"><div className="panel-heading"><h2>Đăng bài</h2><span className="muted">Facebook</span></div>
-          <div className="compose-toolbar"><button className="tool-chip" type="button" title="Kiểu chữ"><Type size={15} /></button><button className="tool-chip" type="button" title="Emoji"><Smile size={15} /></button><button className="tool-chip" type="button" title="Gắn thẻ"><AtSign size={15} /></button><button className="tool-chip" type="button" title="Vị trí"><MapPin size={15} /></button></div>
-          <textarea className="compose-editor" placeholder="Nội dung bài đăng" value={content} onChange={(event) => setContent(event.target.value)} />
-          <div className="compose-bottom"><span className="muted">{content.length} ký tự</span><label className="button button-secondary"><ImagePlus size={15} />{uploadingMedia ? 'Đang tải…' : 'Tải ảnh/video'}<input type="file" accept="image/*,video/*" hidden onChange={handleMediaChange} /></label></div>
-          {mediaPreviewUrl && <div className="preview-media">{uploadedMedia?.mediaType === 'video' ? <video src={mediaPreviewUrl} controls style={{ maxWidth: '100%', maxHeight: 220 }} /> : <img src={mediaPreviewUrl} alt="Xem trước media" style={{ maxWidth: '100%', maxHeight: 220, objectFit: 'contain' }} />}</div>}
-          <div className="panel-body" style={{ paddingTop: 0 }}><label className="field-label" htmlFor="scheduled-at">Thời gian đăng</label><input id="scheduled-at" className="field" type="datetime-local" value={scheduledAt} onChange={(event) => setScheduledAt(event.target.value)} /></div>
-          <div className="panel-body" style={{ paddingTop: 0 }}>
-            <div className="panel-heading" style={{ padding: 0, minHeight: 38 }}><h2><MessageCircle size={15} style={{ verticalAlign: 'middle', marginRight: 6 }} />Comment seeding ({comments.length}/5)</h2><button className="button button-secondary" type="button" onClick={() => setComments((items) => items.length < 5 ? [...items, { content: '', delayMinutes: 0 }] : items)} disabled={comments.length >= 5}><Plus size={14} /> Thêm comment</button></div>
-            {comments.map((comment, index) => <div className="comment-entry" key={index}>
-              <input className="field" aria-label={`Nội dung comment ${index + 1}`} placeholder={`Nội dung comment ${index + 1}`} value={comment.content} onChange={(event) => setComments((items) => items.map((item, itemIndex) => itemIndex === index ? { ...item, content: event.target.value } : item))} />
-              <label className="comment-delay"><span className="muted">Sau</span><input className="field" type="number" min="0" max="10080" aria-label={`Độ trễ comment ${index + 1} phút`} value={comment.delayMinutes} onChange={(event) => setComments((items) => items.map((item, itemIndex) => itemIndex === index ? { ...item, delayMinutes: Number(event.target.value) } : item))} /><span className="muted">phút</span></label>
-              <button className="button button-danger" type="button" aria-label={`Xóa comment ${index + 1}`} onClick={() => setComments((items) => items.filter((_, itemIndex) => itemIndex !== index))}><Trash2 size={14} /></button>
-            </div>)}
+            <div className="panel-body">
+              {/* LỰA CHỌN ĐỊNH DẠNG XUẤT BẢN */}
+              <div style={{ marginBottom: 20 }}>
+                <label className="field-label" style={{ marginBottom: 8, display: 'block' }}>
+                  1. Chọn hình thức đăng Facebook *
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                  <button
+                    type="button"
+                    onClick={() => setPostType('feed')}
+                    className={`compose-type-pill${postType === 'feed' ? ' is-active' : ''}`}
+                  >
+                    <Globe size={20} />
+                    <span style={{ fontSize: 13, fontWeight: 700 }}>Bảng tin (Feed)</span>
+                    <span style={{ fontSize: 11, opacity: 0.75, fontWeight: 400 }}>Chữ + Ảnh/Video</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPostType('reel')}
+                    className={`compose-type-pill${postType === 'reel' ? ' is-active' : ''}`}
+                  >
+                    <Film size={20} />
+                    <span style={{ fontSize: 13, fontWeight: 700 }}>Facebook Reels</span>
+                    <span style={{ fontSize: 11, opacity: 0.75, fontWeight: 400 }}>Video ngắn dọc 9:16</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPostType('story')}
+                    className={`compose-type-pill${postType === 'story' ? ' is-active' : ''}`}
+                  >
+                    <Clock size={20} />
+                    <span style={{ fontSize: 13, fontWeight: 700 }}>Tin (Story 24h)</span>
+                    <span style={{ fontSize: 11, opacity: 0.75, fontWeight: 400 }}>Đầu trang trong 24 giờ</span>
+                  </button>
+                </div>
+
+                {/* BANNER HƯỚNG DẪN THEO TỪNG ĐỊNH DẠNG */}
+                {postType === 'reel' && (
+                  <div style={{ marginTop: 10, fontSize: 12.5, color: '#38bdf8', background: 'rgba(0, 242, 254, 0.08)', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(0, 242, 254, 0.25)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Play size={18} style={{ flexShrink: 0, color: '#00f2fe' }} />
+                    <div>
+                      <strong>Chuẩn Facebook Reels:</strong> Bắt buộc đính kèm Video dọc tỷ lệ 9:16 (1080x1920), dung lượng &lt; 50MB, thời lượng khuyến nghị dưới 60 giây để cắn xu hướng tự nhiên.
+                    </div>
+                  </div>
+                )}
+                {postType === 'story' && (
+                  <div style={{ marginTop: 10, fontSize: 12.5, color: '#10b981', background: 'rgba(16, 185, 129, 0.08)', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(16, 185, 129, 0.25)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Clock size={18} style={{ flexShrink: 0, color: '#10b981' }} />
+                    <div>
+                      <strong>Chuẩn Facebook Story:</strong> Tin sẽ nổi bật ở thanh đầu trang trong 24 giờ. Hỗ trợ ảnh 9:16 (dung lượng &lt; 1MB) hoặc video ngắn &lt; 50MB.
+                    </div>
+                  </div>
+                )}
+                {postType === 'feed' && (
+                  <div style={{ marginTop: 10, fontSize: 12, color: 'var(--muted)', background: 'rgba(255, 255, 255, 0.03)', padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                    💡 <strong>Bài viết thường:</strong> Hiển thị trên Newsfeed và Dòng thời gian của Fanpage. Có thể đăng chỉ văn bản, hoặc đính kèm ảnh (&lt;1MB) / video (&lt;50MB).
+                  </div>
+                )}
+              </div>
+
+              {/* ────────────────── 1. ĐỊNH DẠNG REELS ────────────────── */}
+              {postType === 'reel' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {/* HERO VIDEO UPLOAD CARD CHO REELS */}
+                  <div>
+                    <label className="field-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>2. Tải lên Video Reels 9:16 * (Bắt buộc)</span>
+                      <span className="muted" style={{ fontSize: 11 }}>Dung lượng &lt; 50MB · Tỷ lệ 9:16</span>
+                    </label>
+
+                    {!uploadedMedia && !mediaPreviewUrl ? (
+                      <label className="compose-media-dropzone" style={{ marginTop: 6 }}>
+                        <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(0, 242, 254, 0.1)', display: 'grid', placeItems: 'center', color: '#00f2fe', marginBottom: 4 }}>
+                          <Film size={24} />
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>
+                          {uploadingMedia ? 'Đang tải lên máy chủ…' : 'Bấm để chọn hoặc kéo thả Video Reels'}
+                        </div>
+                        <div className="muted" style={{ fontSize: 12 }}>
+                          Định dạng MP4, MOV dọc (9:16) · Dung lượng tối đa 50MB
+                        </div>
+                        <input type="file" accept="video/*" hidden onChange={handleMediaChange} disabled={uploadingMedia} />
+                      </label>
+                    ) : (
+                      <div style={{ marginTop: 6, padding: '12px 14px', background: 'rgba(0, 242, 254, 0.05)', border: '1px solid rgba(0, 242, 254, 0.3)', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 44, height: 44, borderRadius: 8, background: '#000', display: 'grid', placeItems: 'center', color: '#00f2fe', flexShrink: 0 }}>
+                          <Play size={22} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13.5, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {uploadedMedia?.fileName || 'Video Reels đã chọn'}
+                          </div>
+                          <div style={{ fontSize: 11.5, color: '#38bdf8' }}>
+                            {uploadingMedia ? 'Đang tải lên…' : '✅ Video Reels đã sẵn sàng xuất bản'}
+                          </div>
+                        </div>
+                        <label className="button button-secondary" style={{ minHeight: 28, fontSize: 11.5, padding: '0 10px' }}>
+                          Đổi video
+                          <input type="file" accept="video/*" hidden onChange={handleMediaChange} disabled={uploadingMedia} />
+                        </label>
+                        <button type="button" className="button button-danger" style={{ minHeight: 28, padding: '0 8px' }} onClick={removeMedia} title="Xóa video">
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* CAPTION CHO REELS */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <label className="field-label" htmlFor="post-content" style={{ margin: 0 }}>
+                        3. Mô tả Reels (Caption ngắn gọn & Hashtag) *
+                      </label>
+                      <div className="compose-toolbar" style={{ margin: 0, padding: 0, background: 'none' }}>
+                        <button
+                          className={`tool-chip${showEmojiPicker ? ' is-active' : ''}`}
+                          type="button"
+                          title="Chèn biểu tượng Emoji"
+                          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                          style={{ minHeight: 26, fontSize: 11.5 }}
+                        >
+                          <Smile size={13} /> Emoji
+                        </button>
+                        <button
+                          className="tool-chip rgb-led-chip"
+                          type="button"
+                          title="Trợ lý AI viết Caption"
+                          onClick={() => setShowAiModal(true)}
+                          style={{ minHeight: 26, fontSize: 11.5 }}
+                        >
+                          <Sparkles size={13} style={{ color: '#00f2fe' }} /> AI Caption
+                        </button>
+                      </div>
+                    </div>
+
+                    {showEmojiPicker && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '8px 10px', background: 'rgba(10, 16, 32, 0.95)', border: '1px solid rgba(0, 242, 254, 0.25)', borderRadius: 8, marginBottom: 8 }}>
+                        {popularEmojis.map((emoji) => (
+                          <button key={emoji} type="button" onClick={() => insertEmoji(emoji)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', padding: 4 }} title={`Chèn ${emoji}`}>
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    <textarea
+                      id="post-content"
+                      ref={contentRef}
+                      className="compose-editor"
+                      placeholder="Nhập mô tả cuốn hút cho thước phim Reels... Kèm các hashtag xu hướng phía dưới 👇"
+                      value={content}
+                      onChange={(event) => setContent(event.target.value)}
+                      rows={4}
+                    />
+
+                    {/* CHIP HASHTAG THỊNH HÀNH REELS */}
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, alignItems: 'center' }}>
+                      <span className="muted" style={{ fontSize: 11 }}>🔥 Gợi ý hashtag viral:</span>
+                      {['#reels', '#viral', '#xuhuong', '#trending', '#fyp', '#fb_reels', '#video'].map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => insertHashtag(tag)}
+                          className="button button-quiet"
+                          style={{ minHeight: 22, padding: '0 8px', fontSize: 11, borderRadius: 12 }}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ────────────────── 2. ĐỊNH DẠNG STORY (TIN 24H) ────────────────── */}
+              {postType === 'story' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {/* MEDIA UPLOAD CHO STORY */}
+                  <div>
+                    <label className="field-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>2. Tải lên Ảnh hoặc Video Story 9:16 *</span>
+                      <span className="muted" style={{ fontSize: 11 }}>Ảnh &lt; 1MB · Video &lt; 50MB</span>
+                    </label>
+
+                    {!uploadedMedia && !mediaPreviewUrl ? (
+                      <label className="compose-media-dropzone" style={{ marginTop: 6 }}>
+                        <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', display: 'grid', placeItems: 'center', color: '#10b981', marginBottom: 4 }}>
+                          <Clock size={24} />
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>
+                          {uploadingMedia ? 'Đang tải lên máy chủ…' : 'Bấm để chọn Ảnh hoặc Video Story 24h'}
+                        </div>
+                        <div className="muted" style={{ fontSize: 12 }}>
+                          Tỷ lệ khuyến nghị 9:16 (1080x1920) · Ảnh &lt; 1MB · Video &lt; 50MB
+                        </div>
+                        <input type="file" accept="image/*,video/*" hidden onChange={handleMediaChange} disabled={uploadingMedia} />
+                      </label>
+                    ) : (
+                      <div style={{ marginTop: 6, padding: '12px 14px', background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 44, height: 44, borderRadius: 8, background: '#000', display: 'grid', placeItems: 'center', color: '#10b981', flexShrink: 0 }}>
+                          {uploadedMedia?.mediaType === 'video' ? <Film size={22} /> : <ImagePlus size={22} />}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13.5, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {uploadedMedia?.fileName || 'Tệp Story đã chọn'}
+                          </div>
+                          <div style={{ fontSize: 11.5, color: '#34d399' }}>
+                            {uploadingMedia ? 'Đang tải lên…' : '✅ Tệp Story đã sẵn sàng đăng'}
+                          </div>
+                        </div>
+                        <label className="button button-secondary" style={{ minHeight: 28, fontSize: 11.5, padding: '0 10px' }}>
+                          Đổi tệp
+                          <input type="file" accept="image/*,video/*" hidden onChange={handleMediaChange} disabled={uploadingMedia} />
+                        </label>
+                        <button type="button" className="button button-danger" style={{ minHeight: 28, padding: '0 8px' }} onClick={removeMedia} title="Xóa tệp">
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* NỘI DUNG / GHI CHÚ TRÊN STORY */}
+                  <div>
+                    <label className="field-label" htmlFor="post-content">
+                      3. Nội dung văn bản hoặc ghi chú Story (tùy chọn)
+                    </label>
+                    <textarea
+                      id="post-content"
+                      ref={contentRef}
+                      className="compose-editor"
+                      placeholder="Nhập thông điệp hiển thị trên Story hoặc ghi chú quản lý..."
+                      value={content}
+                      onChange={(event) => setContent(event.target.value)}
+                      rows={3}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* ────────────────── 3. ĐỊNH DẠNG BẢNG TIN (FEED) ────────────────── */}
+              {postType === 'feed' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {/* TIÊU ĐỀ BÀI VIẾT */}
+                  <div>
+                    <label className="field-label" htmlFor="post-title">2. Tiêu đề bài viết (quản lý nội bộ)</label>
+                    <input
+                      id="post-title"
+                      className="field"
+                      placeholder="Nhập tiêu đề hoặc ghi chú phân biệt bài viết..."
+                      value={title}
+                      onChange={(event) => setTitle(event.target.value)}
+                    />
+                  </div>
+
+                  {/* NỘI DUNG BÀI ĐĂNG */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <label className="field-label" htmlFor="post-content" style={{ margin: 0 }}>
+                        3. Nội dung bài đăng Facebook *
+                      </label>
+                      <div className="compose-toolbar" style={{ margin: 0, padding: 0, background: 'none' }}>
+                        <button
+                          className={`tool-chip${showEmojiPicker ? ' is-active' : ''}`}
+                          type="button"
+                          title="Chèn biểu tượng Emoji"
+                          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                          style={{ minHeight: 26, fontSize: 11.5 }}
+                        >
+                          <Smile size={13} /> Emoji
+                        </button>
+                        <button
+                          className="tool-chip"
+                          type="button"
+                          title="Gợi ý Hashtag"
+                          onClick={() => insertHashtag('#viral')}
+                          style={{ minHeight: 26, fontSize: 11.5 }}
+                        >
+                          <Hash size={13} /> Hashtag
+                        </button>
+                        <button
+                          className="tool-chip rgb-led-chip"
+                          type="button"
+                          title="Trợ lý AI viết Content"
+                          onClick={() => setShowAiModal(true)}
+                          style={{ minHeight: 26, fontSize: 11.5 }}
+                        >
+                          <Sparkles size={13} style={{ color: '#00f2fe' }} /> AI Writer
+                        </button>
+                      </div>
+                    </div>
+
+                    {showEmojiPicker && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '8px 10px', background: 'rgba(10, 16, 32, 0.95)', border: '1px solid rgba(0, 242, 254, 0.25)', borderRadius: 8, marginBottom: 8 }}>
+                        {popularEmojis.map((emoji) => (
+                          <button key={emoji} type="button" onClick={() => insertEmoji(emoji)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', padding: 4 }} title={`Chèn ${emoji}`}>
+                            {emoji}
+                          </button>
+                        ))}
+                        <div style={{ width: '100%', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: 6, marginTop: 4, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          <span className="muted" style={{ fontSize: 11, alignSelf: 'center' }}>Tag nhanh:</span>
+                          {popularHashtags.map((tag) => (
+                            <button key={tag} type="button" onClick={() => insertHashtag(tag)} className="button button-quiet" style={{ minHeight: 20, padding: '0 6px', fontSize: 10.5 }}>
+                              {tag}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <textarea
+                      id="post-content"
+                      ref={contentRef}
+                      className="compose-editor"
+                      placeholder="Bạn đang muốn chia sẻ điều gì lên các Fanpage hôm nay? Nhập nội dung bài viết..."
+                      value={content}
+                      onChange={(event) => setContent(event.target.value)}
+                      rows={6}
+                    />
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                      <span className="muted" style={{ fontSize: 11.5 }}>{content.length} ký tự</span>
+                      <span className="muted" style={{ fontSize: 11 }}>Hỗ trợ format xuống dòng và hashtag #</span>
+                    </div>
+                  </div>
+
+                  {/* ĐÍNH KÈM ẢNH HOẶC VIDEO */}
+                  <div>
+                    <label className="field-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>4. Đính kèm Ảnh hoặc Video (tùy chọn)</span>
+                      <span className="muted" style={{ fontSize: 11 }}>Ảnh &lt; 1MB · Video &lt; 50MB</span>
+                    </label>
+
+                    {mediaList.length > 0 ? (
+                      /* GIAO DIỆN QUẢN LÝ ALBUM ẢNH */
+                      <div style={{ marginTop: 8, background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(0, 242, 254, 0.25)', borderRadius: 12, padding: 14 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                          <div>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: 6 }}>
+                              📸 Album ảnh ({mediaList.length} ảnh)
+                            </span>
+                            <span className="muted" style={{ fontSize: 11 }}>
+                              Hệ thống sẽ tạo bài đăng Album đa ảnh lên Fanpage
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <label className="button button-secondary" style={{ minHeight: 26, fontSize: 11, padding: '0 10px', cursor: 'pointer' }}>
+                              + Thêm ảnh
+                              <input type="file" accept="image/*" multiple hidden onChange={handleMediaChange} disabled={uploadingMedia} />
+                            </label>
+                            <button type="button" className="button button-quiet" style={{ minHeight: 26, padding: '0 8px', fontSize: 11, color: '#fca5a5' }} onClick={removeMedia} title="Xóa toàn bộ album">
+                              Xóa tất cả
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Danh sách ảnh trong album */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 10 }}>
+                          {mediaList.map((item, idx) => (
+                            <div key={idx} style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', background: '#000', aspectRatio: '1/1' }}>
+                              <img src={item.previewUrl} alt={`Ảnh ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              <span style={{ position: 'absolute', top: 4, left: 4, background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: 10, padding: '1px 5px', borderRadius: 4, fontWeight: 700 }}>
+                                #{idx + 1}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => removeImageFromAlbum(idx)}
+                                style={{
+                                  position: 'absolute',
+                                  top: 4,
+                                  right: 4,
+                                  width: 20,
+                                  height: 20,
+                                  borderRadius: '50%',
+                                  background: 'rgba(239, 68, 68, 0.85)',
+                                  border: 'none',
+                                  color: '#fff',
+                                  display: 'grid',
+                                  placeItems: 'center',
+                                  cursor: 'pointer',
+                                  padding: 0
+                                }}
+                                title="Xóa ảnh này"
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        {uploadingMedia && (
+                          <div style={{ fontSize: 11.5, color: '#00f2fe', marginTop: 10, textAlign: 'center' }}>
+                            Đang tải thêm ảnh lên máy chủ…
+                          </div>
+                        )}
+                      </div>
+                    ) : !uploadedMedia && !mediaPreviewUrl ? (
+                      <label className="compose-media-dropzone" style={{ marginTop: 6, padding: '16px 14px' }}>
+                        <ImagePlus size={24} style={{ color: 'var(--muted)' }} />
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#cbd5e1' }}>
+                          {uploadingMedia ? 'Đang tải lên máy chủ…' : 'Bấm để thêm Ảnh (chọn nhiều để tạo Album) hoặc Video'}
+                        </div>
+                        <span className="muted" style={{ fontSize: 11 }}>
+                          Hỗ trợ tải lên cùng lúc nhiều ảnh để xuất bản dạng Album Facebook
+                        </span>
+                        <input type="file" accept="image/*,video/*" multiple hidden onChange={handleMediaChange} disabled={uploadingMedia} />
+                      </label>
+                    ) : (
+                      <div style={{ marginTop: 6, padding: '10px 14px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 38, height: 38, borderRadius: 6, background: '#000', display: 'grid', placeItems: 'center', color: '#00f2fe', flexShrink: 0 }}>
+                          {uploadedMedia?.mediaType === 'video' ? <Film size={18} /> : <ImagePlus size={18} />}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {uploadedMedia?.fileName || 'Tệp đính kèm'}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#10b981' }}>
+                            {uploadingMedia ? 'Đang tải lên…' : '✅ Đã tải lên máy chủ'}
+                          </div>
+                        </div>
+                        <label className="button button-secondary" style={{ minHeight: 26, fontSize: 11, padding: '0 8px' }}>
+                          Đổi tệp
+                          <input type="file" accept="image/*,video/*" multiple hidden onChange={handleMediaChange} disabled={uploadingMedia} />
+                        </label>
+                        <button type="button" className="button button-danger" style={{ minHeight: 26, padding: '0 8px' }} onClick={removeMedia} title="Xóa tệp">
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* CỘT PHẢI: LIVE FACEBOOK MOCKUP PREVIEW THỜI GIAN THỰC */}
+          <div className="compose-preview-sticky">
+            <div className="panel" style={{ margin: 0 }}>
+              <div className="panel-heading" style={{ padding: '12px 16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px #10b981' }} />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>
+                    Xem trước thực tế trên Facebook
+                  </span>
+                </div>
+                <span style={{ fontSize: 11, background: 'rgba(0, 242, 254, 0.12)', color: '#00f2fe', padding: '2px 8px', borderRadius: 99, fontWeight: 700 }}>
+                  {postType === 'reel' ? 'REELS 9:16' : postType === 'story' ? 'STORY 24H' : 'BẢNG TIN'}
+                </span>
+              </div>
+              <div className="panel-body" style={{ padding: '14px 16px' }}>
+                <div style={{ maxWidth: postType === 'feed' ? '100%' : 310, margin: '0 auto' }}>
+                  <FacebookMockupPreview
+                    postType={postType}
+                    pageName={channels.find((c) => selectedPageIds.includes(c.id))?.name || 'Fanpage của bạn'}
+                    content={content}
+                    title={title}
+                    mediaPreviewUrl={mediaPreviewUrl}
+                    uploadedMedia={uploadedMedia}
+                    mediaList={mediaList}
+                    scheduledAt={scheduledAt}
+                  />
+                </div>
+                <div style={{ textAlign: 'center', marginTop: 12 }}>
+                  <span className="muted" style={{ fontSize: 11 }}>
+                    ⚡ Mockup phản hồi trực tiếp theo thời gian thực (0ms độ trễ)
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BƯỚC 2: CHỌN KÊNH ĐĂNG (HỖ TRỢ ĐĂNG NHIỀU FANPAGE CÙNG LÚC & THEO NHÓM KÊNH) */}
+      {step === 1 && (
+        <div className="compose-grid">
+          {/* Cột chọn kênh */}
+          <section className="panel compose-panel">
+            <div className="panel-heading">
+              <h2>Chọn Fanpage đăng bài</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span className="muted" style={{ fontSize: 12 }}>
+                  Đã chọn: <strong style={{ color: '#00f2fe' }}>{selectedPageIds.length}</strong>/{channels.length}
+                </span>
+                <button
+                  className="button button-quiet"
+                  type="button"
+                  style={{ minHeight: 24, padding: '0 8px', fontSize: 11 }}
+                  onClick={selectedPageIds.length === channels.length ? deselectAllPages : selectAllPages}
+                >
+                  {selectedPageIds.length === channels.length ? 'Bỏ chọn hết' : 'Chọn tất cả'}
+                </button>
+              </div>
+            </div>
+            <div className="panel-body">
+              {/* CHỌN NHANH THEO NHÓM KÊNH */}
+              {groups.length > 0 && (
+                <div style={{ marginBottom: 14, padding: '10px 12px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 10, border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                  <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Layers size={13} style={{ color: '#00f2fe' }} /> Chọn nhanh theo Nhóm kênh ({groups.length} nhóm):
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {groups.map((grp) => {
+                      const pIds = Array.isArray(grp.pageIds) ? grp.pageIds : [];
+                      const isAllInGroup = pIds.length > 0 && pIds.every((id) => selectedPageIds.includes(id));
+                      return (
+                        <button
+                          key={grp.id}
+                          type="button"
+                          onClick={() => {
+                            if (isAllInGroup) {
+                              setSelectedPageIds((prev) => prev.filter((id) => !pIds.includes(id)));
+                            } else {
+                              setSelectedPageIds((prev) => [...new Set([...prev, ...pIds])]);
+                            }
+                          }}
+                          style={{
+                            background: isAllInGroup ? `${grp.color || '#00f2fe'}20` : 'rgba(255, 255, 255, 0.04)',
+                            border: `1px solid ${isAllInGroup ? (grp.color || '#00f2fe') : 'rgba(255, 255, 255, 0.12)'}`,
+                            color: isAllInGroup ? (grp.color || '#00f2fe') : '#cbd5e1',
+                            borderRadius: 16,
+                            padding: '4px 12px',
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: grp.color || '#00f2fe' }} />
+                          {grp.name} ({pIds.length})
+                          {isAllInGroup && <Check size={12} />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {channelLoading && <p className="muted">Đang tải danh sách Fanpage…</p>}
+              {channelError && <div className="notice">{channelError}</div>}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {channels.map((channel) => {
+                  const isChecked = selectedPageIds.includes(channel.id);
+                  return (
+                    <div
+                      key={channel.id}
+                      onClick={() => togglePageSelection(channel.id)}
+                      className={isChecked ? 'rgb-led-card' : ''}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                        padding: '12px 14px',
+                        borderRadius: 12,
+                        cursor: 'pointer',
+                        background: isChecked ? '#0a0f1d' : 'rgba(255, 255, 255, 0.02)',
+                        border: isChecked ? 'none' : '1px solid rgba(255, 255, 255, 0.08)',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <div style={{ color: isChecked ? '#00f2fe' : 'var(--muted)', display: 'flex', alignItems: 'center' }}>
+                        {isChecked ? <CheckSquare size={18} /> : <Square size={18} />}
+                      </div>
+                      <span className="fb-mark">f</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, color: '#fff', fontSize: 13.5 }}>{channel.name}</div>
+                        <div className="muted" style={{ fontSize: 11 }}>Facebook · {channel.category || 'Fanpage'} · ID: {channel.id}</div>
+                      </div>
+                      {isChecked && (
+                        <span style={{ fontSize: 11, color: '#00f2fe', background: 'rgba(0, 242, 254, 0.15)', padding: '2px 8px', borderRadius: 10 }}>
+                          Sẵn sàng đăng
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {!channelLoading && channels.length === 0 && !channelError && (
+                <p className="muted">Chưa có Fanpage nào được đồng bộ. Vui lòng vào trang Kênh để kết nối lại.</p>
+              )}
+            </div>
+          </section>
+
+          {/* Cột lịch đăng & comment seeding */}
+          <section className="panel compose-panel">
+            <div className="panel-heading">
+              <h2>Thời gian & Comment Seeding</h2>
+            </div>
+            <div className="panel-body">
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <label className="field-label" htmlFor="scheduled-at" style={{ margin: 0 }}>Thời gian đăng bài *</label>
+                  <span className="muted" style={{ fontSize: 11 }}>Chọn giờ vàng tương tác cao</span>
+                </div>
+
+                {/* HÀNG NÚT CHỌN NHANH THỜI GIAN */}
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+                  <button
+                    type="button"
+                    className="time-preset-pill"
+                    onClick={() => setQuickPresetTime('now')}
+                    title="Đăng ngay lập tức sau khi lưu"
+                  >
+                    ⚡ Đăng ngay
+                  </button>
+                  <button
+                    type="button"
+                    className="time-preset-pill"
+                    onClick={() => setQuickPresetTime('plus1h')}
+                    title="Lên lịch sau 1 tiếng nữa"
+                  >
+                    ⏰ Sau 1 giờ
+                  </button>
+                  <button
+                    type="button"
+                    className="time-preset-pill"
+                    onClick={() => setQuickPresetTime('tonight')}
+                    title="Lên lịch vào khung giờ vàng 20:00 tối"
+                  >
+                    🌙 Tối nay (20:00)
+                  </button>
+                  <button
+                    type="button"
+                    className="time-preset-pill"
+                    onClick={() => setQuickPresetTime('tomorrowMorning')}
+                    title="Lên lịch vào 08:00 sáng mai"
+                  >
+                    ☀️ Sáng mai (08:00)
+                  </button>
+                </div>
+
+                <input
+                  id="scheduled-at"
+                  className="field"
+                  type="datetime-local"
+                  value={scheduledAt}
+                  onChange={(event) => setScheduledAt(event.target.value)}
+                />
+              </div>
+              <p className="muted" style={{ fontSize: 11, marginTop: 4, marginBottom: 16 }}>
+                💡 Nếu chọn giờ hiện tại, bài sẽ được đưa vào hàng đợi đăng ngay lập tức.
+              </p>
+
+              {/* Comment Seeding */}
+              <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)', paddingTop: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <span style={{ fontWeight: 700, fontSize: 13, color: '#fff' }}>
+                    <MessageCircle size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+                    Comment seeding tự động ({comments.length}/5)
+                  </span>
+                  <button
+                    className="button button-secondary"
+                    type="button"
+                    style={{ minHeight: 26, padding: '0 8px', fontSize: 11 }}
+                    onClick={() => setComments((items) => items.length < 5 ? [...items, { content: '', delayMinutes: 0 }] : items)}
+                    disabled={comments.length >= 5}
+                  >
+                    <Plus size={13} /> Thêm comment
+                  </button>
+                </div>
+
+                {comments.map((comment, index) => (
+                  <div className="comment-entry" key={index} style={{ marginBottom: 8 }}>
+                    <input
+                      className="field"
+                      aria-label={`Nội dung comment ${index + 1}`}
+                      placeholder={`Nội dung seeding ${index + 1}...`}
+                      value={comment.content}
+                      onChange={(event) =>
+                        setComments((items) =>
+                          items.map((item, itemIndex) =>
+                            itemIndex === index ? { ...item, content: event.target.value } : item
+                          )
+                        )
+                      }
+                    />
+                    <label className="comment-delay">
+                      <span className="muted">Sau</span>
+                      <input
+                        className="field"
+                        type="number"
+                        min="0"
+                        max="10080"
+                        aria-label={`Độ trễ comment ${index + 1} phút`}
+                        value={comment.delayMinutes}
+                        onChange={(event) =>
+                          setComments((items) =>
+                            items.map((item, itemIndex) =>
+                              itemIndex === index ? { ...item, delayMinutes: Number(event.target.value) } : item
+                            )
+                          )
+                        }
+                      />
+                      <span className="muted">phút</span>
+                    </label>
+                    <button
+                      className="button button-danger"
+                      type="button"
+                      aria-label={`Xóa comment ${index + 1}`}
+                      onClick={() => setComments((items) => items.filter((_, itemIndex) => itemIndex !== index))}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {/* BƯỚC 3: XEM LẠI & XUẤT BẢN */}
+      {step === 2 && (
+        <section className="panel">
+          <div className="panel-heading">
+            <h2>Kiểm tra bài viết trước khi lên lịch</h2>
+          </div>
+          <div className="panel-body" style={{ maxWidth: 820 }}>
+            {/* Danh sách các page sẽ nhận bài */}
+            <div style={{ marginBottom: 16 }}>
+              <span className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+                Các Fanpage sẽ đăng ({selectedPageIds.length} Page):
+              </span>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {selectedPageIds.map((id) => {
+                  const channel = channels.find((c) => c.id === id);
+                  return (
+                    <span
+                      key={id}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        background: 'rgba(0, 242, 254, 0.12)',
+                        border: '1px solid rgba(0, 242, 254, 0.3)',
+                        borderRadius: 16,
+                        padding: '4px 12px',
+                        fontSize: 12.5,
+                        color: '#fff',
+                        fontWeight: 600
+                      }}
+                    >
+                      <span className="fb-mark" style={{ width: 16, height: 16, fontSize: 10 }}>f</span>
+                      {channel?.name || id}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Mô phỏng bài đăng Facebook */}
+            <div style={{ maxWidth: postType === 'feed' ? 620 : 330, margin: '0 auto 16px' }}>
+              <FacebookMockupPreview
+                postType={postType}
+                pageName={channels.find((c) => selectedPageIds.includes(c.id))?.name || 'Fanpage của bạn'}
+                content={content}
+                title={title}
+                mediaPreviewUrl={mediaPreviewUrl}
+                uploadedMedia={uploadedMedia}
+                mediaList={mediaList}
+                scheduledAt={scheduledAt}
+              />
+            </div>
+
+
+            {notice && (
+              <div
+                className="notice"
+                style={{
+                  marginTop: 16,
+                  borderColor: createdPostIds.length > 0 ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)',
+                  color: createdPostIds.length > 0 ? '#10b981' : '#ef4444'
+                }}
+              >
+                {notice}
+              </div>
+            )}
+
+            {createdPostIds.length > 0 && (
+              <div style={{ marginTop: 14, display: 'flex', gap: 10 }}>
+                <Link href="/post-planner/list" className="button button-secondary">
+                  Xem danh sách bài đăng ({createdPostIds.length})
+                </Link>
+                <Link href="/post-planner/calendar" className="button button-quiet">
+                  Xem lịch Calendar
+                </Link>
+              </div>
+            )}
           </div>
         </section>
-        <section className="panel compose-preview"><div className="panel-heading"><h2>Xem trước</h2></div><div className="panel-body"><div className="preview-paper"><div className="preview-head"><span className="fb-mark" style={{ width: 26, height: 26, fontSize: 15 }}>f</span><strong style={{ fontSize: 12 }}>văn tuấn</strong></div><div className="preview-body">{content || 'Nội dung bài viết sẽ hiển thị tại đây.'}</div></div></div></section>
-      </div>}
+      )}
 
-      {step === 2 && <section className="panel"><div className="panel-heading"><h2>Kiểm tra bài viết</h2></div><div className="panel-body" style={{ maxWidth: 760 }}>
-        <div className="preview-paper"><div className="preview-head"><span className="fb-mark" style={{ width: 26, height: 26, fontSize: 15 }}>f</span><strong style={{ fontSize: 12 }}>{channels.find((channel) => channel.id === selectedPageId)?.name || 'Fanpage'}</strong></div><div className="preview-body"><strong>{title || 'Bài viết Facebook'}</strong>{'\n\n'}{content || 'Chưa nhập nội dung.'}</div>{mediaPreviewUrl && <div className="preview-media">{uploadedMedia?.mediaType === 'video' ? <video src={mediaPreviewUrl} controls style={{ maxWidth: '100%', maxHeight: 220 }} /> : <img src={mediaPreviewUrl} alt="Xem trước media" style={{ maxWidth: '100%', maxHeight: 220, objectFit: 'contain' }} />}</div>}</div>
-        {notice && <div className="notice" style={{ marginTop: 14 }}>{notice}</div>}
-        {createdPostId && <Link href="/post-planner/list" className="button button-secondary" style={{ marginTop: 14 }}>Xem bài #{createdPostId} trong lịch đăng</Link>}
-      </div></section>}
-
+      {/* NÚT ĐIỀU HƯỚNG BƯỚC */}
       <div className="compose-footer">
         {notice && step !== 2 && <span className="notice">{notice}</span>}
-        <button className="button button-secondary" type="button" onClick={() => { setStep(Math.max(0, step - 1)); setNotice(''); }} disabled={step === 0}><ArrowLeft size={15} /> Quay lại</button>
-        {step < 2 && <button className="button button-primary" type="button" onClick={() => { if (step === 0 && !content.trim()) { setNotice('Nhập nội dung bài viết trước khi tiếp tục.'); return; } if (step === 1 && !selectedPageId) { setNotice('Chọn ít nhất một kênh đăng.'); return; } setNotice(''); setStep(step + 1); }} disabled={step === 1 && (channelLoading || !selectedPageId)}>Tiếp <ArrowRight size={15} /></button>}
-        {step === 2 && !createdPostId && <button className="button button-primary" type="button" onClick={createScheduledPost} disabled={saving || uploadingMedia}>{saving ? 'Đang lưu…' : 'Lên lịch bài'} <Send size={15} /></button>}
-        {step === 2 && createdPostId && <Link className="button button-secondary" href="/post-planner/list">Mở lịch đăng <ArrowRight size={15} /></Link>}
+        <button
+          className="button button-secondary"
+          type="button"
+          onClick={() => {
+            setStep(Math.max(0, step - 1));
+            setNotice('');
+          }}
+          disabled={step === 0}
+        >
+          <ArrowLeft size={15} /> Quay lại
+        </button>
+
+        {step < 2 && (
+          <button
+            className="button button-primary"
+            type="button"
+            onClick={() => {
+              if (step === 0 && !content.trim()) {
+                setNotice('Nhập nội dung bài viết trước khi tiếp tục.');
+                return;
+              }
+              if (step === 1 && selectedPageIds.length === 0) {
+                setNotice('Vui lòng chọn ít nhất một Fanpage đăng bài.');
+                return;
+              }
+              setNotice('');
+              setStep(step + 1);
+            }}
+            disabled={step === 1 && (channelLoading || selectedPageIds.length === 0)}
+          >
+            Tiếp tục <ArrowRight size={15} />
+          </button>
+        )}
+
+        {step === 2 && createdPostIds.length === 0 && (
+          <button
+            className="button button-primary"
+            type="button"
+            onClick={createScheduledPost}
+            disabled={saving || uploadingMedia || selectedPageIds.length === 0}
+          >
+            {saving ? 'Đang lưu lịch…' : `Lên lịch đăng (${selectedPageIds.length} Page)`} <Send size={15} />
+          </button>
+        )}
+
+        {step === 2 && createdPostIds.length > 0 && (
+          <Link className="button button-primary" href="/post-planner/list">
+            Mở lịch đăng <ArrowRight size={15} />
+          </Link>
+        )}
       </div>
+
+      {/* MODAL TRỢ LÝ AI VIẾT CONTENT */}
+      {showAiModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: 20
+          }}
+        >
+          <div
+            className="panel rgb-led-card"
+            style={{
+              width: '100%',
+              maxWidth: 580,
+              maxHeight: '90vh',
+              overflowY: 'auto'
+            }}
+          >
+            <div className="panel-heading">
+              <h2><Sparkles size={16} style={{ color: '#00f2fe', marginRight: 6, verticalAlign: 'middle' }} />Trợ lý AI viết bài Facebook</h2>
+              <button
+                className="button button-quiet"
+                type="button"
+                style={{ minHeight: 28, padding: '0 8px' }}
+                onClick={() => setShowAiModal(false)}
+              >
+                <X size={15} />
+              </button>
+            </div>
+            <div className="panel-body">
+              <label className="field-label">Chủ đề bài viết *</label>
+              <textarea
+                className="field"
+                placeholder="Ví dụ: Giới thiệu sản phẩm mới giảm giá 30%, hoặc câu chuyện truyền cảm hứng khởi nghiệp..."
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                rows={3}
+                style={{ width: '100%', resize: 'vertical' }}
+              />
+
+              <label className="field-label" style={{ marginTop: 12 }}>Phong cách viết</label>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                {['Bán hàng hấp dẫn', 'Kể chuyện viral', 'Tin tức giật tít', 'Chia sẻ kiến thức', 'Hài hước hóm hỉnh'].map((tone) => (
+                  <button
+                    key={tone}
+                    type="button"
+                    className={`button ${aiTone === tone ? 'button-primary' : 'button-secondary'}`}
+                    style={{ minHeight: 28, fontSize: 11.5, padding: '0 10px' }}
+                    onClick={() => setAiTone(tone)}
+                  >
+                    {tone}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                className="button button-primary"
+                type="button"
+                style={{ width: '100%', minHeight: 38 }}
+                onClick={handleGenerateAi}
+                disabled={aiGenerating || !aiPrompt.trim()}
+              >
+                <Sparkles size={15} /> {aiGenerating ? 'AI đang viết bài…' : 'Bắt đầu tạo nội dung'}
+              </button>
+
+              {aiError && (
+                <div className="notice" style={{ marginTop: 12, borderColor: 'rgba(239, 68, 68, 0.4)', color: '#ef4444' }}>
+                  {aiError}
+                </div>
+              )}
+
+              {aiResult && (
+                <div style={{ marginTop: 14 }}>
+                  <label className="field-label">Kết quả từ AI:</label>
+                  <div
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      border: '1px solid rgba(0, 242, 254, 0.25)',
+                      borderRadius: 8,
+                      padding: 12,
+                      whiteSpace: 'pre-wrap',
+                      fontSize: 13,
+                      lineHeight: 1.6,
+                      maxHeight: 220,
+                      overflowY: 'auto'
+                    }}
+                  >
+                    {aiResult}
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, marginTop: 10, justifyContent: 'flex-end' }}>
+                    <button className="button button-secondary" type="button" onClick={() => setAiResult('')}>
+                      Viết lại
+                    </button>
+                    <button className="button button-primary" type="button" onClick={applyAiResult}>
+                      <Check size={14} /> Dán vào bài viết
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </MainLayout>
   );
 }

@@ -42,9 +42,14 @@ async function ensureSchema() {
           facebook_user_id varchar(64) NOT NULL PRIMARY KEY,
           display_name nvarchar(120) NOT NULL,
           user_access_token_encrypted nvarchar(max) NOT NULL,
+          avatar_url nvarchar(1000) NULL,
           token_expires_at datetime2 NULL,
           updated_at datetime2 NOT NULL CONSTRAINT DF_FacebookUsers_updated_at DEFAULT SYSUTCDATETIME()
         );
+      END;
+      IF COL_LENGTH('dbo.FacebookUsers', 'avatar_url') IS NULL
+      BEGIN
+        ALTER TABLE dbo.FacebookUsers ADD avatar_url nvarchar(1000) NULL;
       END;
 
       IF OBJECT_ID(N'dbo.FacebookPages', N'U') IS NULL
@@ -81,19 +86,39 @@ async function saveFacebookUser(user, accessToken, expiresInSeconds) {
     ? new Date(Date.now() + expiresInSeconds * 1000)
     : null;
   const encryptedToken = encryptToken(accessToken);
+  const avatarUrl = user.picture?.data?.url || user.avatar || null;
   await pool.request()
     .input('userId', sql.VarChar(64), String(user.id))
     .input('name', sql.NVarChar(120), String(user.name || 'Facebook user').slice(0, 120))
     .input('token', sql.NVarChar(sql.MAX), encryptedToken)
+    .input('avatar', sql.NVarChar(1000), avatarUrl)
     .input('expiresAt', sql.DateTime2, expiresAt)
     .query(`
       UPDATE dbo.FacebookUsers
-      SET display_name=@name, user_access_token_encrypted=@token, token_expires_at=@expiresAt, updated_at=SYSUTCDATETIME()
+      SET display_name=@name, user_access_token_encrypted=@token, avatar_url=COALESCE(@avatar, avatar_url), token_expires_at=@expiresAt, updated_at=SYSUTCDATETIME()
       WHERE facebook_user_id=@userId;
       IF @@ROWCOUNT=0
-        INSERT INTO dbo.FacebookUsers (facebook_user_id, display_name, user_access_token_encrypted, token_expires_at)
-        VALUES (@userId, @name, @token, @expiresAt);
+        INSERT INTO dbo.FacebookUsers (facebook_user_id, display_name, user_access_token_encrypted, avatar_url, token_expires_at)
+        VALUES (@userId, @name, @token, @avatar, @expiresAt);
     `);
+}
+
+async function getStoredUserAvatar(userId) {
+  await ensureSchema();
+  const pool = await getPool();
+  const result = await pool.request()
+    .input('userId', sql.VarChar(64), String(userId))
+    .query('SELECT avatar_url FROM dbo.FacebookUsers WHERE facebook_user_id=@userId');
+  return result.recordset[0]?.avatar_url || null;
+}
+
+async function saveUserAvatar(userId, avatarUrl) {
+  await ensureSchema();
+  const pool = await getPool();
+  await pool.request()
+    .input('userId', sql.VarChar(64), String(userId))
+    .input('avatar', sql.NVarChar(1000), avatarUrl)
+    .query('UPDATE dbo.FacebookUsers SET avatar_url=@avatar WHERE facebook_user_id=@userId');
 }
 
 async function getStoredUserAccessToken(userId) {
@@ -188,16 +213,76 @@ async function getStoredPageAccessToken(pageId) {
     .input('pageId', sql.VarChar(64), String(pageId))
     .query('SELECT TOP 1 page_access_token_encrypted FROM dbo.FacebookPages WHERE page_id=@pageId ORDER BY updated_at DESC');
   const encrypted = result.recordset[0]?.page_access_token_encrypted;
-  return encrypted ? decryptToken(encrypted) : null;
+  if (!encrypted) return null;
+  try {
+    return decryptToken(encrypted);
+  } catch (decryptErr) {
+    console.error(`[Token Decrypt Error] Không thể giải mã token cho Fanpage ${pageId}: ${decryptErr.message}`);
+    throw new Error(`Token của Fanpage ${pageId} không giải mã được do SESSION_SECRET thay đổi. Vui lòng vào trang Kênh bấm 'Đồng bộ từ Facebook' hoặc cập nhật lại Page Token.`);
+  }
+}
+
+
+async function saveManualFacebookPage(userId, pageId, pageToken) {
+  await ensureSchema();
+  const version = process.env.FB_GRAPH_VERSION || 'v19.0';
+  const response = await axios.get(`https://graph.facebook.com/${version}/${pageId}`, {
+    params: {
+      fields: 'id,name,category,link',
+      access_token: pageToken
+    },
+    timeout: 15000
+  });
+  const pageData = response.data;
+  const pool = await getPool();
+  await pool.request()
+    .input('userId', sql.VarChar(64), String(userId))
+    .input('pageId', sql.VarChar(64), String(pageData.id || pageId))
+    .input('pageName', sql.NVarChar(200), String(pageData.name || 'Facebook Page').slice(0, 200))
+    .input('category', sql.NVarChar(200), pageData.category ? String(pageData.category).slice(0, 200) : null)
+    .input('link', sql.NVarChar(500), pageData.link ? String(pageData.link).slice(0, 500) : null)
+    .input('pageToken', sql.NVarChar(sql.MAX), encryptToken(pageToken))
+    .input('tasks', sql.NVarChar(sql.MAX), JSON.stringify(['MANAGE', 'CREATE_CONTENT']))
+    .query(`
+      UPDATE dbo.FacebookPages
+      SET page_name=@pageName, category=@category, page_link=@link, page_access_token_encrypted=@pageToken, tasks_json=@tasks, updated_at=SYSUTCDATETIME()
+      WHERE facebook_user_id=@userId AND page_id=@pageId;
+      IF @@ROWCOUNT = 0
+        INSERT INTO dbo.FacebookPages (facebook_user_id, page_id, page_name, category, page_link, page_access_token_encrypted, tasks_json, updated_at)
+        VALUES (@userId, @pageId, @pageName, @category, @link, @pageToken, @tasks, SYSUTCDATETIME());
+    `);
+  return {
+    id: String(pageData.id || pageId),
+    name: pageData.name || 'Facebook Page',
+    category: pageData.category || 'Facebook Page',
+    link: pageData.link || null,
+    platform: 'facebook',
+    connected: true,
+    tasks: ['MANAGE', 'CREATE_CONTENT']
+  };
+}
+
+async function disconnectFacebookPage(userId, pageId) {
+  await ensureSchema();
+  const pool = await getPool();
+  await pool.request()
+    .input('userId', sql.VarChar(64), String(userId))
+    .input('pageId', sql.VarChar(64), String(pageId))
+    .query('DELETE FROM dbo.FacebookPages WHERE facebook_user_id=@userId AND page_id=@pageId');
+  return true;
 }
 
 module.exports = {
   decryptToken,
+  disconnectFacebookPage,
   encryptToken,
   ensureSchema,
   getConnectedPages,
   getStoredPageAccessToken,
   getStoredUserAccessToken,
+  getStoredUserAvatar,
   saveFacebookUser,
+  saveManualFacebookPage,
+  saveUserAvatar,
   syncFacebookPages
 };
