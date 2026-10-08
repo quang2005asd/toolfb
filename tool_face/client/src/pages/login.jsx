@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
-import { LogIn, UserPlus, ShieldCheck, KeyRound, Loader2, ArrowRight, User, Lock, ChevronDown, ChevronUp } from 'lucide-react';
+import { LogIn, UserPlus, ShieldCheck, KeyRound, Loader2, ArrowRight, User, Lock, ChevronDown, ChevronUp, Sun, Moon } from 'lucide-react';
 import authApi from '../services/authApi';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 export default function LoginPage() {
   const router = useRouter();
   const { setUser } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [activeTab, setActiveTab] = useState('login'); // 'login' | 'register'
   
   // Login form state
@@ -135,6 +137,18 @@ export default function LoginPage() {
 
   return (
     <main className="login-shell">
+      <div style={{ position: 'fixed', top: 20, right: 24, zIndex: 100 }}>
+        <button
+          className="theme-toggle-btn"
+          type="button"
+          onClick={toggleTheme}
+          title={theme === 'light' ? 'Chuyển sang Dark Mode' : 'Chuyển sang Tone Trắng'}
+          aria-label="Đổi giao diện Sáng / Tối"
+        >
+          {theme === 'light' ? <Moon size={16} style={{ color: '#475569' }} /> : <Sun size={16} style={{ color: '#fbbf24' }} />}
+          <span className="theme-toggle-text">{theme === 'light' ? 'Giao diện Tối' : 'Tone Trắng'}</span>
+        </button>
+      </div>
       <section className="login-card">
         <div className="login-brand">
           <Image src="/brand-logo.png" alt="Logo" width={52} height={52} priority />

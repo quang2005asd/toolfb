@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import useAuth from '../../hooks/useAuth';
+import { useTheme } from '../../context/ThemeContext';
 import {
   BarChart3,
   Bell,
@@ -12,9 +13,11 @@ import {
   Home,
   LayoutDashboard,
   List,
+  Moon,
   PenLine,
   Settings,
   Sparkles,
+  Sun,
   UsersRound
 } from 'lucide-react';
 
@@ -31,6 +34,7 @@ const navigation = [
 export default function MainLayout({ children, title = 'Không gian làm việc', actions }) {
   const router = useRouter();
   const { user, loading, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   if (loading) {
     return (
@@ -129,6 +133,16 @@ export default function MainLayout({ children, title = 'Không gian làm việc'
       <div className="workspace-main">
         <header className="topbar">
           <div className="topbar-spacer" />
+          <button
+            className="theme-toggle-btn"
+            type="button"
+            onClick={toggleTheme}
+            title={theme === 'light' ? 'Chuyển sang Dark Mode Huyền Bí' : 'Chuyển sang Tone Trắng Sang Trọng'}
+            aria-label="Đổi giao diện Sáng / Tối"
+          >
+            {theme === 'light' ? <Moon size={17} style={{ color: '#475569' }} /> : <Sun size={17} style={{ color: '#fbbf24' }} />}
+            <span className="theme-toggle-text">{theme === 'light' ? 'Giao diện Tối' : 'Tone Trắng'}</span>
+          </button>
           <button className="icon-button" type="button" aria-label="Trợ giúp"><CircleHelp size={19} /></button>
           <button className="icon-button" type="button" aria-label="Thông báo"><Bell size={19} /></button>
           <button className="account-chip" type="button" onClick={logout} title={`Facebook ID: ${user.id} · Đăng xuất`}>
