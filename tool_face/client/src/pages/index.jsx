@@ -2,477 +2,451 @@ import Link from 'next/link';
 import Image from 'next/image';
 import {
   ArrowRight,
-  CalendarRange,
   Globe2,
-  Layers3,
-  PenSquare,
   Sparkles,
   Zap,
   Shield,
   Users,
-  ChevronRight,
-  Play,
   CheckCircle2,
   FileSpreadsheet,
   MessageSquare,
   Clock,
-  Cpu,
   LayoutDashboard,
-  Video,
   Film,
+  TrendingUp,
+  Layers,
+  Calendar,
+  Check,
+  Cpu,
+  ChevronRight,
   Send,
   MessageCircle,
   PhoneCall,
-  Check
+  Flame,
+  CheckCheck
 } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 
 const workflowSteps = [
   {
     step: '01',
-    title: 'Chọn Fanpage đích',
-    desc: 'Chọn 1 hoặc kết nối đồng thời nhiều Fanpage để xuất bản nội dung đồng bộ.',
-    image: '/step-1-multichannel.jpg',
+    title: 'Kết nối Fanpage & Nick Facebook',
+    desc: 'Liên kết không giới hạn Fanpage qua Token dài hạn hoặc đồng bộ tự động. Quản lý và phân nhóm kênh chuyên nghiệp.',
     tag: 'ĐA KÊNH'
   },
   {
     step: '02',
-    title: 'Sáng tạo bài viết',
-    desc: 'Tự viết, dùng AI Studio sinh caption tự động hoặc tải hàng trăm bài từ file Excel.',
-    image: '/step-2-ai.jpg',
+    title: 'Sáng tạo nội dung với AI LPU',
+    desc: 'Trợ lý AI tự động viết caption viral, tạo hashtag chuẩn SEO, điều chỉnh giọng văn và vẽ ảnh bản quyền bằng AI.',
     tag: 'AI STUDIO'
   },
   {
     step: '03',
-    title: 'Media & Seeding',
-    desc: 'Đính kèm ảnh, video và thiết lập sẵn bình luận seeding mồi tương tác tự động.',
-    image: '/step-3-seeding.jpg',
-    tag: 'SEEDING'
+    title: 'Đính kèm Media & Seeding mồi',
+    desc: 'Hỗ trợ trọn vẹn Facebook Reels 9:16, Story 24h, Album ảnh và cài đặt sẵn bình luận mồi tự động đẩy tương tác.',
+    tag: 'TỰ ĐỘNG HOÁ'
   },
   {
     step: '04',
-    title: 'Hẹn giờ & Xuất bản',
-    desc: 'Đăng ngay hoặc lên lịch theo phút. Hệ thống BullMQ xếp hàng xử lý ngầm bền bỉ.',
-    image: '/step-4-scheduler.jpg',
-    tag: 'TỰ ĐỘNG 24/7'
+    title: 'Lên lịch & Xuất bản 24/7',
+    desc: 'Hẹn giờ chính xác từng phút. Hàng đợi BullMQ và Redis ngầm xuất bản đều đặn ngay cả khi tắt máy tính.',
+    tag: 'BULLMQ 24/7'
   }
 ];
 
 const contacts = [
   {
     type: 'fb',
-    name: 'Facebook',
+    name: 'Facebook Cá Nhân',
     handle: 'Nguyễn Việt Quang',
-    action: 'Liên hệ trực tiếp',
+    action: 'Nhắn tin Messenger',
     url: 'https://web.facebook.com/nguyen.viet.quang.751589',
-    image: '/contact-fb.jpg'
+    color: '#1877f2',
+    icon: Globe2
   },
   {
     type: 'tiktok',
-    name: 'TikTok',
+    name: 'Kênh TikTok Official',
     handle: '@nvtq.27',
-    action: 'Xem Video Review',
+    action: 'Xem Video Hướng Dẫn',
     url: 'https://www.tiktok.com/@nvtq.27',
-    image: '/contact-tiktok.jpg'
+    color: '#000000',
+    icon: Film
   },
   {
     type: 'tele',
-    name: 'Telegram',
+    name: 'Cộng Đồng Telegram',
     handle: '@emquang_toolface',
-    action: 'Tham gia kênh hỗ trợ',
+    action: 'Vào Nhóm Hỗ Trợ',
     url: 'https://t.me',
-    image: '/contact-tele.jpg'
+    color: '#229ed9',
+    icon: Send
   },
   {
     type: 'zalo',
-    name: 'Zalo Hotline',
-    handle: 'Hỗ trợ kỹ thuật 24/7',
-    action: 'Chat Zalo Official',
+    name: 'Hotline / Zalo Hỗ Trợ',
+    handle: '0336.672.005 (24/7)',
+    action: 'Chat Zalo Kỹ Thuật',
     url: 'https://zalo.me/0336672005',
-    image: '/contact-zalo.jpg'
+    color: '#0068ff',
+    icon: MessageCircle
   }
 ];
 
 const stats = [
-  { value: '100+', label: 'Fanpage', suffix: 'kết nối an toàn' },
-  { value: '2.4K+', label: 'Bài/tuần', suffix: 'đăng tự động' },
-  { value: '100%', label: 'Lưu trữ AI', suffix: 'nhiều phiên chat' },
-  { value: '24/7', label: 'Bền bỉ', suffix: 'BullMQ Queue' }
+  { value: '100+', label: 'Fanpage Quản lý', desc: 'Đồng bộ đa tài khoản an toàn' },
+  { value: '10,000+', label: 'Bài đã xuất bản', desc: 'Tự động 24/7 qua hàng đợi' },
+  { value: '99.9%', label: 'Tỉ lệ thành công', desc: 'Cơ chế tự động thử lại khi lỗi' },
+  { value: '0.5s', label: 'Tốc độ phản hồi AI', desc: 'Tích hợp chip AI LPU siêu tốc' }
 ];
-
-const marqueeText = '⟡ ĐĂNG BÀI FANPAGE TỰ ĐỘNG ⟡ LÊN LỊCH THÔNG MINH ⟡ AI STUDIO LPU ⟡ ĐĂNG HÀNG LOẠT QUA EXCEL ⟡ SEEDING BÌNH LUẬN TỰ ĐỘNG ⟡ ĐỒNG BỘ ĐA FANPAGE ⟡ REDIS 24/7 ⟡';
 
 export default function LandingPage() {
   const { user } = useAuth();
 
   return (
-    <div className="landing">
-      {/* ── Header: Logo + Account / CTA (Đã gỡ bỏ menu links thừa) ── */}
-      <header className="l-header">
-        <div className="l-brand">
-          <div className="l-brand-logo-container">
-            <div className="l-brand-logo-inner">
-              <Image src="/brand-logo.png" alt="Logo" width={54} height={54} priority style={{ objectFit: 'cover' }} />
+    <div className="landing-modern">
+      {/* ── HEADER NAVIGATION ── */}
+      <header className="lm-header">
+        <div className="lm-header-inner">
+          <div className="lm-brand">
+            <div className="lm-brand-mark">
+              <Image src="/brand-logo.png" alt="Logo" width={42} height={42} priority style={{ borderRadius: 10, objectFit: 'cover' }} />
+            </div>
+            <div>
+              <div className="lm-brand-title">Em Quang Tool Face</div>
+              <div className="lm-brand-subtitle">Facebook Automation Suite</div>
             </div>
           </div>
-          <div>
-            <div className="l-brand-name">Em Quang Tool Face</div>
-            <div className="l-brand-tag">Auto Post Fanpage</div>
-          </div>
-        </div>
 
-        <nav className="l-nav">
-          {user ? (
-            <div className="l-user-nav-group">
-              <Link href="/dashboard" prefetch={true} className="l-user-badge-chip" title="Trang làm việc cá nhân">
-                {user.avatar ? (
-                  <img
-                    src={user.avatar}
-                    alt={user.name}
-                    className="l-user-avatar-img"
-                    referrerPolicy="no-referrer"
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                  />
-                ) : (
-                  <span className="l-user-avatar-text">{user.name?.charAt(0)?.toUpperCase() || 'U'}</span>
-                )}
-                <div className="l-user-info-text">
-                  <span className="l-user-name">{user.name}</span>
-                  <span className="l-user-status">● Đang đăng nhập</span>
-                </div>
-              </Link>
-              <Link href="/dashboard" prefetch={true} className="l-cta l-cta-dashboard">
-                <LayoutDashboard size={16} /> Vào Workspace
-              </Link>
-            </div>
-          ) : (
-            <Link href="/login" prefetch={true} className="l-cta">
-              <Globe2 size={16} /> Đăng nhập Facebook
-            </Link>
-          )}
-        </nav>
+          <nav className="lm-nav">
+            {user ? (
+              <div className="lm-user-group">
+                <Link href="/dashboard" className="lm-user-pill" title="Workspace cá nhân">
+                  {user.avatar ? (
+                    <img src={user.avatar} alt={user.name} className="lm-user-avatar" referrerPolicy="no-referrer" />
+                  ) : (
+                    <span className="lm-user-fallback">{user.name?.charAt(0)?.toUpperCase() || 'U'}</span>
+                  )}
+                  <div className="lm-user-meta">
+                    <span className="lm-user-name">{user.name}</span>
+                    <span className="lm-user-status">● Đang hoạt động</span>
+                  </div>
+                </Link>
+                <Link href="/dashboard" className="lm-btn lm-btn-primary">
+                  <LayoutDashboard size={15} /> Vào Workspace
+                </Link>
+              </div>
+            ) : (
+              <div className="lm-auth-actions">
+                <Link href="/login" className="lm-btn lm-btn-outline">
+                  Đăng nhập
+                </Link>
+                <Link href="/login" className="lm-btn lm-btn-primary">
+                  <Globe2 size={15} /> Bắt đầu ngay
+                </Link>
+              </div>
+            )}
+          </nav>
+        </div>
       </header>
 
-      {/* ── Marquee LED ── */}
-      <div className="marquee-strip">
-        <div className="marquee-track">
-          <span className="marquee-text">{marqueeText}{marqueeText}</span>
+      {/* ── NOTICE TICKER (TINH TẾ & THANH LỊCH) ── */}
+      <div className="lm-ticker">
+        <div className="lm-ticker-inner">
+          <span className="lm-ticker-badge">MỚI NHẤT</span>
+          <span className="lm-ticker-text">
+            Hỗ trợ toàn diện Facebook Graph API v22.0 · Đăng Reels 9:16 · Story 24h · Album ảnh · AI LPU Studio thế hệ mới
+          </span>
         </div>
       </div>
 
-      {/* ── Hero ── */}
-      <section className="hero">
-        <div>
-          <div className="hero-badge">
-            <Sparkles size={14} /> Nền tảng tự động hoá Fanpage toàn diện
+      {/* ── HERO SECTION ── */}
+      <section className="lm-hero">
+        <div className="lm-hero-content">
+          <div className="lm-badge">
+            <Sparkles size={14} className="lm-badge-icon" />
+            <span>Hệ sinh thái Quản lý & Lên lịch Fanpage Tự Động 2026</span>
           </div>
-          <h1>
-            Quản lý Fanpage<br />
-            <span className="hero-gradient">thông minh với AI 3D.</span>
+
+          <h1 className="lm-hero-title">
+            Tự động hoá Fanpage<br />
+            <span className="lm-hero-gradient">Đơn giản. Sang trọng. Bền bỉ.</span>
           </h1>
-          <p className="hero-desc">
-            Sáng tạo nội dung với AI Studio, tải hàng loạt bài viết từ Excel, hẹn giờ chính xác từng phút, seeding comment tự động và quản lý đa Fanpage từ một nơi duy nhất.
+
+          <p className="lm-hero-desc">
+            Nền tảng toàn diện giúp bạn quản lý hàng chục Fanpage, sáng tạo nội dung tự động bằng AI,
+            lên lịch đăng bài hàng trăm bài từ file Excel và tự động đẩy tương tác bằng bình luận mồi 24/7.
           </p>
 
-          {user ? (
-            <div className="hero-actions">
-              <Link href="/dashboard" prefetch={true} className="hero-primary">
-                Vào Workspace làm việc <ArrowRight size={18} />
-              </Link>
-              <Link href="/ai-studio" prefetch={true} className="hero-secondary">
-                <Sparkles size={16} /> Mở AI Studio
-              </Link>
-            </div>
-          ) : (
-            <div className="hero-actions">
-              <Link href="/login" prefetch={true} className="hero-primary">
-                Bắt đầu miễn phí <ArrowRight size={18} />
-              </Link>
-              <Link href="/login" prefetch={true} className="hero-secondary">
-                <Play size={16} /> Trải nghiệm ngay
-              </Link>
-            </div>
-          )}
+          <div className="lm-hero-actions">
+            {user ? (
+              <>
+                <Link href="/dashboard" className="lm-btn lm-btn-lg lm-btn-primary">
+                  Vào Workspace làm việc <ArrowRight size={17} />
+                </Link>
+                <Link href="/post-planner/compose" className="lm-btn lm-btn-lg lm-btn-secondary">
+                  <Zap size={16} /> Soạn bài viết mới
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="lm-btn lm-btn-lg lm-btn-primary">
+                  Bắt đầu sử dụng ngay <ArrowRight size={17} />
+                </Link>
+                <Link href="/login" className="lm-btn lm-btn-lg lm-btn-secondary">
+                  Đăng nhập Facebook
+                </Link>
+              </>
+            )}
+          </div>
 
-          <div className="trust-bar">
-            <div className="trust-item"><span className="trust-dot" /> Miễn phí sử dụng</div>
-            <div className="trust-item"><span className="trust-dot" /> Token AES-256 an toàn</div>
-            <div className="trust-item"><span className="trust-dot" /> AI chip LPU siêu tốc</div>
+          <div className="lm-hero-trust">
+            <div className="lm-trust-item"><CheckCircle2 size={14} color="#059669" /> Miễn phí sử dụng</div>
+            <div className="lm-trust-item"><CheckCircle2 size={14} color="#059669" /> Mã hoá AES-256 an toàn</div>
+            <div className="lm-trust-item"><CheckCircle2 size={14} color="#059669" /> Chạy ngầm 24/7 với BullMQ</div>
           </div>
         </div>
 
-        <div className="hero-visual">
-          <div className="hero-float hero-float-1">
-            <span className="float-dot green" />
-            <span>AI Studio đã sẵn sàng</span>
-          </div>
-          <div className="hero-float hero-float-2">
-            <span className="float-dot blue" />
-            <span>Hàng đợi BullMQ 24/7</span>
-          </div>
+        {/* ── LIVE INTERACTIVE MOCKUP SHOWCASE (THAY THẾ ẢNH ĐEN CŨ) ── */}
+        <div className="lm-hero-preview">
+          <div className="lm-preview-window">
+            <div className="lm-preview-topbar">
+              <div className="lm-window-dots">
+                <span className="dot red" />
+                <span className="dot yellow" />
+                <span className="dot green" />
+              </div>
+              <div className="lm-window-title">
+                <Globe2 size={13} /> app.toolface.local / workspace / overview
+              </div>
+              <div className="lm-window-status">
+                <span className="lm-pulse-dot" /> Sẵn sàng
+              </div>
+            </div>
 
-          <div className="rgb-card-border">
-            <div className="hero-card-3d" style={{ padding: '16px' }}>
-              {/* Window Header */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', padding: '0 6px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ef4444' }} />
-                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#f59e0b' }} />
-                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#10b981' }} />
-                  <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '6px', fontWeight: 600 }}>
-                    Facebook Automation Hub • Meta Graph API
-                  </span>
+            {/* Inner Dashboard Simulation */}
+            <div className="lm-preview-body">
+              {/* Top stats in preview */}
+              <div className="lm-pv-stats-row">
+                <div className="lm-pv-stat-card">
+                  <span className="lm-pv-stat-label">Fanpage Kết Nối</span>
+                  <strong className="lm-pv-stat-num">12 Trang</strong>
+                  <span className="lm-pv-stat-sub text-green">100% Token Sống</span>
                 </div>
-                <span style={{ fontSize: '10.5px', background: 'rgba(0, 242, 254, 0.12)', color: '#00f2fe', padding: '2px 8px', borderRadius: 99, fontWeight: 700, border: '1px solid rgba(0, 242, 254, 0.3)' }}>
-                  ● LIVE
-                </span>
+                <div className="lm-pv-stat-card">
+                  <span className="lm-pv-stat-label">Hàng Đợi Xuất Bản</span>
+                  <strong className="lm-pv-stat-num">48 Bài</strong>
+                  <span className="lm-pv-stat-sub text-blue">Hẹn giờ chính xác</span>
+                </div>
+                <div className="lm-pv-stat-card">
+                  <span className="lm-pv-stat-label">Trợ Lý AI Studio</span>
+                  <strong className="lm-pv-stat-num">Hoạt động</strong>
+                  <span className="lm-pv-stat-sub text-purple">Chip LPU siêu tốc</span>
+                </div>
               </div>
 
-              {/* Showcase Image */}
-              <div style={{ position: 'relative', borderRadius: '16px', overflow: 'hidden', border: '1px solid rgba(255, 255, 255, 0.12)', background: '#070a14', boxShadow: '0 20px 50px rgba(0,0,0,0.6)' }}>
-                <Image
-                  src="/hero-dashboard.jpg"
-                  alt="Facebook Automation Hub Dashboard"
-                  width={720}
-                  height={540}
-                  priority
-                  style={{ width: '100%', height: 'auto', display: 'block', transform: 'scale(1.01)', transition: 'transform 0.4s ease' }}
-                />
+              {/* Sample Post Item */}
+              <div className="lm-pv-post-item">
+                <div className="lm-pv-post-head">
+                  <div className="lm-pv-avatar">f</div>
+                  <div>
+                    <div className="lm-pv-name">Thời Trang Cao Cấp Hà Nội <span className="lm-pv-badge">Đã lên lịch</span></div>
+                    <div className="lm-pv-time"><Clock size={11} /> Xuất bản lúc 19:30 hôm nay · Facebook Reels</div>
+                  </div>
+                </div>
+                <div className="lm-pv-content">
+                  🔥 BST Thu Đông 2026 chính thức ra mắt! Trải nghiệm phong cách tinh giản, sang trọng vượt thời gian với chất liệu dạ lông cừu nguyên bản... #Fashion2026 #LuxuryStyle
+                </div>
+                <div className="lm-pv-tags">
+                  <span className="lm-pv-tag">🎬 Video Reels 9:16</span>
+                  <span className="lm-pv-tag">💬 3 Comment Mồi</span>
+                  <span className="lm-pv-tag">⚡ AI Caption</span>
+                </div>
               </div>
 
-              {/* Quick Feature Badges below image */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 12 }}>
-                <div style={{ background: 'rgba(0, 242, 254, 0.06)', border: '1px solid rgba(0, 242, 254, 0.2)', borderRadius: 10, padding: '8px 10px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 800, color: '#38bdf8' }}>⚡ Đa kênh</div>
-                  <div style={{ fontSize: '10.5px', color: 'var(--muted)', marginTop: 2 }}>Đăng 50+ Page</div>
-                </div>
-                <div style={{ background: 'rgba(16, 185, 129, 0.06)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: 10, padding: '8px 10px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 800, color: '#34d399' }}>✨ AI Studio</div>
-                  <div style={{ fontSize: '10.5px', color: 'var(--muted)', marginTop: 2 }}>Caption viral</div>
-                </div>
-                <div style={{ background: 'rgba(168, 85, 247, 0.06)', border: '1px solid rgba(168, 85, 247, 0.2)', borderRadius: 10, padding: '8px 10px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 800, color: '#c084fc' }}>🕒 BullMQ</div>
-                  <div style={{ fontSize: '10.5px', color: 'var(--muted)', marginTop: 2 }}>Hẹn giờ chuẩn</div>
-                </div>
+              {/* Interactive Module Links */}
+              <div className="lm-pv-quick-grid">
+                <Link href="/post-planner/compose" className="lm-pv-tile">
+                  <Sparkles size={16} className="text-blue" />
+                  <span>Viết bài AI</span>
+                </Link>
+                <Link href="/post-planner/bulk-upload" className="lm-pv-tile">
+                  <FileSpreadsheet size={16} className="text-amber" />
+                  <span>Tải Excel</span>
+                </Link>
+                <Link href="/post-planner/calendar" className="lm-pv-tile">
+                  <Calendar size={16} className="text-emerald" />
+                  <span>Lịch tháng</span>
+                </Link>
+                <Link href="/channels" className="lm-pv-tile">
+                  <Users size={16} className="text-purple" />
+                  <span>Quản lý Kênh</span>
+                </Link>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── Stats ── */}
-      <section className="stats-strip">
-        <div className="stats-grid">
-          {stats.map(({ value, label, suffix }) => (
-            <div className="stat-card" key={label}>
-              <div className="stat-value">{value}</div>
-              <div className="stat-label">{label}</div>
-              <div className="stat-suffix">{suffix}</div>
+      {/* ── STATS NUMBERS BAR ── */}
+      <section className="lm-stats-section">
+        <div className="lm-stats-grid">
+          {stats.map((s, idx) => (
+            <div key={idx} className="lm-stat-item">
+              <div className="lm-stat-value">{s.value}</div>
+              <div className="lm-stat-label">{s.label}</div>
+              <div className="lm-stat-desc">{s.desc}</div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ── 3D QUY TRÌNH TẠO BÀI ĐĂNG (WORKFLOW MỚI) ── */}
-      <section className="workflow-section">
-        <div className="section-header">
-          <div className="section-label"><Clock size={14} /> Quy trình chuẩn</div>
-          <h2>4 Bước tạo & xuất bản bài viết tự động</h2>
-          <p>Tối ưu từng thao tác, giúp bạn lên lịch hàng tuần nội dung chỉ trong vài phút.</p>
+      {/* ── CORE PILLARS & FEATURES (TINH GỌN & THỰC DỤNG) ── */}
+      <section className="lm-features-section">
+        <div className="lm-section-head">
+          <span className="lm-section-pill"><Layers size={13} /> Module Tính Năng</span>
+          <h2 className="lm-section-title">Giải pháp toàn diện cho mọi Fanpage</h2>
+          <p className="lm-section-desc">
+            Không còn thao tác thủ công rườm rà. Tất cả công cụ bạn cần đều được tích hợp trong một bảng điều khiển duy nhất.
+          </p>
         </div>
 
-        <div className="workflow-grid-3d">
-          {workflowSteps.map((ws) => (
-            <div className="workflow-card-3d" key={ws.step}>
-              <div className="workflow-step-badge">BƯỚC {ws.step} • {ws.tag}</div>
-              <div
-                style={{
-                  width: 68,
-                  height: 68,
-                  borderRadius: 18,
-                  overflow: 'hidden',
-                  marginBottom: 18,
-                  border: '1.5px solid rgba(0, 242, 254, 0.25)',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5), 0 0 16px rgba(0, 242, 254, 0.15)',
-                  flexShrink: 0
-                }}
+        <div className="lm-features-grid">
+          {/* Feature 1: AI Content Studio */}
+          <div className="lm-feature-card">
+            <div className="lm-feature-icon icon-blue">
+              <Sparkles size={22} />
+            </div>
+            <h3 className="lm-feature-title">Trợ lý AI Studio Đột Phá</h3>
+            <p className="lm-feature-text">
+              Tích hợp các mô hình ngôn ngữ lớn mạnh mẽ nhất (OpenAI, Gemini, DeepSeek). Tự động sinh nội dung viral, hashtag xu hướng, tối ưu giọng văn theo thương hiệu và lưu trữ lịch sử hội thoại dài hạn.
+            </p>
+            <ul className="lm-feature-bullets">
+              <li><Check size={14} /> Tự động tạo caption theo ngành hàng</li>
+              <li><Check size={14} /> Chuyển đổi giọng văn: Hài hước, chuyên gia, bán hàng</li>
+              <li><Check size={14} /> Tích hợp DALL-E & Flux vẽ ảnh minh hoạ kèm watermark</li>
+            </ul>
+            <Link href="/ai-studio" className="lm-card-link">Khám phá AI Studio →</Link>
+          </div>
+
+          {/* Feature 2: Bulk Upload Excel */}
+          <div className="lm-feature-card">
+            <div className="lm-feature-icon icon-amber">
+              <FileSpreadsheet size={22} />
+            </div>
+            <h3 className="lm-feature-title">Lên lịch hàng loạt qua Excel</h3>
+            <p className="lm-feature-text">
+              Chỉ cần 1 file Excel (.xlsx), bạn có thể lên lịch hàng trăm bài viết cho cả tháng chỉ trong 30 giây. Hệ thống tự động bóc tách tiêu đề, nội dung, đường dẫn media, thời gian và Fanpage chỉ định.
+            </p>
+            <ul className="lm-feature-bullets">
+              <li><Check size={14} /> Hỗ trợ file mẫu chuẩn, tải về và dùng ngay</li>
+              <li><Check size={14} /> Tự động dàn đều khung giờ vàng đăng bài</li>
+              <li><Check size={14} /> Báo cáo chi tiết từng dòng dữ liệu hợp lệ / lỗi</li>
+            </ul>
+            <Link href="/post-planner/bulk-upload" className="lm-card-link">Thử nghiệm Tải Excel →</Link>
+          </div>
+
+          {/* Feature 3: Seeding Comment */}
+          <div className="lm-feature-card">
+            <div className="lm-feature-icon icon-emerald">
+              <MessageSquare size={22} />
+            </div>
+            <h3 className="lm-feature-title">Bình luận Seeding Tự Động</h3>
+            <p className="lm-feature-text">
+              Tự động ghim bình luận mồi ngay sau khi bài vừa xuất bản. Kích thích tương tác tự nhiên của người đọc, đặt link mua hàng dưới bình luận để bài viết không bị bóp tương tác.
+            </p>
+            <ul className="lm-feature-bullets">
+              <li><Check size={14} /> Hỗ trợ cài đặt lên tới 5 tầng bình luận mồi</li>
+              <li><Check size={14} /> Độ trễ hẹn giờ linh hoạt từ 0 đến 60 phút</li>
+              <li><Check size={14} /> Giữ bài viết sạch sẽ, tăng tỉ lệ chuyển đổi</li>
+            </ul>
+            <Link href="/post-planner/compose" className="lm-card-link">Cấu hình Seeding →</Link>
+          </div>
+
+          {/* Feature 4: Đa định dạng Reels, Story, Album */}
+          <div className="lm-feature-card">
+            <div className="lm-feature-icon icon-purple">
+              <Film size={22} />
+            </div>
+            <h3 className="lm-feature-title">Xuất bản Đa Định Dạng Toàn Diện</h3>
+            <p className="lm-feature-text">
+              Bắt trọn mọi xu hướng thuật toán Facebook: Video ngắn Reels 9:16 để tiếp cận khách hàng mới, tin Story 24h giữ chân follower thân thiết và bài viết dạng Album ảnh chuyên nghiệp.
+            </p>
+            <ul className="lm-feature-bullets">
+              <li><Check size={14} /> Facebook Reels 9:16 tối ưu độ phân giải cao</li>
+              <li><Check size={14} /> Facebook Story 24h tự động biến mất</li>
+              <li><Check size={14} /> Album nhiều ảnh tự động dàn khung bắt mắt</li>
+            </ul>
+            <Link href="/post-planner/compose" className="lm-card-link">Trải nghiệm xuất bản →</Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── WORKFLOW PROCESS (QUY TRÌNH 4 BƯỚC) ── */}
+      <section className="lm-workflow-section">
+        <div className="lm-section-head">
+          <span className="lm-section-pill"><Clock size={13} /> Quy Trình Tinh Gọn</span>
+          <h2 className="lm-section-title">Vận hành chuẩn chỉ trong 4 bước</h2>
+          <p className="lm-section-desc">
+            Quy trình làm việc được tối ưu hóa để bạn tiết kiệm 90% thời gian quản lý Fanpage mỗi ngày.
+          </p>
+        </div>
+
+        <div className="lm-workflow-grid">
+          {workflowSteps.map((wf, idx) => (
+            <div key={idx} className="lm-workflow-card">
+              <div className="lm-wf-step-num">{wf.step}</div>
+              <span className="lm-wf-tag">{wf.tag}</span>
+              <h4 className="lm-wf-title">{wf.title}</h4>
+              <p className="lm-wf-desc">{wf.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── OFFICIAL CONTACT CHANNELS (KÊNH HỖ TRỢ TRỰC TIẾP) ── */}
+      <section className="lm-contact-section">
+        <div className="lm-section-head">
+          <span className="lm-section-pill"><Globe2 size={13} /> Hỗ Trợ Kỹ Thuật 24/7</span>
+          <h2 className="lm-section-title">Kênh liên hệ chính thức</h2>
+          <p className="lm-section-desc">
+            Cần giải đáp thắc mắc, yêu cầu tính năng mới hoặc hỗ trợ cài đặt? Kết nối với tác giả qua các kênh bên dưới.
+          </p>
+        </div>
+
+        <div className="lm-contact-grid">
+          {contacts.map((c, idx) => {
+            const Icon = c.icon;
+            return (
+              <a
+                key={idx}
+                href={c.url}
+                target="_blank"
+                rel="noreferrer"
+                className="lm-contact-card"
               >
-                <Image
-                  src={ws.image}
-                  alt={ws.title}
-                  width={68}
-                  height={68}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              </div>
-              <h3 className="workflow-card-title">{ws.title}</h3>
-              <p className="workflow-card-desc">{ws.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── 3D BENTO SHOWCASE (CÔNG NGHỆ TỐI ƯU GỌN GÀNG) ── */}
-      <section className="bento-section">
-        <div className="section-header">
-          <div className="section-label"><Layers3 size={14} /> Tính năng cốt lõi</div>
-          <h2>Công nghệ hiện đại cho Fanpage</h2>
-          <p>Thiết kế tinh gọn, trực quan và tập trung vào hiệu suất vận hành.</p>
-        </div>
-
-        <div className="bento-grid-3d">
-          {/* Card 1: AI Studio */}
-          <div className="bento-card-3d bento-col-8">
-            <div className="bento-badge-3d bento-badge-cyan">
-              <Sparkles size={13} /> Trợ lý AI Studio
-            </div>
-            <h3 className="bento-card-title">Viết bài siêu tốc & Lưu lịch sử hội thoại</h3>
-            <p className="bento-card-desc">
-              Tích hợp mô hình AI mạnh mẽ trên nền chip LPU. Sinh caption viral, kịch bản tương tác và tự động lưu trữ nhiều phiên trò chuyện để tiếp tục bất cứ lúc nào.
-            </p>
-            <div style={{ position: 'relative', borderRadius: '16px', overflow: 'hidden', border: '1px solid rgba(0, 242, 254, 0.25)', marginTop: '16px', background: '#070a14', boxShadow: '0 16px 40px rgba(0,0,0,0.6)' }}>
-              <Image
-                src="/ai-studio-showcase.jpg"
-                alt="Trợ lý AI Studio viết content tự động"
-                width={1200}
-                height={675}
-                style={{ width: '100%', height: 'auto', display: 'block' }}
-              />
-            </div>
-          </div>
-
-          {/* Card 2: Bảo mật Token */}
-          <div className="bento-card-3d bento-col-4">
-            <div className="bento-badge-3d bento-badge-purple">
-              <Shield size={13} /> Bảo mật Token
-            </div>
-            <h3 className="bento-card-title">Mã hoá AES-256-GCM</h3>
-            <p className="bento-card-desc">
-              Toàn bộ User Access Token và Page Token được mã hoá cấp cao, tự động đồng bộ và bảo vệ an toàn cho Fanpage.
-            </p>
-            <div style={{ padding: '24px 16px', borderRadius: 16, background: 'rgba(168, 85, 247, 0.05)', border: '1px solid rgba(168, 85, 247, 0.2)', textAlign: 'center', marginTop: 24 }}>
-              <div style={{ fontSize: 36, marginBottom: 8 }}>🔒</div>
-              <div style={{ fontWeight: 800, color: 'var(--ink)', fontSize: 14.5 }}>Chuẩn mã hoá quân sự</div>
-              <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>Bảo mật dữ liệu tuyệt đối</div>
-            </div>
-          </div>
-
-          {/* Card 3: Seeding Comment */}
-          <div className="bento-card-3d bento-col-4">
-            <div className="bento-badge-3d bento-badge-green">
-              <MessageSquare size={13} /> Seeding tự động
-            </div>
-            <h3 className="bento-card-title">Đẩy bình luận mồi tức thì</h3>
-            <p className="bento-card-desc">
-              Tự động ghim bình luận mồi ngay khi bài vừa xuất bản để kích thích người đọc tương tác và tăng tương tác tự nhiên.
-            </p>
-            <div style={{ padding: '24px 16px', borderRadius: 16, background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)', textAlign: 'center', marginTop: 24 }}>
-              <div style={{ fontSize: 36, marginBottom: 8 }}>💬</div>
-              <div style={{ fontWeight: 800, color: 'var(--ink)', fontSize: 14.5 }}>5 Tầng Comment</div>
-              <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>Hẹn giờ độ trễ từng phút</div>
-            </div>
-          </div>
-
-          {/* Card 4: Tải Excel hàng loạt */}
-          <div className="bento-card-3d bento-col-8">
-            <div className="bento-badge-3d bento-badge-amber">
-              <FileSpreadsheet size={13} /> Bulk Upload Excel
-            </div>
-            <h3 className="bento-card-title">Lên lịch hàng trăm bài từ file Excel</h3>
-            <p className="bento-card-desc">
-              Kéo thả file Excel (.xlsx), hệ thống tự động bóc tách tiêu đề, nội dung, ảnh/video, thời gian hẹn giờ và phân bổ tới từng Fanpage chỉ trong vài giây.
-            </p>
-            <div style={{ position: 'relative', borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--line)', marginTop: '16px', background: 'var(--panel)', boxShadow: '0 8px 24px rgba(70,55,40,0.06)' }}>
-              <Image
-                src="/excel-bulk-showcase.jpg"
-                alt="Tải file Excel lên lịch tự động"
-                width={1200}
-                height={675}
-                style={{ width: '100%', height: 'auto', display: 'block' }}
-              />
-            </div>
-          </div>
-
-          {/* Card 5: Đa định dạng Reels, Story, Album */}
-          <div className="bento-card-3d bento-col-12" style={{ gridColumn: 'span 12' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
-              <div>
-                <div className="bento-badge-3d bento-badge-cyan" style={{ background: 'rgba(236, 72, 153, 0.12)', color: '#f43f5e', border: '1px solid rgba(236, 72, 153, 0.3)' }}>
-                  <Film size={13} /> Đa định dạng xuất bản
+                <div className="lm-contact-icon-wrap" style={{ color: c.color }}>
+                  <Icon size={24} />
                 </div>
-                <h3 className="bento-card-title" style={{ fontSize: 24, marginTop: 6 }}>
-                  Xuất bản toàn diện: Facebook Reels 9:16, Story 24h & Album đa ảnh
-                </h3>
-                <p className="bento-card-desc" style={{ maxWidth: 760, marginBottom: 0 }}>
-                  Bắt trọn xu hướng video ngắn Reels với tỷ lệ dọc 9:16, tin Story biến mất sau 24h và bài viết dạng Album ghép ảnh thông minh tự động tối ưu tỉ lệ hiển thị trên bảng tin.
-                </p>
-              </div>
-              <Link href="/post-planner/compose" prefetch={true} className="button button-primary" style={{ padding: '12px 24px', fontSize: 13.5, fontWeight: 700 }}>
-                Tạo bài ngay <ArrowRight size={15} />
-              </Link>
-            </div>
-            <div style={{ position: 'relative', borderRadius: '18px', overflow: 'hidden', border: '1px solid rgba(255, 255, 255, 0.12)', marginTop: '24px', background: '#070a14', boxShadow: '0 20px 50px rgba(0,0,0,0.7)' }}>
-              <Image
-                src="/multiformat-showcase.jpg"
-                alt="Xuất bản Facebook Reels, Story và Album ảnh"
-                width={1200}
-                height={675}
-                style={{ width: '100%', height: 'auto', display: 'block' }}
-              />
-            </div>
+                <div className="lm-contact-name">{c.name}</div>
+                <div className="lm-contact-handle">{c.handle}</div>
+                <div className="lm-contact-action">{c.action} →</div>
+              </a>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ── FOOTER ── */}
+      <footer className="lm-footer">
+        <div className="lm-footer-inner">
+          <div className="lm-footer-brand">
+            <strong>Em Quang Tool Face</strong> — Hệ thống quản lý & lên lịch bài Fanpage tự động 2026.
+          </div>
+          <div className="lm-footer-copy">
+            Thiết kế theo triết lý Tinh Gọn, Sang Trọng và Bền Bỉ.
           </div>
         </div>
-      </section>
-
-      {/* ── 3D CONTACT SECTION (FB, TIKTOK, TELE, ZALO) ── */}
-      <section className="contact-section">
-        <div className="section-header">
-          <div className="section-label"><Globe2 size={14} /> Kết nối & Hỗ trợ</div>
-          <h2>Kênh liên hệ chính thức</h2>
-          <p>Cần hỗ trợ kỹ thuật, hướng dẫn sử dụng hoặc đóng góp ý kiến? Hãy kết nối với chúng tôi qua các kênh dưới đây.</p>
-        </div>
-
-        <div className="contact-grid-3d">
-          {contacts.map((c) => (
-            <a
-              href={c.url}
-              target="_blank"
-              rel="noreferrer"
-              key={c.type}
-              className={`contact-card-3d contact-card-${c.type}`}
-            >
-              <div
-                style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 16,
-                  overflow: 'hidden',
-                  marginBottom: 16,
-                  border: '1.5px solid rgba(255, 255, 255, 0.15)',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
-                  flexShrink: 0
-                }}
-              >
-                <Image
-                  src={c.image}
-                  alt={c.name}
-                  width={64}
-                  height={64}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              </div>
-              <h3 className="contact-title">{c.name}</h3>
-              <div className="contact-handle">{c.handle}</div>
-              <span className="contact-btn-pill">{c.action} →</span>
-            </a>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Footer ── */}
-      <footer className="l-footer">
-        © 2026 Em Quang Tool Face — Auto Post Fanpage. Built with
-        <span className="l-footer-heart"> ❤ </span>
       </footer>
     </div>
   );
