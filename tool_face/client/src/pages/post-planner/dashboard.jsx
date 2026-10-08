@@ -173,7 +173,7 @@ export default function DashboardPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <ShieldAlert size={26} style={{ color: '#f87171', flexShrink: 0 }} />
             <div>
-              <strong style={{ color: '#fff', fontSize: 13.5, display: 'block', marginBottom: 3 }}>
+              <strong style={{ color: 'var(--ink)', fontSize: 13.5, display: 'block', marginBottom: 3 }}>
                 Token Facebook đã hết hạn phiên đăng nhập!
               </strong>
               <span style={{ color: '#fca5a5', fontSize: 12, lineHeight: 1.5 }}>
@@ -428,7 +428,7 @@ export default function DashboardPage() {
                             <div
                               style={{
                                 fontSize: 12.5,
-                                color: '#fff',
+                                color: 'var(--ink)',
                                 fontWeight: 600,
                                 whiteSpace: 'nowrap',
                                 overflow: 'hidden',

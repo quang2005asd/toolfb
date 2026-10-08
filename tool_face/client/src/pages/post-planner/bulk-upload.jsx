@@ -196,7 +196,7 @@ export default function BulkUpload() {
           <section className="panel" style={{ padding: '24px' }}>
             <div className="panel-heading" style={{ marginBottom: '18px' }}>
               <div>
-                <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#fff' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: 'var(--ink)' }}>
                   Nhập lịch đăng bài từ Excel
                 </h2>
                 <span className="muted" style={{ fontSize: '13px' }}>
@@ -299,7 +299,7 @@ export default function BulkUpload() {
                   >
                     <FileSpreadsheet size={26} />
                   </div>
-                  <strong style={{ fontSize: '16px', color: '#fff', display: 'block', marginBottom: '4px' }}>
+                  <strong style={{ fontSize: '16px', color: 'var(--ink)', display: 'block', marginBottom: '4px' }}>
                     {file.name}
                   </strong>
                   <span className="muted" style={{ fontSize: '13px' }}>
@@ -335,7 +335,7 @@ export default function BulkUpload() {
                   <span className="file-icon">
                     <UploadCloud size={26} />
                   </span>
-                  <strong style={{ fontSize: '15px', color: '#fff', display: 'block', marginBottom: '6px' }}>
+                  <strong style={{ fontSize: '15px', color: 'var(--ink)', display: 'block', marginBottom: '6px' }}>
                     Kéo và thả tệp Excel vào đây
                   </strong>
                   <p className="muted" style={{ margin: 0, fontSize: '13px' }}>
@@ -454,7 +454,7 @@ export default function BulkUpload() {
                 }}
               >
                 <div>
-                  <h3 style={{ fontSize: '16.5px', fontWeight: 800, margin: 0, color: '#fff' }}>
+                  <h3 style={{ fontSize: '16.5px', fontWeight: 800, margin: 0, color: 'var(--ink)' }}>
                     Xem trước danh sách bài đăng ({previewData.total} dòng)
                   </h3>
                   <div style={{ display: 'flex', gap: '14px', marginTop: '6px', fontSize: '13px' }}>
@@ -683,7 +683,7 @@ export default function BulkUpload() {
           {/* Box 1: Connected Fanpages & Quick Copy ID */}
           <div className="panel" style={{ padding: '20px' }}>
             <div className="panel-heading" style={{ marginBottom: '14px' }}>
-              <h3 style={{ fontSize: '15px', fontWeight: 800, margin: 0, color: '#fff' }}>
+              <h3 style={{ fontSize: '15px', fontWeight: 800, margin: 0, color: 'var(--ink)' }}>
                 Danh sách Fanpage của bạn
               </h3>
             </div>
@@ -773,7 +773,7 @@ export default function BulkUpload() {
           {/* Box 2: Instructions & Rules */}
           <div className="panel" style={{ padding: '20px' }}>
             <div className="panel-heading" style={{ marginBottom: '14px' }}>
-              <h3 style={{ fontSize: '15px', fontWeight: 800, margin: 0, color: '#fff' }}>
+              <h3 style={{ fontSize: '15px', fontWeight: 800, margin: 0, color: 'var(--ink)' }}>
                 Quy tắc file Excel
               </h3>
             </div>

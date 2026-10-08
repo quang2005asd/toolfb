@@ -207,7 +207,7 @@ function PostDetailModal({ postId, onClose, onRefresh, channelName }) {
               {post.status === 'published' && post.facebook_post_id && (
                 <div style={{ background: 'linear-gradient(135deg, rgba(24, 119, 242, 0.12), rgba(0, 242, 254, 0.08))', border: '1px solid rgba(24, 119, 242, 0.3)', borderRadius: 12, padding: 14 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>
                       <CheckCircle2 size={16} color="#10b981" /> Đã xuất bản lên Facebook (ID: {post.facebook_post_id})
                     </span>
                     <a
@@ -540,7 +540,7 @@ export default function PostListPage() {
                     </div>
                   </td>
                   <td>
-                    <span style={{ fontWeight: 600, color: '#fff' }}>
+                    <span style={{ fontWeight: 600, color: 'var(--ink)' }}>
                       {channels.find((c) => c.id === String(post.page_id))?.name || post.page_id || 'Fanpage'}
                     </span>
                   </td>

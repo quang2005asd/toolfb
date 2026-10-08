@@ -266,7 +266,7 @@ export default function DashboardHomePage() {
                 {timeGreeting}, {displayName}! 👋
               </h1>
               <p className="dashboard-subtitle">
-                Hôm nay là <strong style={{ color: '#fff', textTransform: 'capitalize' }}>{formattedToday}</strong>.
+                Hôm nay là <strong style={{ color: 'var(--ink)', textTransform: 'capitalize' }}>{formattedToday}</strong>.
                 Trung tâm điều phối & tự động hóa nội dung đa kênh Facebook của bạn đang vận hành ổn định.
               </p>
             </div>
@@ -342,11 +342,11 @@ export default function DashboardHomePage() {
                     </div>
                     <div className="dashboard-spotlight-meta">
                       <span>
-                        📅 Xuất bản lúc: <strong style={{ color: '#00f2fe' }}>{formatDateSafe(nextUpcomingPost.scheduled_at, 'Đang chờ')}</strong>
+                        📅 Xuất bản lúc: <strong style={{ color: 'var(--blue)' }}>{formatDateSafe(nextUpcomingPost.scheduled_at, 'Đang chờ')}</strong>
                       </span>
                       <span>
                         📱 Fanpage:{' '}
-                        <strong style={{ color: '#fff' }}>
+                        <strong style={{ color: 'var(--ink)' }}>
                           {channels.find((c) => String(c.id) === String(nextUpcomingPost.page_id))?.name || nextUpcomingPost.page_id || 'Đa kênh'}
                         </strong>
                       </span>
@@ -399,16 +399,16 @@ export default function DashboardHomePage() {
       {/* ═══ 3. HIGH-TECH 4 METRIC OVERVIEW CARDS ═══ */}
       <section className="metric-grid">
         {/* Metric 1: Tổng bài */}
-        <article className="metric-card-pro" style={{ borderTop: '2px solid #00f2fe' }}>
+        <article className="metric-card-pro" style={{ borderTop: '2px solid var(--blue)' }}>
           <div className="metric-card-pro-top">
-            <div className="metric-label" style={{ color: '#00f2fe' }}>
+            <div className="metric-label" style={{ color: 'var(--blue)' }}>
               <Send size={16} /> Tổng bài đăng
             </div>
-            <span className="metric-card-pro-trend" style={{ background: 'rgba(0, 242, 254, 0.1)', color: '#00f2fe' }}>
+            <span className="metric-card-pro-trend" style={{ background: 'rgba(37, 99, 235, 0.08)', color: 'var(--blue)' }}>
               <TrendingUp size={11} /> Toàn bộ
             </span>
           </div>
-          <div className="metric-card-pro-value" style={{ color: '#fff' }}>
+          <div className="metric-card-pro-value" style={{ color: 'var(--ink)' }}>
             {loading ? (
               <div className="skeleton-shimmer skeleton-box" style={{ width: 64, height: 32, borderRadius: 8, margin: '6px 0' }} />
             ) : (
@@ -422,7 +422,7 @@ export default function DashboardHomePage() {
             {loading ? (
               <div className="skeleton-shimmer skeleton-box" style={{ width: '100%', height: '100%' }} />
             ) : (
-              <div className="metric-card-pro-bar-fill" style={{ width: '100%', background: 'linear-gradient(90deg, #00f2fe, #38bdf8)' }} />
+              <div className="metric-card-pro-bar-fill" style={{ width: '100%', background: 'linear-gradient(90deg, #2563eb, #3b82f6)' }} />
             )}
           </div>
         </article>
@@ -552,10 +552,10 @@ export default function DashboardHomePage() {
       ) : channels.length > 0 ? (
         <section style={{ marginBottom: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <h2 style={{ fontSize: 15, fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
-              <Layers size={16} color="#00f2fe" /> Kênh Fanpage đang kết nối ({channels.length})
+            <h2 style={{ fontSize: 15, fontWeight: 800, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
+              <Layers size={16} color="var(--blue)" /> Kênh Fanpage đang kết nối ({channels.length})
             </h2>
-            <Link href="/channels" className="button button-quiet" style={{ fontSize: 12, color: '#38bdf8' }}>
+            <Link href="/channels" className="button button-quiet" style={{ fontSize: 12, color: 'var(--blue)' }}>
               Quản lý kênh & Token <ArrowRight size={13} style={{ marginLeft: 4 }} />
             </Link>
           </div>
@@ -587,7 +587,7 @@ export default function DashboardHomePage() {
                 <Link
                   href={`/post-planner/compose?pageId=${chan.id}`}
                   className="button button-quiet"
-                  style={{ minHeight: 28, fontSize: 11, padding: '0 8px', color: '#00f2fe' }}
+                  style={{ minHeight: 28, fontSize: 11, padding: '0 8px', color: 'var(--blue)' }}
                   title={`Đăng bài cho ${chan.name}`}
                 >
                   <PenLine size={12} />
@@ -604,7 +604,7 @@ export default function DashboardHomePage() {
         <section className="panel">
           <div className="panel-heading">
             <h2>
-              <Send size={16} style={{ marginRight: 8, color: '#00f2fe', verticalAlign: 'middle' }} />
+              <Send size={16} style={{ marginRight: 8, color: 'var(--blue)', verticalAlign: 'middle' }} />
               Bài đăng gần đây
             </h2>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -665,7 +665,7 @@ export default function DashboardHomePage() {
                             {post.content || <span style={{ color: 'var(--muted)', fontStyle: 'italic' }}>Không có văn bản (Nội dung media)</span>}
                           </strong>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4, flexWrap: 'wrap' }}>
-                            <small style={{ color: '#00f2fe', fontWeight: 700 }}>
+                            <small style={{ color: 'var(--blue)', fontWeight: 700 }}>
                               #{post.id}
                             </small>
                             <small style={{ color: 'var(--muted)' }}>
@@ -789,7 +789,7 @@ export default function DashboardHomePage() {
             <div className="panel-body">
               <div className="dashboard-tools-grid">
                 <Link className="dashboard-tool-card" href="/post-planner/calendar">
-                  <div className="dashboard-tool-icon" style={{ background: 'rgba(0, 242, 254, 0.1)', color: '#00f2fe' }}>
+                  <div className="dashboard-tool-icon" style={{ background: 'rgba(37, 99, 235, 0.08)', color: 'var(--blue)' }}>
                     <CalendarDays size={20} />
                   </div>
                   <div>
@@ -809,7 +809,7 @@ export default function DashboardHomePage() {
                 </Link>
 
                 <Link className="dashboard-tool-card" href="/channels">
-                  <div className="dashboard-tool-icon" style={{ background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8' }}>
+                  <div className="dashboard-tool-icon" style={{ background: 'rgba(2, 132, 199, 0.08)', color: '#0284c7' }}>
                     <Layers size={20} />
                   </div>
                   <div>
@@ -882,7 +882,7 @@ export default function DashboardHomePage() {
                 >
                   <FormatIcon size={12} /> {meta.label}
                 </span>
-                <span style={{ fontSize: 12, fontWeight: 800, color: '#00f2fe' }}>
+                <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--blue)' }}>
                   #{post.id}
                 </span>
               </div>

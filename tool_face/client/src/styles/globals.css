@@ -1,24 +1,25 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800;900&display=swap');
 
 :root {
-  /* ═══ LUXURY PLATINUM PEARL & ROYAL SAPPHIRE PALETTE (DEFAULT TONE TRẮNG SANG TRỌNG) ═══ */
-  --bg-dark: #f8fafc;
-  --canvas: #f6f8fc;
+  /* ═══ LUXURY WARM IVORY & ROYAL SAPPHIRE (TONE TRẮNG KEM HOÀNG GIA - MẶC ĐỊNH) ═══ */
+  --bg-dark: #faf8f5;
+  --canvas: #faf8f5;              /* Nền chính: Trắng kem sứ ngọc ngà, ấm áp, cực dịu mắt */
   --navy: #ffffff;
-  --panel: #ffffff;
-  --panel-elevated: #ffffff;
+  --panel: #ffffff;               /* Mặt thẻ / khối: Trắng tinh thuần khiết trên nền kem */
+  --panel-elevated: #fdfcf9;      /* Khối nâng: Trắng ngà */
   --panel-glass: rgba(255, 255, 255, 0.94);
-  --field-bg: #f8fafc;
+  --field-bg: #f5f2eb;            /* Nền ô input/search: Trắng kem nhạt sang trọng */
   
-  --ink: #0f172a;
-  --text-main: #0f172a;
-  --muted: #475569;
-  --text-muted: #475569;
-  --dim: #64748b;
-  --text-dim: #64748b;
-  --line: rgba(15, 23, 42, 0.08);
-  --border-subtle: rgba(15, 23, 42, 0.08);
-  --line-hover: rgba(37, 99, 235, 0.35);
+  --ink: #1c1917;                 /* Chữ chính: Warm Stone Charcoal (Stone-900) */
+  --text-main: #1c1917;
+  --muted: #57534e;               /* Chữ phụ: Warm Stone Muted (Stone-600) */
+  --text-muted: #57534e;
+  --dim: #78716c;                 /* Chữ mờ: Warm Stone Dim (Stone-500) */
+  --text-dim: #78716c;
+  --line: rgba(215, 208, 195, 0.7);       /* Viền màu cát kem ấm sang trọng */
+  --border-subtle: rgba(215, 208, 195, 0.6);
+  --border-strong: rgba(180, 170, 150, 0.75);
+  --line-hover: rgba(37, 99, 235, 0.4);
   
   /* ACCENT & EXECUTIVE LUXURY SPECTRUM */
   --rgb-cyan: #0284c7;
@@ -33,10 +34,10 @@
   --red: #dc2626;
   --amber: #d97706;
 
-  /* 3D TACTILE SHADOWS & SPECULAR DEPTH */
-  --shadow-3d-button: 0 4px 0 #1e40af, 0 10px 22px rgba(37, 99, 235, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.5);
-  --shadow-3d-panel: 0 16px 36px -8px rgba(15, 23, 42, 0.07), 0 0 0 1px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  --shadow-3d-card: 0 12px 28px -6px rgba(15, 23, 42, 0.06), 0 0 0 1px rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  /* WARM CREAM LUXURY SHADOWS (ĐỔ BÓNG ẤM MỊN MÀNG) */
+  --shadow-3d-button: 0 3px 0 #1d4ed8, 0 8px 20px rgba(37, 99, 235, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --shadow-3d-panel: 0 10px 32px -4px rgba(70, 55, 40, 0.05), 0 2px 6px rgba(70, 55, 40, 0.02), inset 0 1px 0 #ffffff;
+  --shadow-3d-card: 0 8px 24px -4px rgba(70, 55, 40, 0.04), 0 1px 4px rgba(70, 55, 40, 0.02), inset 0 1px 0 #ffffff;
 }
 
 [data-theme="dark"], body.dark-mode {
@@ -82,9 +83,9 @@ html, body, #__next { min-height: 100%; margin: 0; }
 body {
   background-color: var(--canvas);
   background-image: 
-    radial-gradient(circle 900px at 15% 10%, rgba(37, 99, 235, 0.035) 0%, transparent 60%),
-    radial-gradient(circle 800px at 85% 85%, rgba(99, 102, 241, 0.035) 0%, transparent 60%),
-    radial-gradient(rgba(15, 23, 42, 0.04) 1.2px, transparent 1.2px);
+    radial-gradient(circle 900px at 15% 10%, rgba(254, 243, 199, 0.5) 0%, transparent 60%),
+    radial-gradient(circle 800px at 85% 85%, rgba(239, 246, 255, 0.65) 0%, transparent 60%),
+    radial-gradient(rgba(120, 113, 108, 0.05) 1.2px, transparent 1.2px);
   background-size: 100% 100%, 100% 100%, 28px 28px;
   color: var(--ink);
   font-family: 'Plus Jakarta Sans', 'DM Sans', -apple-system, sans-serif;
@@ -4403,130 +4404,169 @@ button:active,
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
-   ═══ BỘ QUY TẮC GIAO DIỆN TONE TRẮNG HOÀNG GIA / LUXURY PEARL WHITE ═══
+   ═══ BỘ QUY TẮC GIAO DIỆN TONE TRẮNG KEM HOÀNG GIA / WARM IVORY CREAM WHITE ═══
    ══════════════════════════════════════════════════════════════════════════════ */
 :root:not([data-theme="dark"]), [data-theme="light"], body.light-mode {
   color-scheme: light;
 }
 
-/* 1. Thanh điều hướng Sidebar */
+/* 1. Nền không gian & Hiệu ứng ánh sáng phòng khách Bắc Âu */
+:root:not([data-theme="dark"]) .workspace::before,
+[data-theme="light"] .workspace::before,
+body.light-mode .workspace::before {
+  background: 
+    radial-gradient(circle 900px at 15% 15%, rgba(254, 243, 199, 0.35) 0%, transparent 55%),
+    radial-gradient(circle 800px at 85% 85%, rgba(239, 246, 255, 0.5) 0%, transparent 55%),
+    linear-gradient(rgba(215, 208, 195, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(215, 208, 195, 0.08) 1px, transparent 1px) !important;
+  background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px !important;
+}
+
+:root:not([data-theme="dark"]) .landing::before,
+[data-theme="light"] .landing::before,
+body.light-mode .landing::before,
+:root:not([data-theme="dark"]) .landing::after,
+[data-theme="light"] .landing::after,
+body.light-mode .landing::after {
+  opacity: 0.18 !important;
+}
+
+/* 2. Thanh điều hướng Sidebar (Trắng sứ tinh tế) */
 :root:not([data-theme="dark"]) .sidebar,
 [data-theme="light"] .sidebar,
 body.light-mode .sidebar {
-  background: rgba(255, 255, 255, 0.94) !important;
+  background: rgba(255, 255, 255, 0.96) !important;
   backdrop-filter: blur(24px) !important;
   -webkit-backdrop-filter: blur(24px) !important;
-  border-right: 1px solid rgba(226, 232, 240, 0.95) !important;
-  box-shadow: 6px 0 30px rgba(15, 23, 42, 0.04), inset -1px 0 0 rgba(37, 99, 235, 0.06) !important;
-  color: #64748b !important;
+  border-right: 1px solid rgba(215, 208, 195, 0.7) !important;
+  box-shadow: 4px 0 25px rgba(70, 55, 40, 0.03) !important;
+  color: #57534e !important;
+}
+
+:root:not([data-theme="dark"]) .brand-mark::after,
+[data-theme="light"] .brand-mark::after,
+body.light-mode .brand-mark::after {
+  background: #ffffff !important;
 }
 
 :root:not([data-theme="dark"]) .nav-item,
 [data-theme="light"] .nav-item,
 body.light-mode .nav-item {
-  color: #64748b !important;
+  color: #57534e !important;
+  transition: all .2s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 :root:not([data-theme="dark"]) .nav-item:hover,
 [data-theme="light"] .nav-item:hover,
 body.light-mode .nav-item:hover {
-  background: rgba(37, 99, 235, 0.06) !important;
-  border-color: rgba(37, 99, 235, 0.2) !important;
-  color: #0f172a !important;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06) !important;
+  background: #f5f2eb !important;
+  border-color: rgba(37, 99, 235, 0.25) !important;
+  color: #1c1917 !important;
+  box-shadow: 0 4px 14px rgba(70, 55, 40, 0.05) !important;
+  transform: translateY(-2px) scale(1.02) !important;
 }
 
 :root:not([data-theme="dark"]) .nav-item.is-active,
 [data-theme="light"] .nav-item.is-active,
 body.light-mode .nav-item.is-active {
   color: #2563eb !important;
-  background: linear-gradient(145deg, rgba(37, 99, 235, 0.12) 0%, rgba(99, 102, 241, 0.08) 100%) !important;
-  border: 1px solid rgba(37, 99, 235, 0.3) !important;
-  border-top-color: rgba(255, 255, 255, 0.9) !important;
-  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+  background: linear-gradient(145deg, #f0f4ff 0%, #eef2ff 100%) !important;
+  border: 1px solid rgba(37, 99, 235, 0.28) !important;
+  border-top-color: #ffffff !important;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.12), inset 0 1px 0 #ffffff !important;
 }
 
 :root:not([data-theme="dark"]) .nav-item.is-active::before,
 [data-theme="light"] .nav-item.is-active::before,
 body.light-mode .nav-item.is-active::before {
-  background: linear-gradient(180deg, #2563eb, #6366f1) !important;
-  box-shadow: 0 0 12px rgba(37, 99, 235, 0.5) !important;
+  background: linear-gradient(180deg, #2563eb, #3b82f6) !important;
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.45) !important;
 }
 
 :root:not([data-theme="dark"]) .sidebar-bottom,
 [data-theme="light"] .sidebar-bottom,
 body.light-mode .sidebar-bottom {
-  border-top: 1px solid rgba(226, 232, 240, 0.95) !important;
+  border-top: 1px solid rgba(215, 208, 195, 0.7) !important;
 }
 
-/* 2. Thanh tiêu đề Topbar */
+/* 3. Thanh tiêu đề Topbar */
 :root:not([data-theme="dark"]) .topbar,
 [data-theme="light"] .topbar,
 body.light-mode .topbar {
-  background: rgba(255, 255, 255, 0.92) !important;
+  background: rgba(255, 255, 255, 0.94) !important;
   backdrop-filter: blur(20px) !important;
   -webkit-backdrop-filter: blur(20px) !important;
-  border-bottom: 1px solid rgba(226, 232, 240, 0.95) !important;
-  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.03), 0 1px 0 rgba(37, 99, 235, 0.06) !important;
+  border-bottom: 1px solid rgba(215, 208, 195, 0.7) !important;
+  box-shadow: 0 4px 20px rgba(70, 55, 40, 0.03) !important;
 }
 
 :root:not([data-theme="dark"]) .icon-button,
 [data-theme="light"] .icon-button,
 body.light-mode .icon-button {
   background: #ffffff !important;
-  border: 1px solid #e2e8f0 !important;
-  color: #475569 !important;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04), inset 0 1px 0 #ffffff !important;
+  border: 1px solid rgba(215, 208, 195, 0.8) !important;
+  color: #57534e !important;
+  box-shadow: 0 2px 6px rgba(70, 55, 40, 0.03), inset 0 1px 0 #ffffff !important;
+  transition: all .2s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 :root:not([data-theme="dark"]) .icon-button:hover,
 [data-theme="light"] .icon-button:hover,
 body.light-mode .icon-button:hover {
-  background: #f8fafc !important;
+  background: #f7f5f0 !important;
   color: #2563eb !important;
   border-color: #2563eb !important;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.16) !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.14) !important;
 }
 
 :root:not([data-theme="dark"]) .account-chip,
 [data-theme="light"] .account-chip,
 body.light-mode .account-chip {
   background: #ffffff !important;
-  border: 1px solid #e2e8f0 !important;
-  border-top-color: #ffffff !important;
-  color: #0f172a !important;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04), inset 0 1px 0 #ffffff !important;
+  border: 1px solid rgba(215, 208, 195, 0.8) !important;
+  color: #1c1917 !important;
+  box-shadow: 0 2px 6px rgba(70, 55, 40, 0.03), inset 0 1px 0 #ffffff !important;
+  transition: all .2s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 :root:not([data-theme="dark"]) .account-chip:hover,
 [data-theme="light"] .account-chip:hover,
 body.light-mode .account-chip:hover {
   border-color: #2563eb !important;
-  background: #f8fafc !important;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.12) !important;
+  background: #f7f5f0 !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12) !important;
 }
 
-/* 3. Khối nội dung Panel & Card */
+/* 4. Khối nội dung Panel, Card & Banner */
 :root:not([data-theme="dark"]) .panel,
+:root:not([data-theme="dark"]) .card,
+:root:not([data-theme="dark"]) .dashboard-banner-card,
 [data-theme="light"] .panel,
-body.light-mode .panel {
+[data-theme="light"] .card,
+[data-theme="light"] .dashboard-banner-card,
+body.light-mode .panel,
+body.light-mode .card,
+body.light-mode .dashboard-banner-card {
   background: #ffffff !important;
-  border: 1px solid rgba(226, 232, 240, 0.95) !important;
-  border-top-color: #ffffff !important;
-  box-shadow: 0 14px 34px -8px rgba(15, 23, 42, 0.06), 0 2px 6px rgba(15, 23, 42, 0.02), inset 0 1px 0 #ffffff !important;
+  border: 1px solid rgba(215, 208, 195, 0.75) !important;
+  box-shadow: 0 10px 30px -4px rgba(70, 55, 40, 0.04), 0 2px 6px rgba(70, 55, 40, 0.02), inset 0 1px 0 #ffffff !important;
+  transition: all .22s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 :root:not([data-theme="dark"]) .panel:hover,
+:root:not([data-theme="dark"]) .card:hover,
 [data-theme="light"] .panel:hover,
-body.light-mode .panel:hover {
-  border-color: rgba(37, 99, 235, 0.35) !important;
-  box-shadow: 0 18px 42px -8px rgba(15, 23, 42, 0.09), 0 0 20px rgba(37, 99, 235, 0.06), inset 0 1px 0 #ffffff !important;
+[data-theme="light"] .card:hover,
+body.light-mode .panel:hover,
+body.light-mode .card:hover {
+  border-color: rgba(37, 99, 235, 0.3) !important;
+  box-shadow: 0 14px 36px -4px rgba(70, 55, 40, 0.07), inset 0 1px 0 #ffffff !important;
 }
 
 :root:not([data-theme="dark"]) .panel-heading,
 [data-theme="light"] .panel-heading,
 body.light-mode .panel-heading {
-  border-bottom: 1px solid #f1f5f9 !important;
+  border-bottom: 1px solid #f3efe6 !important;
 }
 
 :root:not([data-theme="dark"]) .panel-heading h2,
@@ -4535,93 +4575,277 @@ body.light-mode .panel-heading {
 [data-theme="light"] .panel-heading h3,
 body.light-mode .panel-heading h2,
 body.light-mode .panel-heading h3 {
-  color: #0f172a !important;
+  color: #1c1917 !important;
   font-weight: 800 !important;
 }
 
 :root:not([data-theme="dark"]) .panel-body,
 [data-theme="light"] .panel-body,
 body.light-mode .panel-body {
-  color: #1e293b !important;
+  color: #1c1917 !important;
 }
 
-/* 4. Thẻ chỉ số Metric Cards & RGB Cards */
+:root:not([data-theme="dark"]) .dashboard-title-heading,
+[data-theme="light"] .dashboard-title-heading,
+body.light-mode .dashboard-title-heading {
+  color: #1c1917 !important;
+  font-weight: 900 !important;
+}
+
+:root:not([data-theme="dark"]) .dashboard-subtitle,
+[data-theme="light"] .dashboard-subtitle,
+body.light-mode .dashboard-subtitle {
+  color: #57534e !important;
+}
+
+/* 5. Spotlight Card (Tiêu điểm bài đăng) */
+:root:not([data-theme="dark"]) .dashboard-spotlight-card,
+[data-theme="light"] .dashboard-spotlight-card,
+body.light-mode .dashboard-spotlight-card {
+  background: #ffffff !important;
+  border: 1px solid rgba(215, 208, 195, 0.8) !important;
+  box-shadow: 0 10px 28px -4px rgba(70, 55, 40, 0.05), inset 0 1px 0 #ffffff !important;
+  color: #1c1917 !important;
+}
+
+:root:not([data-theme="dark"]) .dashboard-spotlight-glow,
+[data-theme="light"] .dashboard-spotlight-glow,
+body.light-mode .dashboard-spotlight-glow {
+  background: radial-gradient(circle at 10% 50%, rgba(254, 243, 199, 0.5) 0%, transparent 60%) !important;
+}
+
+:root:not([data-theme="dark"]) .dashboard-spotlight-title,
+[data-theme="light"] .dashboard-spotlight-title,
+body.light-mode .dashboard-spotlight-title {
+  color: #2563eb !important;
+  font-weight: 800 !important;
+}
+
+:root:not([data-theme="dark"]) .dashboard-spotlight-snippet,
+[data-theme="light"] .dashboard-spotlight-snippet,
+body.light-mode .dashboard-spotlight-snippet {
+  color: #1c1917 !important;
+}
+
+:root:not([data-theme="dark"]) .dashboard-spotlight-meta,
+[data-theme="light"] .dashboard-spotlight-meta,
+body.light-mode .dashboard-spotlight-meta {
+  color: #57534e !important;
+}
+
+:root:not([data-theme="dark"]) .dashboard-spotlight-icon-box,
+[data-theme="light"] .dashboard-spotlight-icon-box,
+body.light-mode .dashboard-spotlight-icon-box {
+  background: #f5f2eb !important;
+  color: #2563eb !important;
+  border: 1px solid rgba(37, 99, 235, 0.2) !important;
+}
+
+/* 6. Thẻ chỉ số Metric Cards & RGB Cards */
 :root:not([data-theme="dark"]) .rgb-led-card,
-[data-theme="light"] .rgb-led-card,
-body.light-mode .rgb-led-card {
-  background: #ffffff !important;
-  border: 1px solid rgba(226, 232, 240, 0.95) !important;
-  border-top-color: #ffffff !important;
-  box-shadow: 0 12px 28px -6px rgba(15, 23, 42, 0.06), inset 0 1px 0 #ffffff !important;
-  color: #0f172a !important;
-}
-
-:root:not([data-theme="dark"]) .rgb-led-card:hover,
-[data-theme="light"] .rgb-led-card:hover,
-body.light-mode .rgb-led-card:hover {
-  border-color: rgba(37, 99, 235, 0.4) !important;
-  box-shadow: 0 18px 36px -6px rgba(15, 23, 42, 0.1), 0 0 22px rgba(37, 99, 235, 0.08), inset 0 1px 0 #ffffff !important;
-}
-
 :root:not([data-theme="dark"]) .metric-card,
+:root:not([data-theme="dark"]) .metric-card-pro,
+[data-theme="light"] .rgb-led-card,
 [data-theme="light"] .metric-card,
-body.light-mode .metric-card {
+[data-theme="light"] .metric-card-pro,
+body.light-mode .rgb-led-card,
+body.light-mode .metric-card,
+body.light-mode .metric-card-pro {
   background: #ffffff !important;
-  border: 1px solid #e2e8f0 !important;
-  box-shadow: 0 10px 24px -4px rgba(15, 23, 42, 0.05) !important;
+  border: 1px solid rgba(215, 208, 195, 0.75) !important;
+  border-top-color: #ffffff !important;
+  box-shadow: 0 8px 24px -4px rgba(70, 55, 40, 0.04), inset 0 1px 0 #ffffff !important;
+  color: #1c1917 !important;
+  transition: all .2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+:root:not([data-theme="dark"]) .metric-card-pro:hover,
+:root:not([data-theme="dark"]) .metric-card:hover,
+:root:not([data-theme="dark"]) .rgb-led-card:hover,
+[data-theme="light"] .metric-card-pro:hover,
+[data-theme="light"] .metric-card:hover,
+[data-theme="light"] .rgb-led-card:hover,
+body.light-mode .metric-card-pro:hover,
+body.light-mode .metric-card:hover,
+body.light-mode .rgb-led-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 12px 30px -4px rgba(70, 55, 40, 0.08), inset 0 1px 0 #ffffff !important;
 }
 
 :root:not([data-theme="dark"]) .metric-value,
+:root:not([data-theme="dark"]) .metric-card-pro-value,
 [data-theme="light"] .metric-value,
-body.light-mode .metric-value {
-  color: #0f172a !important;
+[data-theme="light"] .metric-card-pro-value,
+body.light-mode .metric-value,
+body.light-mode .metric-card-pro-value {
+  color: #1c1917 !important;
 }
 
 :root:not([data-theme="dark"]) .metric-label,
 [data-theme="light"] .metric-label,
 body.light-mode .metric-label {
-  color: #64748b !important;
+  color: #57534e !important;
 }
 
-/* 5. Nút bấm Buttons */
+:root:not([data-theme="dark"]) .metric-foot,
+[data-theme="light"] .metric-foot,
+body.light-mode .metric-foot {
+  color: #78716c !important;
+}
+
+:root:not([data-theme="dark"]) .metric-card-pro-bar,
+[data-theme="light"] .metric-card-pro-bar,
+body.light-mode .metric-card-pro-bar {
+  background: #f5f2eb !important;
+}
+
+/* 7. Kênh Fanpage (Channel Cards & Strips) */
+:root:not([data-theme="dark"]) .dashboard-channel-card,
+:root:not([data-theme="dark"]) .channel-card,
+[data-theme="light"] .dashboard-channel-card,
+[data-theme="light"] .channel-card,
+body.light-mode .dashboard-channel-card,
+body.light-mode .channel-card {
+  background: #ffffff !important;
+  border: 1px solid rgba(215, 208, 195, 0.75) !important;
+  box-shadow: 0 6px 18px -4px rgba(70, 55, 40, 0.04) !important;
+  color: #1c1917 !important;
+  transition: all .2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+:root:not([data-theme="dark"]) .dashboard-channel-card:hover,
+:root:not([data-theme="dark"]) .channel-card:hover,
+[data-theme="light"] .dashboard-channel-card:hover,
+[data-theme="light"] .channel-card:hover,
+body.light-mode .dashboard-channel-card:hover,
+body.light-mode .channel-card:hover {
+  transform: translateY(-2px) !important;
+  border-color: rgba(37, 99, 235, 0.35) !important;
+  box-shadow: 0 12px 28px -4px rgba(70, 55, 40, 0.07) !important;
+}
+
+:root:not([data-theme="dark"]) .dashboard-channel-name,
+:root:not([data-theme="dark"]) .channel-name,
+[data-theme="light"] .dashboard-channel-name,
+[data-theme="light"] .channel-name,
+body.light-mode .dashboard-channel-name,
+body.light-mode .channel-name {
+  color: #1c1917 !important;
+  font-weight: 700 !important;
+}
+
+:root:not([data-theme="dark"]) .dashboard-channel-sub,
+[data-theme="light"] .dashboard-channel-sub,
+body.light-mode .dashboard-channel-sub {
+  color: #57534e !important;
+}
+
+/* 8. Bài đăng gần đây & Bảng dữ liệu Tables */
+:root:not([data-theme="dark"]) .post-row,
+[data-theme="light"] .post-row,
+body.light-mode .post-row {
+  background: #ffffff !important;
+  border-bottom: 1px solid #f3efe6 !important;
+  color: #1c1917 !important;
+  transition: all .18s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+:root:not([data-theme="dark"]) .post-row:hover,
+[data-theme="light"] .post-row:hover,
+body.light-mode .post-row:hover {
+  background: #faf8f4 !important;
+  border-color: rgba(37, 99, 235, 0.25) !important;
+}
+
+:root:not([data-theme="dark"]) table,
+[data-theme="light"] table,
+body.light-mode table {
+  color: #1c1917 !important;
+}
+
+:root:not([data-theme="dark"]) table th,
+[data-theme="light"] table th,
+body.light-mode table th {
+  background: #f7f5f0 !important;
+  color: #44403c !important;
+  border-bottom: 1px solid rgba(215, 208, 195, 0.7) !important;
+  font-weight: 800 !important;
+}
+
+:root:not([data-theme="dark"]) table td,
+[data-theme="light"] table td,
+body.light-mode table td {
+  border-bottom: 1px solid #f3efe6 !important;
+  color: #1c1917 !important;
+}
+
+:root:not([data-theme="dark"]) table tr:hover td,
+[data-theme="light"] table tr:hover td,
+body.light-mode table tr:hover td {
+  background: #faf8f4 !important;
+}
+
+/* 9. Nút bấm Buttons (Thiết kế thanh lịch) */
+:root:not([data-theme="dark"]) .button-primary,
+[data-theme="light"] .button-primary,
+body.light-mode .button-primary {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  transition: all .2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+:root:not([data-theme="dark"]) .button-primary:hover,
+[data-theme="light"] .button-primary:hover,
+body.light-mode .button-primary:hover {
+  background: linear-gradient(135deg, #1d4ed8, #1e40af) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.32) !important;
+}
+
 :root:not([data-theme="dark"]) .button-secondary,
 [data-theme="light"] .button-secondary,
 body.light-mode .button-secondary {
-  color: #0f172a !important;
+  color: #292524 !important;
   background: #ffffff !important;
-  border: 1px solid #cbd5e1 !important;
-  border-top-color: #e2e8f0 !important;
-  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.05), inset 0 1px 0 #ffffff !important;
+  border: 1px solid rgba(215, 208, 195, 0.85) !important;
+  border-top-color: #ffffff !important;
+  box-shadow: 0 2px 6px rgba(70, 55, 40, 0.04), inset 0 1px 0 #ffffff !important;
+  transition: all .2s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 :root:not([data-theme="dark"]) .button-secondary:hover,
 [data-theme="light"] .button-secondary:hover,
 body.light-mode .button-secondary:hover {
-  background: #f8fafc !important;
-  border-color: #94a3b8 !important;
-  color: #0284c7 !important;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+  background: #f7f5f0 !important;
+  border-color: #a8a29e !important;
+  color: #1c1917 !important;
+  box-shadow: 0 4px 12px rgba(70, 55, 40, 0.07) !important;
+  transform: translateY(-1px) !important;
 }
 
 :root:not([data-theme="dark"]) .button-quiet,
 [data-theme="light"] .button-quiet,
 body.light-mode .button-quiet {
   color: #2563eb !important;
-  background: rgba(37, 99, 235, 0.06) !important;
-  border: 1px solid rgba(37, 99, 235, 0.2) !important;
-  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.03) !important;
+  background: #f5f2eb !important;
+  border: 1px solid rgba(215, 208, 195, 0.6) !important;
+  box-shadow: 0 2px 5px rgba(70, 55, 40, 0.02) !important;
+  transition: all .2s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 :root:not([data-theme="dark"]) .button-quiet:hover,
 [data-theme="light"] .button-quiet:hover,
 body.light-mode .button-quiet:hover {
-  background: rgba(37, 99, 235, 0.12) !important;
-  border-color: #2563eb !important;
+  background: #ede8dc !important;
+  border-color: rgba(37, 99, 235, 0.3) !important;
   color: #1d4ed8 !important;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.18) !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15) !important;
+  transform: translateY(-1px) !important;
 }
 
-/* 6. Form Fields, Inputs & Textareas */
+/* 10. Form Fields, Inputs & Textareas */
 :root:not([data-theme="dark"]) .field,
 :root:not([data-theme="dark"]) input:not([type="checkbox"]):not([type="radio"]),
 :root:not([data-theme="dark"]) textarea,
@@ -4638,9 +4862,10 @@ body.light-mode textarea,
 body.light-mode select,
 body.light-mode .auth-input {
   background: #ffffff !important;
-  color: #0f172a !important;
-  border: 1px solid #cbd5e1 !important;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+  color: #1c1917 !important;
+  border: 1px solid rgba(215, 208, 195, 0.85) !important;
+  box-shadow: 0 1px 3px rgba(70, 55, 40, 0.03) !important;
+  transition: border-color .2s ease, box-shadow .2s ease !important;
 }
 
 :root:not([data-theme="dark"]) .field:focus,
@@ -4659,101 +4884,103 @@ body.light-mode textarea:focus,
 body.light-mode select:focus,
 body.light-mode .auth-input:focus {
   border-color: #2563eb !important;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14) !important;
 }
 
 :root:not([data-theme="dark"]) .field-label,
 [data-theme="light"] .field-label,
 body.light-mode .field-label {
-  color: #334155 !important;
+  color: #44403c !important;
   font-weight: 700 !important;
 }
 
-/* 7. Tiêu đề & Văn bản */
-:root:not([data-theme="dark"]) .page-topline h1,
-[data-theme="light"] .page-topline h1,
-body.light-mode .page-topline h1 {
-  color: #0f172a !important;
-  font-weight: 900 !important;
+/* 11. Quick Tools & Biểu đồ Chart */
+:root:not([data-theme="dark"]) .dashboard-tools-grid .dashboard-tool-card,
+[data-theme="light"] .dashboard-tools-grid .dashboard-tool-card,
+body.light-mode .dashboard-tools-grid .dashboard-tool-card {
+  background: #ffffff !important;
+  border: 1px solid rgba(215, 208, 195, 0.75) !important;
+  box-shadow: 0 4px 14px rgba(70, 55, 40, 0.03) !important;
+  transition: all .2s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
-:root:not([data-theme="dark"]) .eyebrow,
-[data-theme="light"] .eyebrow,
-body.light-mode .eyebrow {
-  color: #2563eb !important;
-  text-shadow: none !important;
-  font-weight: 800 !important;
+:root:not([data-theme="dark"]) .dashboard-tools-grid .dashboard-tool-card:hover,
+[data-theme="light"] .dashboard-tools-grid .dashboard-tool-card:hover,
+body.light-mode .dashboard-tools-grid .dashboard-tool-card:hover {
+  background: #faf8f4 !important;
+  border-color: rgba(37, 99, 235, 0.35) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 22px rgba(70, 55, 40, 0.06) !important;
 }
 
-/* 8. Bảng Dữ liệu Tables */
-:root:not([data-theme="dark"]) table,
-[data-theme="light"] table,
-body.light-mode table {
-  color: #0f172a !important;
+:root:not([data-theme="dark"]) .dashboard-tool-title,
+[data-theme="light"] .dashboard-tool-title,
+body.light-mode .dashboard-tool-title {
+  color: #1c1917 !important;
+  font-weight: 700 !important;
 }
 
-:root:not([data-theme="dark"]) table th,
-[data-theme="light"] table th,
-body.light-mode table th {
-  background: #f8fafc !important;
-  color: #475569 !important;
-  border-bottom: 1px solid #e2e8f0 !important;
-  font-weight: 800 !important;
+:root:not([data-theme="dark"]) .dashboard-tool-desc,
+[data-theme="light"] .dashboard-tool-desc,
+body.light-mode .dashboard-tool-desc {
+  color: #57534e !important;
 }
 
-:root:not([data-theme="dark"]) table td,
-[data-theme="light"] table td,
-body.light-mode table td {
-  border-bottom: 1px solid #f1f5f9 !important;
-  color: #1e293b !important;
+:root:not([data-theme="dark"]) .dashboard-chart-box,
+[data-theme="light"] .dashboard-chart-box,
+body.light-mode .dashboard-chart-box {
+  background: #ffffff !important;
+  border: 1px solid rgba(215, 208, 195, 0.75) !important;
 }
 
-:root:not([data-theme="dark"]) table tr:hover td,
-[data-theme="light"] table tr:hover td,
-body.light-mode table tr:hover td {
-  background: #f8fafc !important;
-}
-
-/* 9. Lịch Đăng Calendar */
+/* 12. Lịch đăng Calendar */
 :root:not([data-theme="dark"]) .calendar-panel,
 [data-theme="light"] .calendar-panel,
 body.light-mode .calendar-panel {
   background: #ffffff !important;
-  border: 1px solid #e2e8f0 !important;
+  border: 1px solid rgba(215, 208, 195, 0.75) !important;
+  box-shadow: 0 8px 24px -4px rgba(70, 55, 40, 0.04) !important;
 }
 
 :root:not([data-theme="dark"]) .calendar-cell,
 [data-theme="light"] .calendar-cell,
 body.light-mode .calendar-cell {
   background: #ffffff !important;
-  border-color: #f1f5f9 !important;
+  border-color: #f3efe6 !important;
+  transition: background-color .18s ease !important;
+}
+
+:root:not([data-theme="dark"]) .calendar-cell:hover,
+[data-theme="light"] .calendar-cell:hover,
+body.light-mode .calendar-cell:hover {
+  background: #faf8f4 !important;
 }
 
 :root:not([data-theme="dark"]) .calendar-day,
 [data-theme="light"] .calendar-day,
 body.light-mode .calendar-day {
-  color: #1e293b !important;
+  color: #1c1917 !important;
 }
 
 :root:not([data-theme="dark"]) .calendar-cell.is-outside,
 [data-theme="light"] .calendar-cell.is-outside,
 body.light-mode .calendar-cell.is-outside {
-  background: #f8fafc !important;
+  background: #f7f5f0 !important;
 }
 
 :root:not([data-theme="dark"]) .calendar-weekday,
 [data-theme="light"] .calendar-weekday,
 body.light-mode .calendar-weekday {
-  background: #f8fafc !important;
-  color: #64748b !important;
-  border-bottom: 1px solid #e2e8f0 !important;
+  background: #f7f5f0 !important;
+  color: #57534e !important;
+  border-bottom: 1px solid rgba(215, 208, 195, 0.7) !important;
 }
 
 :root:not([data-theme="dark"]) .calendar-switch .segment-button,
 [data-theme="light"] .calendar-switch .segment-button,
 body.light-mode .calendar-switch .segment-button {
-  background: #f1f5f9 !important;
-  color: #475569 !important;
+  background: #f5f2eb !important;
+  color: #57534e !important;
 }
 
 :root:not([data-theme="dark"]) .calendar-switch .segment-button.is-selected,
@@ -4761,51 +4988,155 @@ body.light-mode .calendar-switch .segment-button {
 body.light-mode .calendar-switch .segment-button.is-selected {
   background: #ffffff !important;
   color: #2563eb !important;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 2px 6px rgba(70, 55, 40, 0.06) !important;
 }
 
-/* 10. Màn hình Đăng nhập Login */
+/* 13. Composer & Post Preview */
+:root:not([data-theme="dark"]) .composer-container,
+:root:not([data-theme="dark"]) .composer-panel,
+:root:not([data-theme="dark"]) .post-preview-card,
+:root:not([data-theme="dark"]) .facebook-post-preview,
+[data-theme="light"] .composer-container,
+[data-theme="light"] .composer-panel,
+[data-theme="light"] .post-preview-card,
+[data-theme="light"] .facebook-post-preview,
+body.light-mode .composer-container,
+body.light-mode .composer-panel,
+body.light-mode .post-preview-card,
+body.light-mode .facebook-post-preview {
+  background: #ffffff !important;
+  border: 1px solid rgba(215, 208, 195, 0.75) !important;
+  color: #1c1917 !important;
+}
+
+:root:not([data-theme="dark"]) .preview-phone-shell,
+[data-theme="light"] .preview-phone-shell,
+body.light-mode .preview-phone-shell {
+  background: #f7f5f0 !important;
+  border-color: rgba(215, 208, 195, 0.9) !important;
+}
+
+/* 14. AI Studio */
+:root:not([data-theme="dark"]) .ai-studio-card,
+:root:not([data-theme="dark"]) .ai-editor-card,
+:root:not([data-theme="dark"]) .ai-output-box,
+[data-theme="light"] .ai-studio-card,
+[data-theme="light"] .ai-editor-card,
+[data-theme="light"] .ai-output-box,
+body.light-mode .ai-studio-card,
+body.light-mode .ai-editor-card,
+body.light-mode .ai-output-box {
+  background: #ffffff !important;
+  border: 1px solid rgba(215, 208, 195, 0.75) !important;
+  color: #1c1917 !important;
+}
+
+:root:not([data-theme="dark"]) .prompt-template-chip,
+[data-theme="light"] .prompt-template-chip,
+body.light-mode .prompt-template-chip {
+  background: #f7f5f0 !important;
+  border: 1px solid rgba(215, 208, 195, 0.8) !important;
+  color: #44403c !important;
+  transition: all .2s ease !important;
+}
+
+:root:not([data-theme="dark"]) .prompt-template-chip:hover,
+[data-theme="light"] .prompt-template-chip:hover,
+body.light-mode .prompt-template-chip:hover {
+  background: #f0f4ff !important;
+  border-color: rgba(37, 99, 235, 0.3) !important;
+  color: #2563eb !important;
+}
+
+/* 15. Custom Glass Tooltip & Popovers */
+:root:not([data-theme="dark"]) .custom-glass-tooltip,
+[data-theme="light"] .custom-glass-tooltip,
+body.light-mode .custom-glass-tooltip {
+  background: rgba(255, 255, 255, 0.97) !important;
+  border: 1px solid rgba(215, 208, 195, 0.85) !important;
+  box-shadow: 0 16px 36px rgba(70, 55, 40, 0.12) !important;
+  color: #1c1917 !important;
+}
+
+:root:not([data-theme="dark"]) .custom-glass-tooltip-header,
+[data-theme="light"] .custom-glass-tooltip-header,
+body.light-mode .custom-glass-tooltip-header {
+  border-bottom: 1px solid #f3efe6 !important;
+}
+
+:root:not([data-theme="dark"]) .custom-glass-tooltip-meta,
+[data-theme="light"] .custom-glass-tooltip-meta,
+body.light-mode .custom-glass-tooltip-meta {
+  color: #57534e !important;
+}
+
+:root:not([data-theme="dark"]) .custom-glass-tooltip-body,
+[data-theme="light"] .custom-glass-tooltip-body,
+body.light-mode .custom-glass-tooltip-body {
+  color: #1c1917 !important;
+}
+
+:root:not([data-theme="dark"]) .custom-glass-tooltip-foot,
+[data-theme="light"] .custom-glass-tooltip-foot,
+body.light-mode .custom-glass-tooltip-foot {
+  border-top: 1px solid #f3efe6 !important;
+  color: #78716c !important;
+}
+
+/* 16. Modals & Dialogs */
+:root:not([data-theme="dark"]) .modal-card,
+:root:not([data-theme="dark"]) .modal-content,
+[data-theme="light"] .modal-card,
+[data-theme="light"] .modal-content,
+body.light-mode .modal-card,
+body.light-mode .modal-content {
+  background: #ffffff !important;
+  border: 1px solid rgba(215, 208, 195, 0.85) !important;
+  box-shadow: 0 25px 50px -12px rgba(70, 55, 40, 0.2) !important;
+  color: #1c1917 !important;
+}
+
+/* 17. Màn hình Đăng nhập Login (Tone Trắng Kem Ngọc Ngà) */
 :root:not([data-theme="dark"]) .login-shell,
 [data-theme="light"] .login-shell,
 body.light-mode .login-shell {
-  background: #f4f6fa !important;
+  background: #faf8f5 !important;
   background-image: 
-    radial-gradient(rgba(15, 23, 42, 0.05) 1.2px, transparent 1.2px),
-    radial-gradient(circle at 18% 20%, rgba(37, 99, 235, 0.05) 0, transparent 50%),
-    radial-gradient(circle at 84% 82%, rgba(99, 102, 241, 0.05) 0, transparent 50%) !important;
+    radial-gradient(circle 900px at 15% 15%, rgba(254, 243, 199, 0.55) 0%, transparent 60%),
+    radial-gradient(circle 800px at 85% 85%, rgba(239, 246, 255, 0.65) 0%, transparent 60%) !important;
 }
 
 :root:not([data-theme="dark"]) .login-card,
 [data-theme="light"] .login-card,
 body.light-mode .login-card {
   background: #ffffff !important;
-  border: 1px solid rgba(226, 232, 240, 0.95) !important;
-  box-shadow: 0 25px 60px -10px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(15, 23, 42, 0.04) !important;
+  border: 1px solid rgba(215, 208, 195, 0.8) !important;
+  box-shadow: 0 25px 60px -10px rgba(70, 55, 40, 0.08), 0 0 0 1px rgba(70, 55, 40, 0.02) !important;
 }
 
 :root:not([data-theme="dark"]) .login-brand h1,
 [data-theme="light"] .login-brand h1,
 body.light-mode .login-brand h1 {
-  color: #0f172a !important;
+  color: #1c1917 !important;
 }
 
 :root:not([data-theme="dark"]) .login-intro,
 [data-theme="light"] .login-intro,
 body.light-mode .login-intro {
-  color: #475569 !important;
+  color: #57534e !important;
 }
 
 :root:not([data-theme="dark"]) .auth-tabs,
 [data-theme="light"] .auth-tabs,
 body.light-mode .auth-tabs {
-  background: #f1f5f9 !important;
-  border: 1px solid #e2e8f0 !important;
+  background: #f7f5f0 !important;
+  border: 1px solid rgba(215, 208, 195, 0.7) !important;
 }
 
 :root:not([data-theme="dark"]) .auth-tab-btn,
 [data-theme="light"] .auth-tab-btn,
 body.light-mode .auth-tab-btn {
-  color: #64748b !important;
+  color: #57534e !important;
 }
 
 :root:not([data-theme="dark"]) .auth-tab-btn.active,
@@ -4813,32 +5144,32 @@ body.light-mode .auth-tab-btn {
 body.light-mode .auth-tab-btn.active {
   background: #ffffff !important;
   color: #2563eb !important;
-  border: 1px solid #e2e8f0 !important;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05) !important;
+  border: 1px solid rgba(215, 208, 195, 0.7) !important;
+  box-shadow: 0 2px 6px rgba(70, 55, 40, 0.05) !important;
 }
 
 :root:not([data-theme="dark"]) .login-setup,
 [data-theme="light"] .login-setup,
 body.light-mode .login-setup {
-  background: #f8fafc !important;
-  border: 1px solid #e2e8f0 !important;
-  color: #475569 !important;
+  background: #f7f5f0 !important;
+  border: 1px solid rgba(215, 208, 195, 0.7) !important;
+  color: #57534e !important;
 }
 
 :root:not([data-theme="dark"]) .login-setup strong,
 [data-theme="light"] .login-setup strong,
 body.light-mode .login-setup strong {
-  color: #0f172a !important;
+  color: #1c1917 !important;
 }
 
 :root:not([data-theme="dark"]) .login-token-box,
 [data-theme="light"] .login-token-box,
 body.light-mode .login-token-box {
-  background: #f8fafc !important;
-  border: 1px solid #e2e8f0 !important;
+  background: #f7f5f0 !important;
+  border: 1px solid rgba(215, 208, 195, 0.7) !important;
 }
 
-/* 11. Theme Toggle Button Style */
+/* 18. Nút chuyển đổi Theme (Theme Toggle Button) */
 .theme-toggle-btn {
   display: inline-flex;
   align-items: center;
@@ -4850,12 +5181,12 @@ body.light-mode .login-token-box {
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
-  transition: all .25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all .2s cubic-bezier(0.16, 1, 0.3, 1);
   user-select: none;
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  color: #334155;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(215, 208, 195, 0.85);
+  color: #44403c;
+  box-shadow: 0 2px 6px rgba(70, 55, 40, 0.04);
 }
 .theme-toggle-btn:hover {
   transform: translateY(-2px);

@@ -348,15 +348,15 @@ export default function SettingsPage() {
               )}
             </div>
 
-            <h2 style={{ fontSize: 20, margin: '0 0 6px', color: '#fff', fontWeight: 900 }}>{user?.name || 'Tài khoản Facebook'}</h2>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', background: 'rgba(0, 242, 254, 0.1)', borderRadius: 99, border: '1px solid rgba(0, 242, 254, 0.3)', fontSize: 11, fontWeight: 700, color: '#00f2fe', marginBottom: 16 }}>
+            <h2 style={{ fontSize: 20, margin: '0 0 6px', color: 'var(--ink)', fontWeight: 900 }}>{user?.name || 'Tài khoản Facebook'}</h2>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', background: 'rgba(37, 99, 235, 0.08)', borderRadius: 99, border: '1px solid rgba(37, 99, 235, 0.25)', fontSize: 11, fontWeight: 700, color: 'var(--blue)', marginBottom: 16 }}>
               <ShieldCheck size={13} /> {user?.role === 'admin' ? 'Quản trị viên (Admin)' : 'Thành viên'}
             </div>
 
-            <div style={{ textAlign: 'left', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 12, padding: 14, border: '1px solid var(--line)', marginBottom: 20, fontSize: 12.5 }}>
+            <div style={{ textAlign: 'left', background: 'var(--panel)', borderRadius: 12, padding: 14, border: '1px solid var(--line)', marginBottom: 20, fontSize: 12.5 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                 <span className="muted">Facebook User ID:</span>
-                <strong style={{ color: '#fff' }}>{user?.id || '—'}</strong>
+                <strong style={{ color: 'var(--ink)' }}>{user?.id || '—'}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                 <span className="muted">Trạng thái Token:</span>
@@ -364,7 +364,7 @@ export default function SettingsPage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span className="muted">Fanpage quản lý:</span>
-                <strong style={{ color: '#00f2fe' }}>{data.account.connectedPagesCount || 0} Fanpage</strong>
+                <strong style={{ color: 'var(--blue)' }}>{data.account.connectedPagesCount || 0} Fanpage</strong>
               </div>
             </div>
 
@@ -399,19 +399,19 @@ export default function SettingsPage() {
               </p>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 14, marginBottom: 20 }}>
-                <div style={{ padding: 14, borderRadius: 12, background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--line)' }}>
-                  <strong style={{ color: '#fff', display: 'block', marginBottom: 4 }}>Meta App ID</strong>
-                  <code style={{ color: '#00f2fe', background: 'rgba(0, 242, 254, 0.08)', padding: '2px 6px', borderRadius: 4 }}>
+                <div style={{ padding: 14, borderRadius: 12, background: 'var(--field-bg)', border: '1px solid var(--line)' }}>
+                  <strong style={{ color: 'var(--ink)', display: 'block', marginBottom: 4 }}>Meta App ID</strong>
+                  <code style={{ color: 'var(--blue)', background: 'rgba(37, 99, 235, 0.08)', padding: '2px 6px', borderRadius: 4 }}>
                     {data.system.metaAppId || '1397216959190868'}
                   </code>
                 </div>
-                <div style={{ padding: 14, borderRadius: 12, background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--line)' }}>
-                  <strong style={{ color: '#fff', display: 'block', marginBottom: 4 }}>Phiên bản Graph API</strong>
-                  <code style={{ color: '#00f2fe', background: 'rgba(0, 242, 254, 0.08)', padding: '2px 6px', borderRadius: 4 }}>v19.0</code>
+                <div style={{ padding: 14, borderRadius: 12, background: 'var(--field-bg)', border: '1px solid var(--line)' }}>
+                  <strong style={{ color: 'var(--ink)', display: 'block', marginBottom: 4 }}>Phiên bản Graph API</strong>
+                  <code style={{ color: 'var(--blue)', background: 'rgba(37, 99, 235, 0.08)', padding: '2px 6px', borderRadius: 4 }}>v19.0</code>
                 </div>
               </div>
 
-              <strong style={{ color: '#fff', display: 'block', marginBottom: 10 }}>Danh sách quyền (Scopes) đã kết nối:</strong>
+              <strong style={{ color: 'var(--ink)', display: 'block', marginBottom: 10 }}>Danh sách quyền (Scopes) đã kết nối:</strong>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
                 {[
                   { name: 'pages_manage_posts', desc: 'Đăng tải nội dung, ảnh, video lên Fanpage' },
@@ -576,7 +576,7 @@ export default function SettingsPage() {
                       {aiTestResult.success ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
                       {aiTestResult.success ? 'AI phản hồi thành công:' : 'Lỗi kết nối:'}
                     </div>
-                    <div style={{ fontSize: 12.5, color: '#fff', fontStyle: 'italic', lineHeight: 1.5 }}>
+                    <div style={{ fontSize: 12.5, color: 'var(--ink)', fontStyle: 'italic', lineHeight: 1.5 }}>
                       &ldquo;{aiTestResult.message}&rdquo;
                     </div>
                   </div>
@@ -623,7 +623,7 @@ export default function SettingsPage() {
                 {/* Switch Bật/Tắt Cảnh báo */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)', marginBottom: 20 }}>
                   <div>
-                    <strong style={{ color: '#fff', fontSize: 13.5, display: 'block', marginBottom: 2 }}>Kích hoạt hệ thống cảnh báo Telegram</strong>
+                    <strong style={{ color: 'var(--ink)', fontSize: 13.5, display: 'block', marginBottom: 2 }}>Kích hoạt hệ thống cảnh báo Telegram</strong>
                     <span className="muted" style={{ fontSize: 11.5 }}>Gửi thông báo tức thì về tài khoản hoặc nhóm Telegram của bạn</span>
                   </div>
                   <label style={{ position: 'relative', display: 'inline-block', width: 44, height: 24, cursor: 'pointer' }}>
@@ -801,26 +801,26 @@ export default function SettingsPage() {
                       <div>
                         {/* 3 Thẻ thống kê */}
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 14 }}>
-                          <div style={{ padding: '10px 8px', textAlign: 'center', background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)' }}>
+                          <div style={{ padding: '10px 8px', textAlign: 'center', background: 'var(--panel)', borderRadius: 8, border: '1px solid var(--line)' }}>
                             <div className="muted" style={{ fontSize: 10 }}>Tổng Fanpage</div>
-                            <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', marginTop: 2 }}>{healthCheckResult.summary.total}</div>
+                            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--ink)', marginTop: 2 }}>{healthCheckResult.summary.total}</div>
                           </div>
                           <div style={{ padding: '10px 8px', textAlign: 'center', background: 'rgba(16,185,129,0.06)', borderRadius: 8, border: '1px solid rgba(16,185,129,0.2)' }}>
                             <div style={{ fontSize: 10, color: '#10b981' }}>Token Sống</div>
                             <div style={{ fontSize: 18, fontWeight: 800, color: '#10b981', marginTop: 2 }}>{healthCheckResult.summary.valid}</div>
                           </div>
-                          <div style={{ padding: '10px 8px', textAlign: 'center', background: healthCheckResult.summary.expired > 0 ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.03)', borderRadius: 8, border: `1px solid ${healthCheckResult.summary.expired > 0 ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.08)'}` }}>
+                          <div style={{ padding: '10px 8px', textAlign: 'center', background: healthCheckResult.summary.expired > 0 ? 'rgba(239,68,68,0.08)' : 'var(--panel)', borderRadius: 8, border: `1px solid ${healthCheckResult.summary.expired > 0 ? 'rgba(239,68,68,0.3)' : 'var(--line)'}` }}>
                             <div style={{ fontSize: 10, color: healthCheckResult.summary.expired > 0 ? '#ef4444' : 'var(--muted)' }}>Hết hạn / Lỗi</div>
-                            <div style={{ fontSize: 18, fontWeight: 800, color: healthCheckResult.summary.expired > 0 ? '#ef4444' : '#fff', marginTop: 2 }}>{healthCheckResult.summary.expired}</div>
+                            <div style={{ fontSize: 18, fontWeight: 800, color: healthCheckResult.summary.expired > 0 ? '#ef4444' : 'var(--ink)', marginTop: 2 }}>{healthCheckResult.summary.expired}</div>
                           </div>
                         </div>
 
                         {/* Danh sách Pages */}
-                        <div style={{ maxHeight: 220, overflowY: 'auto', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8, padding: 6, background: 'rgba(0,0,0,0.2)' }}>
+                        <div style={{ maxHeight: 220, overflowY: 'auto', border: '1px solid var(--line)', borderRadius: 8, padding: 6, background: 'var(--field-bg)' }}>
                           {healthCheckResult.summary.pages?.map((p) => (
-                            <div key={p.pageId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 12 }}>
+                            <div key={p.pageId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', borderBottom: '1px solid var(--line)', fontSize: 12 }}>
                               <div style={{ minWidth: 0, flex: 1, paddingRight: 8 }}>
-                                <div style={{ color: '#fff', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                                <div style={{ color: 'var(--ink)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
                                 {p.error && <div style={{ fontSize: 10.5, color: '#f87171' }}>{p.error}</div>}
                               </div>
                               <span className={`status-pill ${p.isValid ? 'published' : 'failed'}`} style={{ fontSize: 10, padding: '2px 8px' }}>
@@ -958,7 +958,7 @@ export default function SettingsPage() {
             <div className="panel-body">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 0', borderBottom: '1px solid var(--line)' }}>
                 <div>
-                  <strong style={{ color: '#fff', display: 'block', marginBottom: 4 }}>Hiệu ứng đèn viền LED RGB chạy tròn (spinLED)</strong>
+                  <strong style={{ color: 'var(--ink)', display: 'block', marginBottom: 4 }}>Hiệu ứng đèn viền LED RGB chạy tròn (spinLED)</strong>
                   <span className="muted" style={{ fontSize: 12 }}>
                     Hiển thị dải viền LED RGB xoay tròn nhiều màu ở thẻ banner, nút AI Writer và các Fanpage đã chọn.
                   </span>
@@ -1001,7 +1001,7 @@ export default function SettingsPage() {
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 0', borderBottom: '1px solid var(--line)' }}>
                 <div>
-                  <strong style={{ color: '#fff', display: 'block', marginBottom: 4 }}>Bộ nhớ đệm trình duyệt (Client Cache)</strong>
+                  <strong style={{ color: 'var(--ink)', display: 'block', marginBottom: 4 }}>Bộ nhớ đệm trình duyệt (Client Cache)</strong>
                   <span className="muted" style={{ fontSize: 12 }}>
                     Xóa cache dữ liệu tạm thời trên trình duyệt để tải lại thông tin mới nhất.
                   </span>
@@ -1054,7 +1054,7 @@ export default function SettingsPage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0' }}>
                 <span className="muted" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Clock size={14} /> Giờ máy chủ:</span>
-                <span style={{ color: '#fff' }}>{new Date().toLocaleTimeString('vi-VN')}</span>
+                <span style={{ color: 'var(--ink)' }}>{new Date().toLocaleTimeString('vi-VN')}</span>
               </div>
             </div>
           </section>
