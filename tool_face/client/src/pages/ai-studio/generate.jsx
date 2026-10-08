@@ -482,23 +482,14 @@ export default function AIGeneratePage() {
           {/* Hero */}
           <div style={{
             textAlign: 'center', marginBottom: 32, padding: '36px 24px',
-            background: 'linear-gradient(145deg, rgba(14, 22, 42, 0.95) 0%, rgba(8, 12, 24, 0.98) 100%)',
-            borderRadius: 24, border: '1px solid rgba(0, 242, 254, 0.35)',
-            borderTopColor: 'rgba(255, 255, 255, 0.4)',
-            boxShadow: '0 24px 60px rgba(0, 0, 0, 0.75), 0 0 35px rgba(0, 242, 254, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.25)',
+            background: 'var(--panel)',
+            borderRadius: 24, border: '1px solid var(--line)',
+            boxShadow: '0 8px 30px rgba(70, 55, 40, 0.05)',
             position: 'relative', overflow: 'hidden'
           }}>
-            <div style={{
-              width: 64, height: 64, borderRadius: 20, margin: '0 auto 18px',
-              background: 'linear-gradient(135deg, #00f2fe, #38bdf8, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 10px 30px rgba(0, 242, 254, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.7)',
-              transform: 'translateZ(10px)'
-            }} className="floating-3d">
-              <Sparkles size={32} color="#040812" strokeWidth={2.2} />
-            </div>
-            <h2 style={{ margin: 0, fontSize: 24, fontWeight: 900, letterSpacing: '-0.3px', color: '#fff' }}>AI Tạo bài hàng loạt</h2>
+            <h2 style={{ margin: 0, fontSize: 24, fontWeight: 900, letterSpacing: '-0.3px', color: 'var(--ink)' }}>AI Tạo bài hàng loạt</h2>
             <p style={{ margin: '10px 0 0', color: 'var(--muted)', fontSize: 14.5, lineHeight: 1.6 }}>
-              Mô tả ý tưởng của bạn, AI lượng tử sẽ tạo <strong>nhiều bài đăng</strong> cùng một lúc.<br />
+              Mô tả ý tưởng của bạn, AI sẽ tạo <strong>nhiều bài đăng</strong> cùng một lúc.<br />
               Ví dụ: &quot;Tạo 3 bài: bán giày, review cafe, tip sống khỏe&quot;
             </p>
           </div>
@@ -506,31 +497,27 @@ export default function AIGeneratePage() {
           {/* Quick Templates */}
           <div style={{ marginBottom: 22 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--muted)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Zap size={14} color="#00f2fe" /> Mẫu nhanh 3D:
+              <Zap size={14} color="var(--blue)" /> Mẫu gợi ý nhanh:
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
               {quickTemplates.map((tmpl, idx) => (
                 <button key={idx} type="button" onClick={() => handleTemplateClick(tmpl)} style={{
-                  background: 'linear-gradient(165deg, rgba(14, 22, 42, 0.75) 0%, rgba(8, 12, 24, 0.85) 100%)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderTopColor: 'rgba(255, 255, 255, 0.22)',
-                  borderRadius: 12, padding: '9px 16px', cursor: 'pointer', color: 'var(--fg)',
+                  background: 'var(--panel)',
+                  border: '1px solid var(--line)',
+                  borderRadius: 12, padding: '9px 16px', cursor: 'pointer', color: 'var(--ink)',
                   fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8,
-                  transition: 'all 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                  boxShadow: '0 2px 8px rgba(70, 55, 40, 0.04)'
                 }}
                   onMouseOver={e => {
-                    e.currentTarget.style.background = 'linear-gradient(165deg, rgba(0, 242, 254, 0.15) 0%, rgba(14, 22, 42, 0.85) 100%)';
-                    e.currentTarget.style.borderColor = 'rgba(0, 242, 254, 0.5)';
-                    e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
-                    e.currentTarget.style.boxShadow = '0 8px 20px rgba(0, 242, 254, 0.25)';
+                    e.currentTarget.style.borderColor = 'var(--blue)';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(37, 99, 235, 0.12)';
                   }}
                   onMouseOut={e => {
-                    e.currentTarget.style.background = 'linear-gradient(165deg, rgba(14, 22, 42, 0.75) 0%, rgba(8, 12, 24, 0.85) 100%)';
-                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                    e.currentTarget.style.borderTopColor = 'rgba(255, 255, 255, 0.22)';
-                    e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
+                    e.currentTarget.style.borderColor = 'var(--line)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(70, 55, 40, 0.04)';
                   }}
                 >
                   <span style={{ fontSize: 16 }}>{tmpl.icon}</span> {tmpl.label}
@@ -541,11 +528,10 @@ export default function AIGeneratePage() {
 
           {/* Prompt Input Box */}
           <div style={{
-            background: 'linear-gradient(165deg, rgba(8, 12, 24, 0.95), rgba(5, 8, 18, 0.98))',
-            borderRadius: 18, border: '1px solid rgba(255, 255, 255, 0.12)',
-            borderTopColor: 'rgba(255, 255, 255, 0.08)',
+            background: 'var(--panel)',
+            borderRadius: 18, border: '1.5px solid var(--line)',
             padding: 22, marginBottom: 18,
-            boxShadow: 'inset 0 3px 8px rgba(0, 0, 0, 0.7), 0 6px 20px rgba(0, 0, 0, 0.4)'
+            boxShadow: '0 4px 20px rgba(70, 55, 40, 0.04)'
           }}>
             <textarea
               ref={textareaRef}
@@ -554,7 +540,7 @@ export default function AIGeneratePage() {
               placeholder="Mô tả yêu cầu tạo bài... VD: Tạo cho tao 3 bài về 3 chủ đề khác nhau: bán quần áo, review đồ ăn, và mẹo làm đẹp"
               style={{
                 width: '100%', minHeight: 110, background: 'transparent', border: 'none', outline: 'none',
-                color: '#fff', fontSize: 15, lineHeight: 1.7, resize: 'none', fontFamily: 'inherit'
+                color: 'var(--ink)', fontSize: 15, lineHeight: 1.7, resize: 'none', fontFamily: 'inherit'
               }}
               onKeyDown={e => {
                 if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleGenerate();
@@ -801,17 +787,16 @@ export default function AIGeneratePage() {
                       <button
                         type="button"
                         onClick={() => handleOpenImageStudio(index)}
-                        className="btn-cyber"
                         style={{
                           padding: '6px 14px', fontSize: 12, borderRadius: 8, height: 'auto',
                           display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer',
-                          background: 'linear-gradient(135deg, rgba(0,242,254,0.18), rgba(168,85,247,0.25))',
-                          borderColor: 'rgba(0,242,254,0.4)', color: '#fff',
-                          boxShadow: '0 4px 12px rgba(0,242,254,0.2)'
+                          background: 'rgba(37, 99, 235, 0.08)',
+                          border: '1px solid rgba(37, 99, 235, 0.25)',
+                          color: 'var(--blue)', fontWeight: 700
                         }}
                         title="Tự động vẽ ảnh minh họa theo nội dung bài và đóng dấu bản quyền thương hiệu"
                       >
-                        <Sparkles size={13} color="#00f2fe" />
+                        <Sparkles size={13} color="var(--blue)" />
                         <span>✨ AI Tạo ảnh & Watermark</span>
                       </button>
 

@@ -243,13 +243,13 @@ function FacebookMockupPreview({
             <span>·</span>
             <Globe size={11} />
             <span>·</span>
-            <span style={{ color: '#00f2fe' }}>Bài viết</span>
+            <span style={{ color: 'var(--blue)' }}>Bài viết</span>
           </div>
         </div>
       </div>
 
       <div className="fb-mockup-content">
-        {title && <div style={{ fontWeight: 700, color: '#00f2fe', marginBottom: 6 }}>{title}</div>}
+        {title && <div style={{ fontWeight: 700, color: 'var(--blue)', marginBottom: 6 }}>{title}</div>}
         {renderFormattedContent(content)}
       </div>
 
@@ -285,7 +285,7 @@ function FacebookMockupPreview({
               </div>
             </div>
           )}
-          <div style={{ padding: '6px 12px', background: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: '#38bdf8' }}>
+          <div style={{ padding: '6px 12px', background: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: '#60a5fa' }}>
             <span>📸 Album Facebook ({mediaList.length} ảnh)</span>
             <span className="muted" style={{ fontSize: 10 }}>Tự động ghép layout</span>
           </div>
@@ -327,9 +327,9 @@ function FacebookMockupPreview({
       </div>
 
       {Array.isArray(comments) && comments.filter((c) => c && c.content && c.content.trim()).length > 0 && (
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', padding: '10px 14px', background: 'rgba(255,255,255,0.02)' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#00f2fe', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
-            <Sparkles size={12} color="#00f2fe" /> Comment mồi tự động ({comments.filter((c) => c && c.content && c.content.trim()).length}):
+        <div style={{ borderTop: '1px solid var(--line)', padding: '10px 14px', background: 'var(--panel-alt, rgba(0,0,0,0.02))' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--blue)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+            <Sparkles size={12} color="var(--blue)" /> Comment mồi tự động ({comments.filter((c) => c && c.content && c.content.trim()).length}):
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
             {comments.filter((c) => c && c.content && c.content.trim()).map((c, idx) => (
@@ -337,14 +337,14 @@ function FacebookMockupPreview({
                 <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#1877f2', color: '#fff', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   f
                 </div>
-                <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '6px 12px', flex: 1, border: '1px solid rgba(255,255,255,0.06)' }}>
-                  <div style={{ fontSize: 11.5, fontWeight: 700, color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ background: 'var(--field-bg)', borderRadius: 12, padding: '6px 12px', flex: 1, border: '1px solid var(--line)' }}>
+                  <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--ink)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>{pageName || 'Fanpage'}</span>
-                    <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 400 }}>
+                    <span style={{ fontSize: 10, color: 'var(--dim)', fontWeight: 400 }}>
                       {Number(c.delayMinutes) > 0 ? `Sau ${c.delayMinutes} phút` : 'Đăng cùng bài'}
                     </span>
                   </div>
-                  <div style={{ fontSize: 12, color: '#e2e8f0', marginTop: 2, lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>
+                  <div style={{ fontSize: 12, color: 'var(--ink)', marginTop: 2, lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>
                     {c.content}
                   </div>
                 </div>
@@ -968,7 +968,7 @@ export default function ComposePage() {
                         <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(0, 242, 254, 0.1)', display: 'grid', placeItems: 'center', color: '#00f2fe', marginBottom: 4 }}>
                           <Film size={24} />
                         </div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>
                           {uploadingMedia ? 'Đang tải lên máy chủ…' : 'Bấm để chọn hoặc kéo thả Video Reels'}
                         </div>
                         <div className="muted" style={{ fontSize: 12 }}>
@@ -977,15 +977,15 @@ export default function ComposePage() {
                         <input type="file" accept="video/*" hidden onChange={handleMediaChange} disabled={uploadingMedia} />
                       </label>
                     ) : (
-                      <div style={{ marginTop: 6, padding: '12px 14px', background: 'rgba(0, 242, 254, 0.05)', border: '1px solid rgba(0, 242, 254, 0.3)', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div style={{ width: 44, height: 44, borderRadius: 8, background: '#000', display: 'grid', placeItems: 'center', color: '#00f2fe', flexShrink: 0 }}>
+                      <div style={{ marginTop: 6, padding: '12px 14px', background: 'rgba(37, 99, 235, 0.05)', border: '1px solid rgba(37, 99, 235, 0.25)', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 44, height: 44, borderRadius: 8, background: '#000', display: 'grid', placeItems: 'center', color: '#60a5fa', flexShrink: 0 }}>
                           <Play size={22} />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13.5, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {uploadedMedia?.fileName || 'Video Reels đã chọn'}
                           </div>
-                          <div style={{ fontSize: 11.5, color: '#38bdf8' }}>
+                          <div style={{ fontSize: 11.5, color: 'var(--blue)' }}>
                             {uploadingMedia ? 'Đang tải lên…' : '✅ Video Reels đã sẵn sàng xuất bản'}
                           </div>
                         </div>
@@ -1082,7 +1082,7 @@ export default function ComposePage() {
                         <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', display: 'grid', placeItems: 'center', color: '#10b981', marginBottom: 4 }}>
                           <Clock size={24} />
                         </div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>
                           {uploadingMedia ? 'Đang tải lên máy chủ…' : 'Bấm để chọn Ảnh hoặc Video Story 24h'}
                         </div>
                         <div className="muted" style={{ fontSize: 12 }}>
@@ -1096,7 +1096,7 @@ export default function ComposePage() {
                           {uploadedMedia?.mediaType === 'video' ? <Film size={22} /> : <ImagePlus size={22} />}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13.5, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {uploadedMedia?.fileName || 'Tệp Story đã chọn'}
                           </div>
                           <div style={{ fontSize: 11.5, color: '#34d399' }}>
@@ -1230,7 +1230,7 @@ export default function ComposePage() {
                       <div style={{ marginTop: 8, background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(0, 242, 254, 0.25)', borderRadius: 12, padding: 14 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                           <div>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>
                               📸 Album ảnh ({mediaList.length} ảnh)
                             </span>
                             <span className="muted" style={{ fontSize: 11 }}>
@@ -1282,7 +1282,7 @@ export default function ComposePage() {
                           ))}
                         </div>
                         {uploadingMedia && (
-                          <div style={{ fontSize: 11.5, color: '#00f2fe', marginTop: 10, textAlign: 'center' }}>
+                          <div style={{ fontSize: 11.5, color: 'var(--blue)', marginTop: 10, textAlign: 'center' }}>
                             Đang tải thêm ảnh lên máy chủ…
                           </div>
                         )}
@@ -1290,7 +1290,7 @@ export default function ComposePage() {
                     ) : !uploadedMedia && !mediaPreviewUrl ? (
                       <label className="compose-media-dropzone" style={{ marginTop: 6, padding: '16px 14px' }}>
                         <ImagePlus size={24} style={{ color: 'var(--muted)' }} />
-                        <div style={{ fontSize: 13, fontWeight: 600, color: '#cbd5e1' }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>
                           {uploadingMedia ? 'Đang tải lên máy chủ…' : 'Bấm để thêm Ảnh (chọn nhiều để tạo Album) hoặc Video'}
                         </div>
                         <span className="muted" style={{ fontSize: 11 }}>
@@ -1300,11 +1300,11 @@ export default function ComposePage() {
                       </label>
                     ) : (
                       <div style={{ marginTop: 6, padding: '10px 14px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ width: 38, height: 38, borderRadius: 6, background: '#000', display: 'grid', placeItems: 'center', color: '#00f2fe', flexShrink: 0 }}>
+                        <div style={{ width: 38, height: 38, borderRadius: 6, background: '#000', display: 'grid', placeItems: 'center', color: '#60a5fa', flexShrink: 0 }}>
                           {uploadedMedia?.mediaType === 'video' ? <Film size={18} /> : <ImagePlus size={18} />}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {uploadedMedia?.fileName || 'Tệp đính kèm'}
                           </div>
                           <div style={{ fontSize: 11, color: '#10b981' }}>
@@ -1332,11 +1332,11 @@ export default function ComposePage() {
               <div className="panel-heading" style={{ padding: '12px 16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px #10b981' }} />
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>
                     Xem trước thực tế trên Facebook
                   </span>
                 </div>
-                <span style={{ fontSize: 11, background: 'rgba(0, 242, 254, 0.12)', color: '#00f2fe', padding: '2px 8px', borderRadius: 99, fontWeight: 700 }}>
+                <span style={{ fontSize: 11, background: 'rgba(37, 99, 235, 0.08)', color: 'var(--blue)', padding: '2px 8px', borderRadius: 99, fontWeight: 700 }}>
                   {postType === 'reel' ? 'REELS 9:16' : postType === 'story' ? 'STORY 24H' : 'BẢNG TIN'}
                 </span>
               </div>
@@ -1409,9 +1409,9 @@ export default function ComposePage() {
                             }
                           }}
                           style={{
-                            background: isAllInGroup ? `${grp.color || '#00f2fe'}20` : 'rgba(255, 255, 255, 0.04)',
-                            border: `1px solid ${isAllInGroup ? (grp.color || '#00f2fe') : 'rgba(255, 255, 255, 0.12)'}`,
-                            color: isAllInGroup ? (grp.color || '#00f2fe') : '#cbd5e1',
+                            background: isAllInGroup ? `${grp.color || 'var(--blue)'}18` : 'var(--field-bg)',
+                            border: `1px solid ${isAllInGroup ? (grp.color || 'var(--blue)') : 'var(--line)'}`,
+                            color: isAllInGroup ? (grp.color || 'var(--blue)') : 'var(--ink)',
                             borderRadius: 16,
                             padding: '4px 12px',
                             fontSize: 12,
@@ -1423,7 +1423,7 @@ export default function ComposePage() {
                             transition: 'all 0.15s ease'
                           }}
                         >
-                          <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: grp.color || '#00f2fe' }} />
+                          <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: grp.color || 'var(--blue)' }} />
                           {grp.name} ({pIds.length})
                           {isAllInGroup && <Check size={12} />}
                         </button>
@@ -1449,9 +1449,9 @@ export default function ComposePage() {
                 }
                 if (fbAccounts.length <= 1) return null;
                 return (
-                  <div style={{ marginBottom: 14, padding: '10px 12px', background: 'rgba(59, 130, 246, 0.05)', borderRadius: 10, border: '1px solid rgba(59, 130, 246, 0.15)' }}>
-                    <div style={{ fontSize: 11.5, color: '#93c5fd', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <Users size={13} style={{ color: '#60a5fa' }} /> Chọn nhanh theo Nick Facebook ({fbAccounts.length} nick):
+                  <div style={{ marginBottom: 14, padding: '10px 12px', background: 'rgba(37, 99, 235, 0.05)', borderRadius: 10, border: '1px solid rgba(37, 99, 235, 0.18)' }}>
+                    <div style={{ fontSize: 11.5, color: 'var(--blue)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}>
+                      <Users size={13} style={{ color: 'var(--blue)' }} /> Chọn nhanh theo Nick Facebook ({fbAccounts.length} nick):
                     </div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       {fbAccounts.map((acc) => {
@@ -1469,9 +1469,9 @@ export default function ComposePage() {
                               }
                             }}
                             style={{
-                              background: isAllSelected ? 'rgba(59, 130, 246, 0.25)' : 'rgba(255, 255, 255, 0.04)',
-                              border: `1px solid ${isAllSelected ? '#3b82f6' : 'rgba(255, 255, 255, 0.1)'}`,
-                              color: isAllSelected ? '#93c5fd' : '#cbd5e1',
+                              background: isAllSelected ? 'var(--blue)' : 'var(--field-bg)',
+                              border: `1px solid ${isAllSelected ? 'var(--blue)' : 'var(--line)'}`,
+                              color: isAllSelected ? '#ffffff' : 'var(--ink)',
                               borderRadius: 16,
                               padding: '4px 12px',
                               fontSize: 12,
@@ -1527,7 +1527,7 @@ export default function ComposePage() {
                       <span className="fb-mark">f</span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                          <span style={{ fontWeight: 700, color: '#fff', fontSize: 13.5 }}>{channel.name}</span>
+                          <span style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 13.5 }}>{channel.name}</span>
                           {channel.fbAccountName && (
                             <span style={{
                               fontSize: 10.5,
@@ -1692,8 +1692,8 @@ export default function ComposePage() {
               <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: 16 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap', gap: 8 }}>
                   <div>
-                    <span style={{ fontWeight: 700, fontSize: 13.5, color: '#fff', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <MessageCircle size={15} style={{ color: '#00f2fe' }} />
+                    <span style={{ fontWeight: 700, fontSize: 13.5, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <MessageCircle size={15} style={{ color: 'var(--blue)' }} />
                       Comment Seeding Boost ({comments.length}/5)
                     </span>
                     <span className="muted" style={{ fontSize: 11, display: 'block', marginTop: 2 }}>
@@ -1878,12 +1878,12 @@ export default function ComposePage() {
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: 6,
-                        background: 'rgba(0, 242, 254, 0.12)',
-                        border: '1px solid rgba(0, 242, 254, 0.3)',
+                        background: 'rgba(37, 99, 235, 0.08)',
+                        border: '1px solid rgba(37, 99, 235, 0.25)',
                         borderRadius: 16,
                         padding: '4px 12px',
                         fontSize: 12.5,
-                        color: '#fff',
+                        color: 'var(--blue)',
                         fontWeight: 600
                       }}
                     >
@@ -2087,10 +2087,10 @@ export default function ComposePage() {
                   id="ai-web-search-toggle"
                   checked={aiWebSearch}
                   onChange={(e) => setAiWebSearch(e.target.checked)}
-                  style={{ accentColor: '#00f2fe', width: 17, height: 17, marginTop: 2, cursor: 'pointer' }}
+                  style={{ accentColor: 'var(--blue)', width: 17, height: 17, marginTop: 2, cursor: 'pointer' }}
                 />
-                <label htmlFor="ai-web-search-toggle" style={{ fontSize: 12, color: '#e2e8f0', cursor: 'pointer', margin: 0, lineHeight: 1.45 }}>
-                  🌐 <strong style={{ color: '#00f2fe' }}>Tự động tra cứu tin tức thời sự trên mạng (Google News)</strong>: Khi viết về sự kiện "hôm nay", tin mới hoặc drama, hệ thống sẽ tự cập nhật tin tức báo chí mới nhất để AI viết chuẩn 100%, chống bịa đặt.
+                <label htmlFor="ai-web-search-toggle" style={{ fontSize: 12, color: 'var(--ink)', cursor: 'pointer', margin: 0, lineHeight: 1.45 }}>
+                  🌐 <strong style={{ color: 'var(--blue)' }}>Tự động tra cứu tin tức thời sự trên mạng (Google News)</strong>: Khi viết về sự kiện "hôm nay", tin mới hoặc drama, hệ thống sẽ tự cập nhật tin tức báo chí mới nhất để AI viết chuẩn 100%, chống bịa đặt.
                 </label>
               </div>
 

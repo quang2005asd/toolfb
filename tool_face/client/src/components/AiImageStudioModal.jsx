@@ -356,7 +356,7 @@ export default function AiImageStudioModal({
               <Sparkles size={20} color="#000" />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#fff', letterSpacing: '-0.01em' }}>
+              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.01em' }}>
                 AI Visual & Watermark Studio
               </h3>
               <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>
@@ -368,8 +368,8 @@ export default function AiImageStudioModal({
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {/* Tab switch */}
             <div style={{
-              display: 'flex', background: 'rgba(0,0,0,0.4)', borderRadius: 10, padding: 3,
-              border: '1px solid rgba(255,255,255,0.08)'
+              display: 'flex', background: 'var(--field-bg)', borderRadius: 10, padding: 3,
+              border: '1px solid var(--line)'
             }}>
               <button
                 type="button"
@@ -377,8 +377,8 @@ export default function AiImageStudioModal({
                 style={{
                   padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
                   border: 'none', cursor: 'pointer', transition: 'all 0.2s',
-                  background: activeTab === 'generate' ? 'rgba(0, 242, 254, 0.15)' : 'transparent',
-                  color: activeTab === 'generate' ? '#00f2fe' : 'var(--muted)'
+                  background: activeTab === 'generate' ? 'var(--blue)' : 'transparent',
+                  color: activeTab === 'generate' ? '#ffffff' : 'var(--muted)'
                 }}
               >
                 🎨 AI Tạo ảnh
@@ -389,8 +389,8 @@ export default function AiImageStudioModal({
                 style={{
                   padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
                   border: 'none', cursor: 'pointer', transition: 'all 0.2s',
-                  background: activeTab === 'watermark' ? 'rgba(0, 242, 254, 0.15)' : 'transparent',
-                  color: activeTab === 'watermark' ? '#00f2fe' : 'var(--muted)'
+                  background: activeTab === 'watermark' ? 'var(--blue)' : 'transparent',
+                  color: activeTab === 'watermark' ? '#ffffff' : 'var(--muted)'
                 }}
               >
                 💧 Đóng dấu Watermark
@@ -427,8 +427,8 @@ export default function AiImageStudioModal({
                     placeholder="Mô tả bức ảnh bạn muốn tạo (tiếng Việt hoặc tiếng Anh)..."
                     rows={3}
                     style={{
-                      width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: 10, padding: 12, color: '#fff', fontSize: 13, resize: 'none',
+                      width: '100%', background: 'var(--field-bg)', border: '1px solid var(--line)',
+                      borderRadius: 10, padding: 12, color: 'var(--ink)', fontSize: 13, resize: 'none',
                       outline: 'none', fontFamily: 'inherit'
                     }}
                   />
@@ -691,8 +691,8 @@ export default function AiImageStudioModal({
                         onChange={e => setWatermarkText(e.target.value)}
                         placeholder="Hotline / Tên Page / Website..."
                         style={{
-                          width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)',
-                          borderRadius: 8, padding: '8px 12px', color: '#fff', fontSize: 13, outline: 'none'
+                          width: '100%', background: 'var(--field-bg)', border: '1px solid var(--line)',
+                          borderRadius: 8, padding: '8px 12px', color: 'var(--ink)', fontSize: 13, outline: 'none'
                         }}
                       />
                     </div>

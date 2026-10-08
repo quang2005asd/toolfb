@@ -352,7 +352,7 @@ export default function LandingPage() {
             </p>
             <div style={{ padding: '24px 16px', borderRadius: 16, background: 'rgba(168, 85, 247, 0.05)', border: '1px solid rgba(168, 85, 247, 0.2)', textAlign: 'center', marginTop: 24 }}>
               <div style={{ fontSize: 36, marginBottom: 8 }}>🔒</div>
-              <div style={{ fontWeight: 800, color: '#fff', fontSize: 14.5 }}>Chuẩn mã hoá quân sự</div>
+              <div style={{ fontWeight: 800, color: 'var(--ink)', fontSize: 14.5 }}>Chuẩn mã hoá quân sự</div>
               <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>Bảo mật dữ liệu tuyệt đối</div>
             </div>
           </div>
@@ -368,7 +368,7 @@ export default function LandingPage() {
             </p>
             <div style={{ padding: '24px 16px', borderRadius: 16, background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)', textAlign: 'center', marginTop: 24 }}>
               <div style={{ fontSize: 36, marginBottom: 8 }}>💬</div>
-              <div style={{ fontWeight: 800, color: '#fff', fontSize: 14.5 }}>5 Tầng Comment</div>
+              <div style={{ fontWeight: 800, color: 'var(--ink)', fontSize: 14.5 }}>5 Tầng Comment</div>
               <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>Hẹn giờ độ trễ từng phút</div>
             </div>
           </div>
@@ -382,7 +382,7 @@ export default function LandingPage() {
             <p className="bento-card-desc">
               Kéo thả file Excel (.xlsx), hệ thống tự động bóc tách tiêu đề, nội dung, ảnh/video, thời gian hẹn giờ và phân bổ tới từng Fanpage chỉ trong vài giây.
             </p>
-            <div style={{ position: 'relative', borderRadius: '16px', overflow: 'hidden', border: '1px solid rgba(245, 158, 11, 0.25)', marginTop: '16px', background: '#070a14', boxShadow: '0 16px 40px rgba(0,0,0,0.6)' }}>
+            <div style={{ position: 'relative', borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--line)', marginTop: '16px', background: 'var(--panel)', boxShadow: '0 8px 24px rgba(70,55,40,0.06)' }}>
               <Image
                 src="/excel-bulk-showcase.jpg"
                 alt="Tải file Excel lên lịch tự động"

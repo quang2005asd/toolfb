@@ -5212,3 +5212,297 @@ body.dark-mode .theme-toggle-btn:hover {
   color: #00f2fe;
   box-shadow: 0 4px 14px rgba(0, 242, 254, 0.25);
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ═══ BỘ CHUẨN HOÁ MÀU CHỮ & TYPOGRAPHY CHO TONE TRẮNG KEM (WARM HIGH CONTRAST) ═══
+   ══════════════════════════════════════════════════════════════════════════════ */
+:root:not([data-theme="dark"]), [data-theme="light"], body.light-mode {
+  /* 1. Mọi Tiêu Đề & Chữ Đậm */
+  h1, h2, h3, h4, h5, h6,
+  .page-topline h1,
+  .panel-heading h2,
+  .panel-heading h3,
+  .home-banner h2,
+  .dashboard-title-heading,
+  .login-brand h1,
+  .ai-header h2,
+  .ai-empty-state h2,
+  .ai-template-header,
+  .table-content,
+  .quick-link strong,
+  .post-row strong,
+  .channel-option strong,
+  .calendar-controls strong,
+  .dashboard-channel-name,
+  .dashboard-tool-title,
+  .login-setup strong,
+  strong, b {
+    color: #1c1917 !important;
+  }
+
+  /* 2. Giá trị số liệu Metric (Đậm nét, rõ ràng, không bị chìm) */
+  .metric-value,
+  .metric-card-pro-value {
+    background: none !important;
+    -webkit-background-clip: unset !important;
+    -webkit-text-fill-color: #1c1917 !important;
+    color: #1c1917 !important;
+    filter: none !important;
+    text-shadow: none !important;
+    font-weight: 900 !important;
+  }
+
+  /* 3. Chữ Phụ (Muted & Dim - Tương phản rõ ràng trên nền kem) */
+  .muted,
+  .text-muted,
+  p.muted,
+  span.muted,
+  div.muted,
+  .dashboard-subtitle,
+  .dashboard-tool-desc,
+  .dashboard-channel-sub,
+  .login-intro,
+  .login-setup,
+  .ai-header-current-chat,
+  .ai-empty-state p,
+  .tip-line,
+  .auth-tab-btn,
+  .step-button {
+    color: #57534e !important;
+  }
+
+  .dim,
+  .text-dim,
+  small,
+  .metric-foot,
+  .login-security,
+  .login-token-hint,
+  .ai-header-meta,
+  .ai-history-item-date,
+  .ai-composer-hint,
+  .chart-labels {
+    color: #78716c !important;
+  }
+
+  /* 4. Nhãn & Trường Nhập liệu (Labels & Fields) */
+  label,
+  .field-label,
+  .auth-field label,
+  .login-token-label {
+    color: #292524 !important;
+    font-weight: 700 !important;
+  }
+
+  .field,
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select,
+  .auth-input,
+  .login-token-input,
+  .compose-editor,
+  .ai-composer textarea {
+    color: #1c1917 !important;
+    background: #ffffff !important;
+    border-color: rgba(215, 208, 195, 0.85) !important;
+  }
+
+  .field::placeholder,
+  input::placeholder,
+  textarea::placeholder,
+  select::placeholder,
+  .auth-input::placeholder,
+  .ai-composer textarea::placeholder {
+    color: #a8a29e !important;
+  }
+
+  /* 5. Điểm nhấn & Eyebrow */
+  .eyebrow {
+    color: #2563eb !important;
+    text-shadow: none !important;
+    font-weight: 800 !important;
+  }
+
+  .back-nav-chip {
+    color: #44403c !important;
+    background: #ffffff !important;
+    border: 1px solid rgba(215, 208, 195, 0.8) !important;
+  }
+  .back-nav-chip:hover {
+    color: #2563eb !important;
+    border-color: #2563eb !important;
+    background: #f7f5f0 !important;
+  }
+
+  /* 6. Thẻ Trạng Thái (Status Pills) */
+  .status-pill.published {
+    color: #065f46 !important;
+    background: #ecfdf5 !important;
+    border: 1px solid #a7f3d0 !important;
+    box-shadow: 0 1px 3px rgba(6, 95, 70, 0.08) !important;
+  }
+  .status-pill.pending {
+    color: #92400e !important;
+    background: #fffbeb !important;
+    border: 1px solid #fde68a !important;
+    box-shadow: 0 1px 3px rgba(146, 64, 14, 0.08) !important;
+  }
+  .status-pill.failed {
+    color: #991b1b !important;
+    background: #fef2f2 !important;
+    border: 1px solid #fecaca !important;
+    box-shadow: 0 1px 3px rgba(153, 27, 27, 0.08) !important;
+  }
+  .status-pill.publishing {
+    color: #1e40af !important;
+    background: #eff6ff !important;
+    border: 1px solid #bfdbfe !important;
+    box-shadow: 0 1px 3px rgba(30, 64, 175, 0.08) !important;
+  }
+  .status-pill.draft {
+    color: #44403c !important;
+    background: #f5f2eb !important;
+    border: 1px solid #d6cebf !important;
+  }
+  .channel-connected {
+    color: #065f46 !important;
+    background: #ecfdf5 !important;
+    border: 1px solid #a7f3d0 !important;
+  }
+
+  /* 7. Thông Báo & Cảnh Báo (Notices) */
+  .notice {
+    background: #eff6ff !important;
+    border: 1px solid #bfdbfe !important;
+    color: #1e40af !important;
+    box-shadow: 0 2px 8px rgba(30, 64, 175, 0.06) !important;
+  }
+
+  /* 8. Bảng Dữ Liệu (Data Tables) */
+  .data-table th, table th {
+    background: #f7f5f0 !important;
+    color: #44403c !important;
+    border-bottom: 1px solid rgba(215, 208, 195, 0.75) !important;
+    font-weight: 800 !important;
+  }
+  .data-table td, table td {
+    color: #1c1917 !important;
+    border-bottom: 1px solid #f3efe6 !important;
+  }
+  .data-table tr:hover td, table tr:hover td {
+    background: #faf8f4 !important;
+  }
+
+  /* 9. AI Studio & Tin Nhắn */
+  .ai-studio-shell {
+    background: #ffffff !important;
+    border: 1px solid rgba(215, 208, 195, 0.8) !important;
+  }
+  .ai-sidebar {
+    background: #fdfcf9 !important;
+    border-right: 1px solid rgba(215, 208, 195, 0.75) !important;
+  }
+  .ai-sidebar-header {
+    background: #faf8f4 !important;
+    border-bottom: 1px solid rgba(215, 208, 195, 0.75) !important;
+  }
+  .ai-sidebar-title {
+    color: #44403c !important;
+  }
+  .ai-btn-new-chat {
+    background: #ffffff !important;
+    color: #2563eb !important;
+    border: 1px solid rgba(37, 99, 235, 0.3) !important;
+  }
+  .ai-history-item-title {
+    color: #292524 !important;
+  }
+  .ai-history-item.active .ai-history-item-title {
+    color: #1c1917 !important;
+    font-weight: 800 !important;
+  }
+  .ai-history-item:hover {
+    background: #f5f2eb !important;
+  }
+  .ai-history-item.active {
+    background: #eff6ff !important;
+    border-color: rgba(37, 99, 235, 0.35) !important;
+  }
+  .ai-header {
+    background: #ffffff !important;
+    border-bottom: 1px solid rgba(215, 208, 195, 0.75) !important;
+  }
+  .ai-conversation {
+    background-color: #faf8f5 !important;
+    background-image: radial-gradient(rgba(120, 113, 108, 0.06) 1px, transparent 1px) !important;
+  }
+  .ai-msg.assistant .ai-msg-content {
+    background: #ffffff !important;
+    border: 1px solid rgba(215, 208, 195, 0.8) !important;
+    color: #1c1917 !important;
+    box-shadow: 0 4px 14px rgba(70, 55, 40, 0.04) !important;
+  }
+  .ai-msg.user .ai-msg-content {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+    color: #ffffff !important;
+    border: none !important;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25) !important;
+  }
+  .ai-msg-label {
+    color: #78716c !important;
+  }
+  .ai-composer-wrap {
+    background: linear-gradient(180deg, transparent 0%, rgba(250, 248, 245, 0.95) 40%) !important;
+  }
+  .ai-composer {
+    background: #ffffff !important;
+    border: 1px solid rgba(215, 208, 195, 0.85) !important;
+  }
+  .ai-chip {
+    background: #ffffff !important;
+    border: 1px solid rgba(215, 208, 195, 0.85) !important;
+    color: #44403c !important;
+  }
+  .ai-chip:hover {
+    background: #f0f4ff !important;
+    border-color: rgba(37, 99, 235, 0.3) !important;
+    color: #2563eb !important;
+  }
+
+  /* 10. Code & Token */
+  code, kbd {
+    background: #f5f2eb !important;
+    color: #1e40af !important;
+    border: 1px solid rgba(215, 208, 195, 0.6) !important;
+    font-weight: 600 !important;
+  }
+
+  /* 11. Dropzones & File Upload */
+  .file-drop, .upload-drop {
+    background: #ffffff !important;
+    border-color: rgba(215, 208, 195, 0.9) !important;
+    color: #57534e !important;
+  }
+  .file-drop label, .upload-drop label {
+    color: #2563eb !important;
+    text-shadow: none !important;
+  }
+
+  /* 12. Command Banner & Marquee */
+  .home-banner {
+    background: linear-gradient(135deg, #ffffff 0%, #fdfcf9 100%) !important;
+    border: 1px solid rgba(215, 208, 195, 0.8) !important;
+    box-shadow: 0 12px 36px -6px rgba(70, 55, 40, 0.06) !important;
+  }
+  .home-banner::before {
+    background: linear-gradient(90deg, transparent, #2563eb 30%, #3b82f6 70%, transparent) !important;
+  }
+  .workspace-marquee {
+    background: #ffffff !important;
+    border: 1px solid rgba(215, 208, 195, 0.75) !important;
+    box-shadow: 0 2px 8px rgba(70, 55, 40, 0.03) !important;
+  }
+  .workspace-marquee-text {
+    color: #2563eb !important;
+    text-shadow: none !important;
+  }
+}

@@ -171,12 +171,12 @@ export default function DashboardPage() {
           flexWrap: 'wrap'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <ShieldAlert size={26} style={{ color: '#f87171', flexShrink: 0 }} />
+            <ShieldAlert size={26} style={{ color: '#dc2626', flexShrink: 0 }} />
             <div>
               <strong style={{ color: 'var(--ink)', fontSize: 13.5, display: 'block', marginBottom: 3 }}>
                 Token Facebook đã hết hạn phiên đăng nhập!
               </strong>
-              <span style={{ color: '#fca5a5', fontSize: 12, lineHeight: 1.5 }}>
+              <span style={{ color: '#b91c1c', fontSize: 12, lineHeight: 1.5 }}>
                 {reportData.tokenErrorMessage || 'Facebook từ chối trả về dữ liệu tương tác vì Token của Fanpage đã hết hạn. Hãy cập nhật lại Token mới.'}
               </span>
             </div>
@@ -194,8 +194,8 @@ export default function DashboardPage() {
       {/* ═══ 4 THẺ CHỈ SỐ TỔNG HỢP BÀI VIẾT ═══ */}
       <section className="metric-grid" style={{ marginBottom: 22 }}>
         {/* Thẻ 1: Lượt xem bài viết */}
-        <article className="panel metric-card" style={{ borderTop: '2px solid #38bdf8' }}>
-          <div className="metric-label" style={{ color: '#38bdf8' }}>
+        <article className="panel metric-card" style={{ borderTop: '2px solid var(--blue)' }}>
+          <div className="metric-label" style={{ color: 'var(--blue)' }}>
             <Eye size={16} /> Lượt xem bài viết
           </div>
           <div className="metric-value">
@@ -206,7 +206,7 @@ export default function DashboardPage() {
 
         {/* Thẻ 2: Tổng tương tác */}
         <article className="panel metric-card" style={{ borderTop: '2px solid #2563eb' }}>
-          <div className="metric-label" style={{ color: '#60a5fa' }}>
+          <div className="metric-label" style={{ color: '#2563eb' }}>
             <TrendingUp size={16} /> Tổng tương tác bài viết
           </div>
           <div className="metric-value">
@@ -218,8 +218,8 @@ export default function DashboardPage() {
         </article>
 
         {/* Thẻ 3: Cảm xúc & Bình luận */}
-        <article className="panel metric-card" style={{ borderTop: '2px solid #10b981' }}>
-          <div className="metric-label" style={{ color: '#34d399' }}>
+        <article className="panel metric-card" style={{ borderTop: '2px solid #059669' }}>
+          <div className="metric-label" style={{ color: '#059669' }}>
             <ThumbsUp size={16} /> Cảm xúc & Bình luận
           </div>
           <div className="metric-value">
@@ -231,8 +231,8 @@ export default function DashboardPage() {
         </article>
 
         {/* Thẻ 4: Hiệu suất & Tần suất bài */}
-        <article className="panel metric-card" style={{ borderTop: '2px solid #f59e0b' }}>
-          <div className="metric-label" style={{ color: '#fbbf24' }}>
+        <article className="panel metric-card" style={{ borderTop: '2px solid #d97706' }}>
+          <div className="metric-label" style={{ color: '#d97706' }}>
             <BarChart3 size={16} /> Hiệu suất trung bình
           </div>
           <div className="metric-value">
@@ -443,7 +443,7 @@ export default function DashboardPage() {
                         </div>
                       </td>
                       <td>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: '#38bdf8' }}>{post.pageName}</span>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--blue)' }}>{post.pageName}</span>
                       </td>
                       <td>
                         <span style={{ fontSize: 12, color: 'var(--muted)' }}>
@@ -451,22 +451,22 @@ export default function DashboardPage() {
                         </span>
                       </td>
                       <td style={{ textAlign: 'center' }}>
-                        <span style={{ fontWeight: 700, color: '#e2e8f0', fontSize: 12.5 }}>
+                        <span style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 12.5 }}>
                           {post.views ? post.views.toLocaleString('vi-VN') : '—'}
                         </span>
                       </td>
                       <td style={{ textAlign: 'center' }}>
-                        <span style={{ color: '#60a5fa', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                        <span style={{ color: 'var(--blue)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
                           <ThumbsUp size={11} /> {post.reactions}
                         </span>
                       </td>
                       <td style={{ textAlign: 'center' }}>
-                        <span style={{ color: '#34d399', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                        <span style={{ color: '#059669', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
                           <MessageSquare size={11} /> {post.comments}
                         </span>
                       </td>
                       <td style={{ textAlign: 'center' }}>
-                        <span style={{ color: '#a78bfa', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                        <span style={{ color: '#7c3aed', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
                           <Share2 size={11} /> {post.shares}
                         </span>
                       </td>

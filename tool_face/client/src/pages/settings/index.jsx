@@ -708,23 +708,23 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Tùy chọn sự kiện nhận cảnh báo */}
-                <div style={{ marginBottom: 22, padding: '14px', background: 'rgba(255,255,255,0.02)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ marginBottom: 22, padding: '14px', background: 'var(--field-bg)', borderRadius: 10, border: '1px solid var(--line)' }}>
                   <label className="field-label" style={{ marginBottom: 10 }}>Các sự kiện kích hoạt cảnh báo:</label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, cursor: 'pointer', fontSize: 12.5, color: '#e2e8f0' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, cursor: 'pointer', fontSize: 12.5, color: 'var(--ink)' }}>
                     <input
                       type="checkbox"
                       checked={data.settings.telegram_alert_on_expired}
                       onChange={(e) => setData({ ...data, settings: { ...data.settings, telegram_alert_on_expired: e.target.checked } })}
-                      style={{ accentColor: '#00f2fe', width: 16, height: 16 }}
+                      style={{ accentColor: 'var(--blue)', width: 16, height: 16 }}
                     />
                     <span>🚨 Cảnh báo ngay khi <strong>Token Fanpage hết hạn / bị thu hồi quyền</strong></span>
                   </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 12.5, color: '#e2e8f0' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 12.5, color: 'var(--ink)' }}>
                     <input
                       type="checkbox"
                       checked={data.settings.telegram_alert_on_failed}
                       onChange={(e) => setData({ ...data, settings: { ...data.settings, telegram_alert_on_failed: e.target.checked } })}
-                      style={{ accentColor: '#00f2fe', width: 16, height: 16 }}
+                      style={{ accentColor: 'var(--blue)', width: 16, height: 16 }}
                     />
                     <span>⚠️ Cảnh báo khẩn cấp khi <strong>bài đăng xuất bản Facebook thất bại</strong></span>
                   </label>

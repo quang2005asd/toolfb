@@ -229,7 +229,7 @@ export default function BulkUpload() {
               }}
             >
               <div>
-                <strong style={{ fontSize: '13.5px', color: '#e2e8f0', display: 'block' }}>
+                <strong style={{ fontSize: '13.5px', color: 'var(--ink)', display: 'block' }}>
                   Fanpage mặc định (nếu dòng Excel không chỉ định Page):
                 </strong>
                 <span className="muted" style={{ fontSize: '12px' }}>
@@ -240,9 +240,9 @@ export default function BulkUpload() {
                 value={selectedDefaultPageId}
                 onChange={handleDefaultPageChange}
                 style={{
-                  background: '#0d1322',
-                  color: '#fff',
-                  border: '1px solid rgba(255, 255, 255, 0.16)',
+                  background: 'var(--field-bg)',
+                  color: 'var(--ink)',
+                  border: '1px solid var(--line)',
                   borderRadius: '8px',
                   padding: '8px 14px',
                   fontSize: '13.5px',
@@ -584,7 +584,7 @@ export default function BulkUpload() {
                           )}
                         </td>
                         <td style={{ padding: '12px 14px' }}>
-                          <div style={{ fontWeight: 600, color: '#e2e8f0', fontSize: '13px' }}>
+                          <div style={{ fontWeight: 600, color: 'var(--ink)', fontSize: '13px' }}>
                             {post.pageName}
                           </div>
                           <span
@@ -598,7 +598,7 @@ export default function BulkUpload() {
                           <p
                             style={{
                               margin: 0,
-                              color: '#cbd5e1',
+                              color: 'var(--ink)',
                               lineHeight: 1.45,
                               maxWidth: '360px',
                               overflow: 'hidden',
@@ -611,7 +611,7 @@ export default function BulkUpload() {
                           </p>
                         </td>
                         <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#93c5fd' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--blue)' }}>
                             <Calendar size={13} />
                             {new Date(post.scheduledAt).toLocaleString('vi-VN', {
                               day: '2-digit',
@@ -721,7 +721,7 @@ export default function BulkUpload() {
                         style={{
                           fontSize: '13px',
                           fontWeight: 700,
-                          color: '#fff',
+                          color: 'var(--ink)',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap'
