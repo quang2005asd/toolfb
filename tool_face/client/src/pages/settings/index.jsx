@@ -329,9 +329,9 @@ export default function SettingsPage() {
                 borderRadius: '50%',
                 margin: '0 auto 16px',
                 overflow: 'hidden',
-                border: '2px solid #00f2fe',
-                boxShadow: '0 0 20px rgba(0, 242, 254, 0.4)',
-                background: 'linear-gradient(135deg, #00f2fe, #8b5cf6)'
+                border: '2px solid #bfdbfe',
+                boxShadow: '0 4px 14px rgba(37, 99, 235, 0.2)',
+                background: 'linear-gradient(135deg, #2563eb, #1d4ed8)'
               }}
             >
               {user?.avatar ? (
@@ -342,7 +342,7 @@ export default function SettingsPage() {
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 />
               ) : (
-                <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', fontSize: 32, fontWeight: 900, color: '#040812' }}>
+                <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', fontSize: 32, fontWeight: 900, color: '#ffffff' }}>
                   {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                 </div>
               )}
@@ -653,7 +653,8 @@ export default function SettingsPage() {
                           width: 18,
                           left: data.settings.telegram_alert_enabled ? 23 : 3,
                           bottom: 3,
-                          backgroundColor: data.settings.telegram_alert_enabled ? '#040812' : '#fff',
+                          backgroundColor: '#ffffff',
+                          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
                           borderRadius: '50%',
                           transition: '.25s'
                         }}
@@ -990,7 +991,8 @@ export default function SettingsPage() {
                         width: 18,
                         left: data.settings.enable_rgb_effects ? 23 : 3,
                         bottom: 3,
-                        backgroundColor: data.settings.enable_rgb_effects ? '#040812' : '#fff',
+                        backgroundColor: '#ffffff',
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
                         borderRadius: '50%',
                         transition: '.25s'
                       }}

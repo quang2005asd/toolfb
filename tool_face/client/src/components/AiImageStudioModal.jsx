@@ -326,34 +326,35 @@ export default function AiImageStudioModal({
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9999,
-      background: 'rgba(2, 6, 23, 0.85)',
-      backdropFilter: 'blur(16px)',
+      background: 'rgba(15, 23, 42, 0.45)',
+      backdropFilter: 'blur(8px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: 16
     }}>
-      <div className="panel-3d" style={{
+      <div className="panel" style={{
         width: '100%', maxWidth: 960, maxHeight: '92vh',
         display: 'flex', flexDirection: 'column',
         borderRadius: 20, overflow: 'hidden',
-        background: 'linear-gradient(135deg, rgba(13, 20, 36, 0.95), rgba(7, 11, 22, 0.98))',
-        border: '1px solid rgba(0, 242, 254, 0.25)',
-        boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 40px rgba(0, 242, 254, 0.15)'
+        background: 'var(--panel)',
+        border: '1px solid var(--line)',
+        boxShadow: '0 20px 50px -10px rgba(70, 55, 40, 0.15)'
       }}>
         {/* Header */}
         <div style={{
           padding: '16px 24px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          borderBottom: '1px solid var(--line)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: 'rgba(255, 255, 255, 0.02)'
+          background: 'var(--panel)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{
               width: 36, height: 36, borderRadius: 10,
-              background: 'linear-gradient(135deg, #00f2fe, #4facfe)',
+              background: '#eff6ff',
+              border: '1px solid #bfdbfe',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 0 15px rgba(0, 242, 254, 0.4)'
+              color: '#2563eb'
             }}>
-              <Sparkles size={20} color="#000" />
+              <Sparkles size={20} color="#2563eb" />
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.01em' }}>
@@ -522,13 +523,13 @@ export default function AiImageStudioModal({
               {/* Right Preview */}
               <div style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                background: 'rgba(0,0,0,0.4)', borderRadius: 16,
-                border: '1px solid rgba(255,255,255,0.08)', padding: 16, minHeight: 380, position: 'relative'
+                background: 'var(--field-bg)', borderRadius: 16,
+                border: '1px solid var(--line)', padding: 16, minHeight: 380, position: 'relative'
               }}>
                 {generating ? (
                   <div style={{ textAlign: 'center' }}>
                     <div className="quantum-orb" style={{ margin: '0 auto 16px' }} />
-                    <div style={{ fontSize: 14, fontWeight: 600, color: '#00f2fe' }}>AI đang vẽ bức ảnh của bạn...</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#2563eb' }}>AI đang vẽ bức ảnh của bạn...</div>
                     <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>
                       Đang xử lý ánh sáng, bố cục & chi tiết 8K (khoảng 3-8 giây)
                     </div>
@@ -537,8 +538,8 @@ export default function AiImageStudioModal({
                   <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <div style={{
                       position: 'relative', width: '100%', minHeight: 320, maxHeight: 360,
-                      borderRadius: 14, overflow: 'hidden', border: '1px solid rgba(0,242,254,0.35)',
-                      boxShadow: '0 0 30px rgba(0,242,254,0.25)', background: 'rgba(2, 6, 23, 0.75)',
+                      borderRadius: 14, overflow: 'hidden', border: '1px solid var(--line)',
+                      boxShadow: '0 4px 20px rgba(70, 55, 40, 0.06)', background: 'var(--panel)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center'
                     }}>
                       <img
@@ -548,12 +549,12 @@ export default function AiImageStudioModal({
                       />
                       <div style={{
                         position: 'absolute', bottom: 10, left: 10,
-                        background: 'rgba(4, 8, 20, 0.85)', backdropFilter: 'blur(8px)',
-                        padding: '5px 12px', borderRadius: 8, fontSize: 11.5, color: '#00f2fe', fontWeight: 700,
-                        border: '1px solid rgba(0,242,254,0.3)', boxShadow: '0 4px 12px rgba(0,0,0,0.6)',
+                        background: 'rgba(255, 255, 255, 0.92)', backdropFilter: 'blur(8px)',
+                        padding: '5px 12px', borderRadius: 8, fontSize: 11.5, color: '#2563eb', fontWeight: 700,
+                        border: '1px solid #bfdbfe', boxShadow: '0 2px 8px rgba(70, 55, 40, 0.08)',
                         display: 'flex', alignItems: 'center', gap: 6, zIndex: 5
                       }}>
-                        <Sparkles size={12} color="#00f2fe" />
+                        <Sparkles size={12} color="#2563eb" />
                         <span>AI Generated ({generatedResult.style})</span>
                       </div>
                     </div>

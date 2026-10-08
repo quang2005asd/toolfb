@@ -452,20 +452,20 @@ export default function AIGeneratePage() {
           <div key={s.num} style={{ display: 'flex', alignItems: 'center', gap: 10, flex: idx < 2 ? 1 : 'none' }}>
             <div style={{
               display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px', borderRadius: 12,
-              background: step === s.num ? 'linear-gradient(135deg, rgba(0, 242, 254, 0.18) 0%, rgba(139, 92, 246, 0.15) 100%)' : step > s.num ? 'rgba(16, 185, 129, 0.12)' : 'rgba(255, 255, 255, 0.02)',
-              border: `1px solid ${step === s.num ? 'rgba(0, 242, 254, 0.45)' : step > s.num ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255, 255, 255, 0.06)'}`,
-              boxShadow: step === s.num ? '0 4px 16px rgba(0, 242, 254, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.25)' : 'none',
-              transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+              background: step === s.num ? '#eff6ff' : step > s.num ? '#ecfdf5' : 'var(--panel)',
+              border: `1px solid ${step === s.num ? '#bfdbfe' : step > s.num ? '#a7f3d0' : 'var(--line)'}`,
+              boxShadow: step === s.num ? '0 2px 8px rgba(37, 99, 235, 0.08)' : 'none',
+              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
             }}>
               <div style={{
                 width: 30, height: 30, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: step === s.num ? 'linear-gradient(135deg, #00f2fe, #38bdf8)' : step > s.num ? '#10b981' : 'rgba(255, 255, 255, 0.08)',
-                fontSize: 13, fontWeight: 800, color: step >= s.num ? '#040812' : 'var(--muted)',
-                boxShadow: step === s.num ? '0 0 14px rgba(0, 242, 254, 0.6)' : 'none'
+                background: step === s.num ? '#2563eb' : step > s.num ? '#059669' : 'var(--field-bg)',
+                fontSize: 13, fontWeight: 800, color: step >= s.num ? '#ffffff' : 'var(--muted)',
+                boxShadow: step === s.num ? '0 2px 8px rgba(37, 99, 235, 0.3)' : 'none'
               }}>
                 {step > s.num ? <Check size={15} color="#fff" strokeWidth={3} /> : s.num}
               </div>
-              <span style={{ fontSize: 13.5, fontWeight: 700, color: step >= s.num ? '#fff' : 'var(--muted)', whiteSpace: 'nowrap' }}>
+              <span style={{ fontSize: 13.5, fontWeight: 700, color: step >= s.num ? 'var(--ink)' : 'var(--muted)', whiteSpace: 'nowrap' }}>
                 {s.label}
               </span>
             </div>
@@ -702,8 +702,9 @@ export default function AIGeneratePage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{
                       width: 32, height: 32, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: 'linear-gradient(135deg, #00f2fe, #38bdf8)', fontSize: 13, fontWeight: 800, color: '#040812',
-                      boxShadow: '0 4px 14px rgba(0, 242, 254, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.6)'
+                      background: '#eff6ff', fontSize: 13, fontWeight: 800, color: '#2563eb',
+                      border: '1px solid #bfdbfe',
+                      boxShadow: '0 1px 3px rgba(37, 99, 235, 0.1)'
                     }}>
                       #{index + 1}
                     </div>
