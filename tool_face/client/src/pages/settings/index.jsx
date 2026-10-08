@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
+  Activity,
   AlertCircle,
+  Bell,
   Bot,
   Check,
   CheckCircle2,
@@ -18,8 +20,10 @@ import {
   Palette,
   RefreshCw,
   Save,
+  Send,
   Server,
   Settings,
+  ShieldAlert,
   ShieldCheck,
   Sparkles,
   User,
@@ -33,6 +37,7 @@ import useAuth from '../../hooks/useAuth';
 const tabs = [
   { id: 'account', label: 'Tài khoản & Facebook', icon: User },
   { id: 'ai', label: 'Cấu hình AI Studio', icon: Sparkles },
+  { id: 'telegram', label: 'Giám sát & Bot Telegram', icon: Bell },
   { id: 'publishing', label: 'Đăng bài & Lịch trình', icon: Clock },
   { id: 'system', label: 'Hệ thống & Giao diện', icon: Cpu }
 ];
@@ -84,7 +89,13 @@ export default function SettingsPage() {
       default_hashtags: '#facebook #marketing #viral',
       default_signature: '📌 Hãy bấm Theo dõi Fanpage để cập nhật bài viết mới nhất!',
       auto_retry_count: 2,
-      enable_rgb_effects: true
+      enable_rgb_effects: true,
+      telegram_bot_token_masked: '',
+      telegram_has_token: false,
+      telegram_chat_id: '',
+      telegram_alert_enabled: true,
+      telegram_alert_on_expired: true,
+      telegram_alert_on_failed: true
     },
     account: {},
     system: {}
@@ -96,6 +107,16 @@ export default function SettingsPage() {
   // Test AI state
   const [testingAi, setTestingAi] = useState(false);
   const [aiTestResult, setAiTestResult] = useState(null);
+
+  // Telegram Bot state (Module 2)
+  const [newTelegramToken, setNewTelegramToken] = useState('');
+  const [showTelegramToken, setShowTelegramToken] = useState(false);
+  const [testingTelegram, setTestingTelegram] = useState(false);
+  const [telegramTestResult, setTelegramTestResult] = useState(null);
+
+  // Token Health Check state (Module 2)
+  const [runningHealthCheck, setRunningHealthCheck] = useState(false);
+  const [healthCheckResult, setHealthCheckResult] = useState(null);
 
   const loadSettings = async () => {
     setLoading(true);
@@ -143,16 +164,25 @@ export default function SettingsPage() {
         default_hashtags: data.settings.default_hashtags,
         default_signature: data.settings.default_signature,
         auto_retry_count: data.settings.auto_retry_count,
-        enable_rgb_effects: data.settings.enable_rgb_effects
+        enable_rgb_effects: data.settings.enable_rgb_effects,
+        telegram_chat_id: data.settings.telegram_chat_id,
+        telegram_alert_enabled: data.settings.telegram_alert_enabled,
+        telegram_alert_on_expired: data.settings.telegram_alert_on_expired,
+        telegram_alert_on_failed: data.settings.telegram_alert_on_failed
       };
 
       if (newApiKey.trim()) {
         payload.ai_api_key = newApiKey.trim();
       }
 
+      if (newTelegramToken.trim()) {
+        payload.telegram_bot_token = newTelegramToken.trim();
+      }
+
       const res = await settingsApi.update(payload);
       setNotice({ type: 'success', text: res.message || 'Đã lưu cấu hình thành công!' });
       setNewApiKey('');
+      setNewTelegramToken('');
       await loadSettings();
     } catch (err) {
       setNotice({ type: 'error', text: 'Lưu cài đặt thất bại: ' + (err.response?.data?.message || err.message) });
@@ -181,6 +211,54 @@ export default function SettingsPage() {
     }
   };
 
+  const handleTestTelegram = async () => {
+    const hasToken = Boolean(newTelegramToken.trim() || data.settings.telegram_has_token);
+    const chatId = data.settings.telegram_chat_id ? String(data.settings.telegram_chat_id).trim() : '';
+
+    if (!hasToken) {
+      setTelegramTestResult({ success: false, message: 'Vui lòng nhập Telegram Bot Token trước khi gửi test.' });
+      return;
+    }
+    if (!chatId) {
+      setTelegramTestResult({ success: false, message: 'Bạn chưa nhập Telegram Chat ID! Hãy chat với bot @userinfobot để lấy ID của bạn rồi điền vào ô "Telegram Chat ID" bên dưới.' });
+      return;
+    }
+
+    setTestingTelegram(true);
+    setTelegramTestResult(null);
+    try {
+      const res = await settingsApi.testTelegram({
+        botToken: newTelegramToken.trim() || undefined,
+        chatId
+      });
+      setTelegramTestResult({ success: true, message: res.message || 'Gửi tin nhắn thử nghiệm thành công! Hãy kiểm tra Telegram.' });
+    } catch (err) {
+      setTelegramTestResult({
+        success: false,
+        message: err.response?.data?.message || err.message
+      });
+    } finally {
+      setTestingTelegram(false);
+    }
+  };
+
+  const handleRunHealthCheck = async () => {
+    setRunningHealthCheck(true);
+    setHealthCheckResult(null);
+    try {
+      const res = await settingsApi.runTokenHealthCheck();
+      if (res.success && res.summary) {
+        setHealthCheckResult({ success: true, summary: res.summary });
+      } else {
+        setHealthCheckResult({ success: false, message: res.message || 'Quét token thất bại.' });
+      }
+    } catch (err) {
+      setHealthCheckResult({ success: false, message: err.response?.data?.message || err.message });
+    } finally {
+      setRunningHealthCheck(false);
+    }
+  };
+
   return (
     <MainLayout
       title="Cài đặt hệ thống"
@@ -197,7 +275,7 @@ export default function SettingsPage() {
           </button>
           <button
             type="button"
-            className="button button-primary rgb-led-chip"
+            className="button button-primary"
             onClick={handleSave}
             disabled={saving}
           >
@@ -243,7 +321,7 @@ export default function SettingsPage() {
       {activeTab === 'account' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 380px) 1fr', gap: 20 }}>
           {/* Card hồ sơ */}
-          <section className="panel rgb-led-card" style={{ padding: 24, textAlign: 'center' }}>
+          <section className="panel" style={{ padding: 24, textAlign: 'center' }}>
             <div
               style={{
                 width: 88,
@@ -525,7 +603,265 @@ export default function SettingsPage() {
         </form>
       )}
 
-      {/* ═══ TAB 3: ĐĂNG BÀI & LỊCH TRÌNH ═══ */}
+      {/* ═══ TAB 3: GIÁM SÁT & BOT TELEGRAM (MODULE 2) ═══ */}
+      {activeTab === 'telegram' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.25fr) minmax(340px, 0.95fr)', gap: 20 }}>
+          {/* CỘT TRÁI: CẤU HÌNH BOT TELEGRAM */}
+          <form onSubmit={handleSave}>
+            <section className="panel" style={{ marginBottom: 20 }}>
+              <div className="panel-heading" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h2><Bell size={16} style={{ verticalAlign: 'middle', marginRight: 8, color: '#00f2fe' }} />Bot Cảnh Báo Telegram Real-time</h2>
+                {data.settings.telegram_has_token && data.settings.telegram_chat_id ? (
+                  <span className="status-pill published" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
+                    <Check size={12} /> Đã kích hoạt Bot
+                  </span>
+                ) : (
+                  <span className="status-pill draft" style={{ fontSize: 11 }}>Chưa thiết lập</span>
+                )}
+              </div>
+              <div className="panel-body">
+                {/* Switch Bật/Tắt Cảnh báo */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)', marginBottom: 20 }}>
+                  <div>
+                    <strong style={{ color: '#fff', fontSize: 13.5, display: 'block', marginBottom: 2 }}>Kích hoạt hệ thống cảnh báo Telegram</strong>
+                    <span className="muted" style={{ fontSize: 11.5 }}>Gửi thông báo tức thì về tài khoản hoặc nhóm Telegram của bạn</span>
+                  </div>
+                  <label style={{ position: 'relative', display: 'inline-block', width: 44, height: 24, cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={data.settings.telegram_alert_enabled}
+                      onChange={(e) => setData({ ...data, settings: { ...data.settings, telegram_alert_enabled: e.target.checked } })}
+                      style={{ opacity: 0, width: 0, height: 0 }}
+                    />
+                    <span
+                      style={{
+                        position: 'absolute',
+                        cursor: 'pointer',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: data.settings.telegram_alert_enabled ? '#00f2fe' : 'rgba(255,255,255,0.15)',
+                        borderRadius: 24,
+                        transition: '.25s'
+                      }}
+                    >
+                      <span
+                        style={{
+                          position: 'absolute',
+                          height: 18,
+                          width: 18,
+                          left: data.settings.telegram_alert_enabled ? 23 : 3,
+                          bottom: 3,
+                          backgroundColor: data.settings.telegram_alert_enabled ? '#040812' : '#fff',
+                          borderRadius: '50%',
+                          transition: '.25s'
+                        }}
+                      />
+                    </span>
+                  </label>
+                </div>
+
+                {/* Telegram Bot Token */}
+                <div style={{ marginBottom: 18 }}>
+                  <label className="field-label">
+                    Telegram Bot Token {data.settings.telegram_has_token && <span style={{ color: '#10b981', fontSize: 11 }}>• Đã lưu ({data.settings.telegram_bot_token_masked})</span>}
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      className="field"
+                      type={showTelegramToken ? 'text' : 'password'}
+                      value={newTelegramToken}
+                      onChange={(e) => setNewTelegramToken(e.target.value)}
+                      placeholder={data.settings.telegram_has_token ? 'Nhập Bot Token mới nếu muốn đổi…' : 'Ví dụ: 7894561230:AAHi98_xYz0123456789...'}
+                      style={{ paddingRight: 40, width: '100%', fontFamily: newTelegramToken ? 'monospace' : 'inherit' }}
+                    />
+                    <button
+                      type="button"
+                      className="button button-quiet"
+                      onClick={() => setShowTelegramToken(!showTelegramToken)}
+                      style={{ position: 'absolute', right: 4, top: 4, bottom: 4, minHeight: 0, padding: '0 8px' }}
+                      title={showTelegramToken ? 'Ẩn token' : 'Hiện token'}
+                    >
+                      {showTelegramToken ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                  <small className="muted" style={{ display: 'block', marginTop: 6, fontSize: 11.5 }}>
+                    Tạo Bot thông qua <strong>@BotFather</strong> trên Telegram để nhận Token này.
+                  </small>
+                </div>
+
+                {/* Telegram Chat ID */}
+                <div style={{ marginBottom: 20 }}>
+                  <label className="field-label">Telegram Chat ID (ID cá nhân hoặc Nhóm)</label>
+                  <input
+                    className="field"
+                    type="text"
+                    value={data.settings.telegram_chat_id || ''}
+                    onChange={(e) => setData({ ...data, settings: { ...data.settings, telegram_chat_id: e.target.value } })}
+                    placeholder="Ví dụ: 123456789 (chat riêng) hoặc -1001234567890 (nhóm chat)..."
+                    style={{ width: '100%', fontFamily: 'monospace' }}
+                  />
+                  <small className="muted" style={{ display: 'block', marginTop: 6, fontSize: 11.5 }}>
+                    Chat với bot <strong>@userinfobot</strong> hoặc thêm bot vào nhóm và lấy Chat ID.
+                  </small>
+                </div>
+
+                {/* Tùy chọn sự kiện nhận cảnh báo */}
+                <div style={{ marginBottom: 22, padding: '14px', background: 'rgba(255,255,255,0.02)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <label className="field-label" style={{ marginBottom: 10 }}>Các sự kiện kích hoạt cảnh báo:</label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, cursor: 'pointer', fontSize: 12.5, color: '#e2e8f0' }}>
+                    <input
+                      type="checkbox"
+                      checked={data.settings.telegram_alert_on_expired}
+                      onChange={(e) => setData({ ...data, settings: { ...data.settings, telegram_alert_on_expired: e.target.checked } })}
+                      style={{ accentColor: '#00f2fe', width: 16, height: 16 }}
+                    />
+                    <span>🚨 Cảnh báo ngay khi <strong>Token Fanpage hết hạn / bị thu hồi quyền</strong></span>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 12.5, color: '#e2e8f0' }}>
+                    <input
+                      type="checkbox"
+                      checked={data.settings.telegram_alert_on_failed}
+                      onChange={(e) => setData({ ...data, settings: { ...data.settings, telegram_alert_on_failed: e.target.checked } })}
+                      style={{ accentColor: '#00f2fe', width: 16, height: 16 }}
+                    />
+                    <span>⚠️ Cảnh báo khẩn cấp khi <strong>bài đăng xuất bản Facebook thất bại</strong></span>
+                  </label>
+                </div>
+
+                {/* Hộp phản hồi thử nghiệm kết nối Telegram */}
+                {telegramTestResult && (
+                  <div style={{
+                    marginBottom: 18,
+                    padding: 12,
+                    borderRadius: 10,
+                    background: telegramTestResult.success ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+                    border: `1px solid ${telegramTestResult.success ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                    fontSize: 12.5,
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 8
+                  }}>
+                    {telegramTestResult.success ? <CheckCircle2 size={16} color="#10b981" style={{ flexShrink: 0, marginTop: 2 }} /> : <AlertCircle size={16} color="#ef4444" style={{ flexShrink: 0, marginTop: 2 }} />}
+                    <div style={{ color: telegramTestResult.success ? '#10b981' : '#f87171', lineHeight: 1.5 }}>
+                      <strong>{telegramTestResult.success ? 'Kết nối thành công!' : 'Lỗi kết nối:'}</strong> {telegramTestResult.message}
+                    </div>
+                  </div>
+                )}
+
+                {/* Hàng nút bấm Hành Động */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                  <button
+                    type="button"
+                    className="button button-secondary"
+                    onClick={handleTestTelegram}
+                    disabled={testingTelegram}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                  >
+                    <Send size={14} /> {testingTelegram ? 'Đang gửi test…' : 'Gửi tin nhắn test'}
+                  </button>
+                  <button type="submit" className="button button-primary" disabled={saving}>
+                    <Save size={15} /> {saving ? 'Đang lưu…' : 'Lưu cấu hình Telegram'}
+                  </button>
+                </div>
+              </div>
+            </section>
+          </form>
+
+          {/* CỘT PHẢI: TRUNG TÂM GIÁM SÁT SỨC KHỎE TOKEN */}
+          <div>
+            <section className="panel" style={{ marginBottom: 20 }}>
+              <div className="panel-heading" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h2><ShieldCheck size={16} style={{ verticalAlign: 'middle', marginRight: 8, color: '#00f2fe' }} />Sức Khỏe Token Fanpage</h2>
+                <span className="status-pill published" style={{ fontSize: 11 }}>Quét mỗi 6h</span>
+              </div>
+              <div className="panel-body">
+                <p className="muted" style={{ fontSize: 12, lineHeight: 1.6, margin: '0 0 16px' }}>
+                  Hệ thống tự động kiểm tra token chạy ngầm. Khi phát hiện bất kỳ Fanpage nào bị mất quyền, bot sẽ gửi cảnh báo tức thì kèm hướng dẫn xử lý.
+                </p>
+
+                <div style={{ marginBottom: 18 }}>
+                  <button
+                    type="button"
+                    className="button button-primary"
+                    style={{ width: '100%', justifyContent: 'center', gap: 8, minHeight: 38 }}
+                    onClick={handleRunHealthCheck}
+                    disabled={runningHealthCheck}
+                  >
+                    <Activity size={16} className={runningHealthCheck ? 'animate-spin' : ''} />
+                    {runningHealthCheck ? 'Đang kiểm tra toàn bộ Token…' : 'Quét kiểm tra sức khỏe Token ngay'}
+                  </button>
+                </div>
+
+                {/* Kết quả quét */}
+                {healthCheckResult && (
+                  <div>
+                    {healthCheckResult.success && healthCheckResult.summary ? (
+                      <div>
+                        {/* 3 Thẻ thống kê */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 14 }}>
+                          <div style={{ padding: '10px 8px', textAlign: 'center', background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)' }}>
+                            <div className="muted" style={{ fontSize: 10 }}>Tổng Fanpage</div>
+                            <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', marginTop: 2 }}>{healthCheckResult.summary.total}</div>
+                          </div>
+                          <div style={{ padding: '10px 8px', textAlign: 'center', background: 'rgba(16,185,129,0.06)', borderRadius: 8, border: '1px solid rgba(16,185,129,0.2)' }}>
+                            <div style={{ fontSize: 10, color: '#10b981' }}>Token Sống</div>
+                            <div style={{ fontSize: 18, fontWeight: 800, color: '#10b981', marginTop: 2 }}>{healthCheckResult.summary.valid}</div>
+                          </div>
+                          <div style={{ padding: '10px 8px', textAlign: 'center', background: healthCheckResult.summary.expired > 0 ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.03)', borderRadius: 8, border: `1px solid ${healthCheckResult.summary.expired > 0 ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.08)'}` }}>
+                            <div style={{ fontSize: 10, color: healthCheckResult.summary.expired > 0 ? '#ef4444' : 'var(--muted)' }}>Hết hạn / Lỗi</div>
+                            <div style={{ fontSize: 18, fontWeight: 800, color: healthCheckResult.summary.expired > 0 ? '#ef4444' : '#fff', marginTop: 2 }}>{healthCheckResult.summary.expired}</div>
+                          </div>
+                        </div>
+
+                        {/* Danh sách Pages */}
+                        <div style={{ maxHeight: 220, overflowY: 'auto', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8, padding: 6, background: 'rgba(0,0,0,0.2)' }}>
+                          {healthCheckResult.summary.pages?.map((p) => (
+                            <div key={p.pageId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 12 }}>
+                              <div style={{ minWidth: 0, flex: 1, paddingRight: 8 }}>
+                                <div style={{ color: '#fff', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                                {p.error && <div style={{ fontSize: 10.5, color: '#f87171' }}>{p.error}</div>}
+                              </div>
+                              <span className={`status-pill ${p.isValid ? 'published' : 'failed'}`} style={{ fontSize: 10, padding: '2px 8px' }}>
+                                {p.isValid ? 'Sống' : 'Hết hạn'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ padding: 12, borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#fca5a5', fontSize: 12 }}>
+                        {healthCheckResult.message}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* Hướng dẫn kết nối Telegram */}
+            <section className="panel">
+              <div className="panel-heading"><h2>3 Bước tạo Telegram Bot</h2></div>
+              <div className="panel-body" style={{ fontSize: 12, lineHeight: 1.6 }}>
+                <ol style={{ paddingLeft: 18, margin: 0 }} className="muted">
+                  <li style={{ marginBottom: 8 }}>
+                    Mở Telegram, chat với <a href="https://t.me/BotFather" target="_blank" rel="noreferrer" style={{ color: '#00f2fe', textDecoration: 'underline' }}>@BotFather</a>, gõ lệnh <code>/newbot</code> và làm theo hướng dẫn để nhận <strong>HTTP API Token</strong>.
+                  </li>
+                  <li style={{ marginBottom: 8 }}>
+                    Để lấy <strong>Chat ID cá nhân</strong>: Chat với <a href="https://t.me/userinfobot" target="_blank" rel="noreferrer" style={{ color: '#00f2fe', textDecoration: 'underline' }}>@userinfobot</a>. Hoặc để nhận vào nhóm: thêm Bot vào nhóm rồi thêm <a href="https://t.me/RawDataBot" target="_blank" rel="noreferrer" style={{ color: '#00f2fe', textDecoration: 'underline' }}>@RawDataBot</a> để xem Chat ID nhóm.
+                  </li>
+                  <li>
+                    Nhập Token và Chat ID vào bảng bên cạnh, bấm <strong>&ldquo;Gửi tin nhắn test&rdquo;</strong> để xác nhận kết nối rồi bấm Lưu.
+                  </li>
+                </ol>
+              </div>
+            </section>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ TAB 4: ĐĂNG BÀI & LỊCH TRÌNH ═══ */}
       {activeTab === 'publishing' && (
         <form onSubmit={handleSave} style={{ maxWidth: 840 }}>
           <section className="panel">

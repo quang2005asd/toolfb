@@ -27,8 +27,10 @@ export const postApi = {
     return response.data;
   },
 
-  getInsights: async (days = 14) => {
-    const response = await api.get('/reports/insights', { params: { days } });
+  getInsights: async (days = 14, pageId = '') => {
+    const params = { days };
+    if (pageId) params.pageId = pageId;
+    const response = await api.get('/reports/insights', { params });
     return response.data;
   },
 
@@ -105,6 +107,12 @@ export const postApi = {
   // 7. Lấy thống kê tương tác thực tế từ Facebook Graph API
   getPostAnalytics: async (postId) => {
     const response = await api.get(`/posts/${postId}/analytics`);
+    return response.data;
+  },
+
+  // 8. Đăng comment seeding ngay lập tức cho bài đã đăng
+  postInstantComment: async (postId, content) => {
+    const response = await api.post(`/posts/${postId}/comments/instant`, { content });
     return response.data;
   }
 };

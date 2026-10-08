@@ -17,7 +17,8 @@ import {
   X,
   Users,
   ShieldCheck,
-  ShieldAlert
+  ShieldAlert,
+  Activity
 } from 'lucide-react';
 import MainLayout from '../../components/layout/MainLayout';
 import channelApi from '../../services/channelApi';
@@ -26,9 +27,11 @@ import channelGroupApi from '../../services/channelGroupApi';
 const PRESET_COLORS = ['#00f2fe', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#3b82f6', '#f43f5e'];
 
 export default function ChannelsPage() {
-  const [activeTab, setActiveTab] = useState('channels'); // 'channels' | 'groups'
+  const [activeTab, setActiveTab] = useState('channels'); // 'channels' | 'groups' | 'accounts'
   const [channels, setChannels] = useState([]);
   const [groups, setGroups] = useState([]);
+  const [accounts, setAccounts] = useState([]);
+  const [selectedFbFilter, setSelectedFbFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -44,6 +47,11 @@ export default function ChannelsPage() {
   const [manualPageToken, setManualPageToken] = useState('');
   const [manualSaving, setManualSaving] = useState(false);
 
+  // Connect Facebook User Token (Auto load all pages)
+  const [showFbAccountModal, setShowFbAccountModal] = useState(false);
+  const [fbAccountToken, setFbAccountToken] = useState('');
+  const [fbAccountSaving, setFbAccountSaving] = useState(false);
+
   // Group Create/Edit Modal
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState(null);
@@ -57,12 +65,16 @@ export default function ChannelsPage() {
     setError('');
     try {
       const [chanRes, groupRes] = await Promise.allSettled([
-        channelApi.list(),
+        channelApi.list(true),
         channelGroupApi.list()
       ]);
 
       if (chanRes.status === 'fulfilled') {
-        setChannels(chanRes.value.channels || []);
+        const val = chanRes.value || {};
+        setChannels(val.channels || []);
+        if (Array.isArray(val.accounts)) {
+          setAccounts(val.accounts);
+        }
       } else {
         setError(chanRes.reason?.response?.data?.message || 'Không tải được danh sách kênh.');
       }
@@ -75,7 +87,82 @@ export default function ChannelsPage() {
     }
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    loadData();
+    handleCheckTokens();
+  }, []);
+
+  // Danh sách các tài khoản Facebook (gom nhóm từ accounts hoặc từ các page)
+  const accountList = useMemo(() => {
+    if (accounts && accounts.length > 0) return accounts;
+    const map = {};
+    for (const ch of channels) {
+      const accId = ch.fbAccountId || 'manual';
+      if (!map[accId]) {
+        map[accId] = {
+          id: accId,
+          name: ch.fbAccountName || (accId === 'manual' ? 'Thêm thủ công / Token riêng' : 'Nick Facebook'),
+          avatar: ch.fbAccountAvatar || null,
+          pageCount: 0
+        };
+      }
+      map[accId].pageCount += 1;
+    }
+    return Object.values(map);
+  }, [accounts, channels]);
+
+  const handleSyncAll = async () => {
+    setLoading(true);
+    setError('');
+    setNotice('');
+    try {
+      const res = await channelApi.syncAll();
+      setNotice(res.message || 'Đã đồng bộ toàn bộ Fanpage từ các tài khoản Facebook!');
+      await loadData();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Không thể đồng bộ Fanpage.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDisconnectAccount = async (accId, accName) => {
+    if (!confirm(`Bạn có chắc muốn xóa tài khoản Facebook "${accName}"? Toàn bộ Fanpage thuộc tài khoản này sẽ bị xóa khỏi hệ thống.`)) return;
+    setLoading(true);
+    setError('');
+    setNotice('');
+    try {
+      await channelApi.disconnectAccount(accId);
+      setNotice(`Đã xóa tài khoản Facebook "${accName}" thành công.`);
+      await loadData();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Không thể xóa tài khoản Facebook.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConnectFacebook = async (e) => {
+    e.preventDefault();
+    if (!fbAccountToken.trim()) {
+      setError('Vui lòng dán Facebook Access Token.');
+      return;
+    }
+    setFbAccountSaving(true);
+    setError('');
+    setNotice('');
+    try {
+      const res = await channelApi.connectFacebookToken(fbAccountToken.trim());
+      setNotice(res.message || `Đã kết nối thành công ${res.count || 0} Fanpage!`);
+      setShowFbAccountModal(false);
+      setFbAccountToken('');
+      await loadData();
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Lỗi kết nối tài khoản Facebook.');
+    } finally {
+      setFbAccountSaving(false);
+    }
+  };
 
   const handleManualAdd = async (e) => {
     e.preventDefault();
@@ -232,6 +319,9 @@ export default function ChannelsPage() {
       title="Quản lý Kênh & Nhóm Fanpage"
       actions={
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button className="button button-primary" type="button" onClick={() => setShowFbAccountModal(!showFbAccountModal)}>
+            <Plus size={15} /> Kết nối Facebook Token
+          </button>
           <button className="button button-quiet" type="button" onClick={handleCheckTokens} disabled={checkingTokens}>
             <ShieldCheck size={15} style={{ color: '#10b981' }} /> {checkingTokens ? 'Đang quét Token…' : 'Kiểm tra Token'}
           </button>
@@ -239,9 +329,9 @@ export default function ChannelsPage() {
             <KeyRound size={15} /> Thêm qua Page Token
           </button>
           <button className="button button-quiet" type="button" onClick={openCreateGroupModal}>
-            <FolderPlus size={15} style={{ color: '#00f2fe' }} /> Tạo nhóm kênh
+            <FolderPlus size={15} style={{ color: '#38bdf8' }} /> Tạo nhóm kênh
           </button>
-          <button className="button button-secondary" type="button" onClick={loadData} disabled={loading}>
+          <button className="button button-secondary" type="button" onClick={handleSyncAll} disabled={loading}>
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} /> Đồng bộ từ Facebook
           </button>
         </div>
@@ -250,24 +340,25 @@ export default function ChannelsPage() {
       {notice && <div className="notice" style={{ marginBottom: 14, borderColor: 'rgba(16, 185, 129, 0.4)', color: '#10b981' }}>{notice}</div>}
       {error && <div className="notice" style={{ marginBottom: 14, borderColor: 'rgba(239, 68, 68, 0.4)', color: '#ef4444' }}>{error}</div>}
 
-      {/* Tabs chuyển đổi giữa Kênh và Nhóm kênh */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 18, borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: 10 }}>
+      {/* Tabs chuyển đổi giữa Kênh, Nhóm kênh và Tài khoản Facebook */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 18, borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: 10, flexWrap: 'wrap' }}>
         <button
           type="button"
           onClick={() => setActiveTab('channels')}
           style={{
-            background: activeTab === 'channels' ? 'rgba(0, 242, 254, 0.15)' : 'transparent',
-            border: activeTab === 'channels' ? '1px solid #00f2fe' : '1px solid rgba(255, 255, 255, 0.08)',
-            color: activeTab === 'channels' ? '#00f2fe' : 'var(--muted)',
-            borderRadius: 8,
-            padding: '7px 16px',
+            background: activeTab === 'channels' ? 'linear-gradient(135deg, rgba(14, 165, 233, 0.22), rgba(37, 99, 235, 0.22))' : 'rgba(255, 255, 255, 0.03)',
+            border: activeTab === 'channels' ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.08)',
+            color: activeTab === 'channels' ? '#ffffff' : 'var(--muted)',
+            borderRadius: 10,
+            padding: '8px 18px',
             fontSize: 13,
             fontWeight: 700,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            transition: 'all 0.15s ease'
+            boxShadow: activeTab === 'channels' ? '0 4px 14px rgba(14, 165, 233, 0.22)' : 'none',
+            transition: 'all 0.2s ease'
           }}
         >
           <Globe2 size={15} /> Tất cả Fanpage ({channels.length})
@@ -276,23 +367,84 @@ export default function ChannelsPage() {
           type="button"
           onClick={() => setActiveTab('groups')}
           style={{
-            background: activeTab === 'groups' ? 'rgba(0, 242, 254, 0.15)' : 'transparent',
-            border: activeTab === 'groups' ? '1px solid #00f2fe' : '1px solid rgba(255, 255, 255, 0.08)',
-            color: activeTab === 'groups' ? '#00f2fe' : 'var(--muted)',
-            borderRadius: 8,
-            padding: '7px 16px',
+            background: activeTab === 'groups' ? 'linear-gradient(135deg, rgba(14, 165, 233, 0.22), rgba(37, 99, 235, 0.22))' : 'rgba(255, 255, 255, 0.03)',
+            border: activeTab === 'groups' ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.08)',
+            color: activeTab === 'groups' ? '#ffffff' : 'var(--muted)',
+            borderRadius: 10,
+            padding: '8px 18px',
             fontSize: 13,
             fontWeight: 700,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            transition: 'all 0.15s ease'
+            boxShadow: activeTab === 'groups' ? '0 4px 14px rgba(14, 165, 233, 0.22)' : 'none',
+            transition: 'all 0.2s ease'
           }}
         >
           <Layers size={15} /> Nhóm kênh ({groups.length})
         </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('accounts')}
+          style={{
+            background: activeTab === 'accounts' ? 'linear-gradient(135deg, rgba(14, 165, 233, 0.22), rgba(37, 99, 235, 0.22))' : 'rgba(255, 255, 255, 0.03)',
+            border: activeTab === 'accounts' ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.08)',
+            color: activeTab === 'accounts' ? '#ffffff' : 'var(--muted)',
+            borderRadius: 10,
+            padding: '8px 18px',
+            fontSize: 13,
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            boxShadow: activeTab === 'accounts' ? '0 4px 14px rgba(14, 165, 233, 0.22)' : 'none',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <Users size={15} /> Nick Facebook đã kết nối ({accountList.length})
+        </button>
       </div>
+
+      {/* Form kết nối tài khoản Facebook bằng Access Token (Tự động nạp toàn bộ Pages) */}
+      {showFbAccountModal && (
+        <section className="panel" style={{ marginBottom: 20, borderColor: 'rgba(0, 242, 254, 0.45)', background: 'linear-gradient(135deg, rgba(8, 12, 24, 0.98), rgba(10, 20, 38, 0.98))', boxShadow: '0 8px 32px rgba(0, 242, 254, 0.15)' }}>
+          <div className="panel-heading">
+            <h2>
+              <Globe2 size={18} style={{ verticalAlign: 'middle', marginRight: 8, color: '#00f2fe' }} />
+              Kết nối tài khoản Facebook bằng Access Token
+            </h2>
+            <button className="button button-quiet" type="button" style={{ minHeight: 28, padding: '0 10px', fontSize: 11 }} onClick={() => setShowFbAccountModal(false)}>Đóng</button>
+          </div>
+          <form className="panel-body" onSubmit={handleConnectFacebook}>
+            <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 0, marginBottom: 12 }}>
+              Dán mã Access Token Facebook của bạn vào đây. Hệ thống sẽ tự động xác thực và tải về toàn bộ các Fanpage mà bạn đang quản lý.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'end' }}>
+              <div>
+                <label className="field-label" htmlFor="fb-account-token">Facebook Access Token (EAAB... / EAAA...) *</label>
+                <input
+                  id="fb-account-token"
+                  className="field"
+                  type="password"
+                  placeholder="Dán mã Token Facebook vào đây..."
+                  value={fbAccountToken}
+                  onChange={(e) => setFbAccountToken(e.target.value)}
+                  disabled={fbAccountSaving}
+                  required
+                />
+              </div>
+              <button className="button button-primary" type="submit" disabled={fbAccountSaving} style={{ minHeight: 40, whiteSpace: 'nowrap' }}>
+                {fbAccountSaving ? 'Đang quét Pages…' : 'Xác thực & Nạp Pages'}
+              </button>
+            </div>
+            <p className="muted" style={{ fontSize: 11.5, marginTop: 12, marginBottom: 0 }}>
+              💡 <em>Cách lấy Token nhanh:</em> Truy cập <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noreferrer" style={{ color: '#00f2fe', textDecoration: 'underline' }}>Meta Graph API Explorer <ExternalLink size={11} style={{ display: 'inline' }} /></a> → Chọn <strong>User Token</strong> → Bấm <strong>Generate Access Token</strong> rồi copy dán vào đây.
+            </p>
+          </form>
+        </section>
+      )}
 
       {/* Form thêm Fanpage thủ công bằng Token */}
       {showManualModal && (
@@ -325,7 +477,7 @@ export default function ChannelsPage() {
       {/* Modal Tạo/Sửa Nhóm kênh */}
       {showGroupModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
-          <div className="panel rgb-led-card" style={{ width: '100%', maxWidth: 540, maxHeight: '90vh', overflowY: 'auto' }}>
+          <div className="panel" style={{ width: '100%', maxWidth: 540, maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="panel-heading">
               <h2><Layers size={16} style={{ color: groupColor, marginRight: 8, verticalAlign: 'middle' }} />{editingGroupId ? 'Chỉnh sửa nhóm kênh' : 'Tạo nhóm kênh mới'}</h2>
               <button className="button button-quiet" type="button" style={{ minHeight: 28, padding: '0 8px' }} onClick={() => setShowGroupModal(false)}>
@@ -449,52 +601,194 @@ export default function ChannelsPage() {
               <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
               <input
                 className="field"
-                placeholder="Tìm kiếm Fanpage theo tên hoặc ID..."
+                placeholder="Tìm kiếm Fanpage theo tên, ID hoặc Nick FB..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{ paddingLeft: 34, width: '100%' }}
               />
             </div>
-            <div className="muted" style={{ fontSize: 12 }}>
-              Tổng cộng: <strong style={{ color: '#00f2fe' }}>{channels.length}</strong> Fanpage đã kết nối
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={handleCheckTokens}
+                disabled={checkingTokens}
+                style={{ minHeight: 32, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                title="Kiểm tra kết nối và token của tất cả Fanpage"
+              >
+                <Activity size={14} className={checkingTokens ? 'animate-spin' : ''} style={{ color: '#00f2fe' }} />
+                {checkingTokens ? 'Đang kiểm tra token…' : 'Kiểm tra sức khỏe Token'}
+              </button>
+              <div className="muted" style={{ fontSize: 12 }}>
+                Tổng cộng: <strong style={{ color: '#00f2fe' }}>{channels.length}</strong> Fanpage ({accountList.length} tài khoản FB)
+              </div>
             </div>
           </div>
+
+          {/* THANH LỌC THEO TỪNG NICK FACEBOOK */}
+          {accountList.length > 0 && (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 18, overflowX: 'auto', paddingBottom: 6 }}>
+              <span className="muted" style={{ fontSize: 12, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}>
+                <Users size={14} style={{ color: '#38bdf8' }} /> Lọc theo nick FB:
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedFbFilter('all')}
+                style={{
+                  background: selectedFbFilter === 'all' ? 'linear-gradient(135deg, rgba(14, 165, 233, 0.22), rgba(37, 99, 235, 0.22))' : 'rgba(255, 255, 255, 0.04)',
+                  border: selectedFbFilter === 'all' ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.1)',
+                  color: selectedFbFilter === 'all' ? '#ffffff' : '#94a3b8',
+                  borderRadius: 20,
+                  padding: '5px 14px',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: selectedFbFilter === 'all' ? '0 4px 14px rgba(14, 165, 233, 0.25)' : 'none',
+                  transition: 'all .2s ease',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                Tất cả ({channels.length})
+              </button>
+              {accountList.map((acc) => {
+                const count = channels.filter((c) => (acc.id === 'manual' ? !c.fbAccountId : c.fbAccountId === acc.id)).length;
+                const isActive = selectedFbFilter === acc.id;
+                return (
+                  <button
+                    key={acc.id}
+                    type="button"
+                    onClick={() => setSelectedFbFilter(acc.id)}
+                    style={{
+                      background: isActive ? 'linear-gradient(135deg, rgba(14, 165, 233, 0.22), rgba(37, 99, 235, 0.22))' : 'rgba(255, 255, 255, 0.04)',
+                      border: isActive ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.1)',
+                      color: isActive ? '#ffffff' : '#cbd5e1',
+                      borderRadius: 20,
+                      padding: '5px 14px',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 7,
+                      boxShadow: isActive ? '0 4px 14px rgba(14, 165, 233, 0.25)' : 'none',
+                      transition: 'all .2s ease',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {acc.avatar ? (
+                      <img src={acc.avatar} alt={acc.name} style={{ width: 16, height: 16, borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                      <Users size={13} />
+                    )}
+                    <span>{acc.name}</span>
+                    <span style={{ fontSize: 10.5, background: 'rgba(255,255,255,0.12)', padding: '1px 7px', borderRadius: 10 }}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {/* Grid danh sách Page */}
           <div className="channel-grid">
             {channels
-              .filter((ch) => !searchTerm.trim() || ch.name.toLowerCase().includes(searchTerm.toLowerCase()) || ch.id.includes(searchTerm))
+              .filter((ch) => {
+                const matchSearch = !searchTerm.trim() ||
+                  ch.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  ch.id.includes(searchTerm) ||
+                  (ch.fbAccountName && ch.fbAccountName.toLowerCase().includes(searchTerm.toLowerCase()));
+                if (!matchSearch) return false;
+                if (selectedFbFilter === 'all') return true;
+                if (selectedFbFilter === 'manual') return !ch.fbAccountId;
+                return ch.fbAccountId === selectedFbFilter;
+              })
               .map((channel) => {
                 const assignedGroups = pageGroupMap[channel.id] || [];
                 return (
-                  <article className="panel channel-card rgb-led-card" key={channel.id}>
+                  <article className="channel-card" key={channel.id}>
                     <div className="channel-card-head">
-                      <div className="channel-avatar rgb-led-ring"><Globe2 size={23} /></div>
+                      <div className="channel-avatar"><Globe2 size={22} /></div>
                       {tokenStatuses[channel.id] ? (
                         tokenStatuses[channel.id].isValid ? (
-                          <span className="status-pill published" style={{ fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <span className="status-pill published" style={{ fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                             <ShieldCheck size={13} color="#10b981" /> Token sống
                           </span>
                         ) : (
-                          <span className="status-pill failed" style={{ fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            <ShieldAlert size={13} color="#ef4444" /> Mất quyền
+                          <span className="status-pill failed" style={{ fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                            <ShieldAlert size={13} color="#f87171" /> Mất quyền
                           </span>
                         )
                       ) : (
                         <span className="channel-connected"><span className="float-dot green" /> Đã kết nối</span>
                       )}
                     </div>
-                    <h2 style={{ fontSize: 15, margin: '14px 0 4px', color: '#fff', fontWeight: 800 }}>{channel.name}</h2>
-                    <div className="muted" style={{ fontSize: 11.5 }}>Facebook · {channel.category || 'Fanpage'} · ID: {channel.id}</div>
+                    <h2 style={{ fontSize: 16, margin: '14px 0 4px', color: '#ffffff', fontWeight: 800, letterSpacing: '-0.3px', lineHeight: 1.3 }}>{channel.name}</h2>
+                    <div style={{ fontSize: 11.5, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <span>Facebook</span> · <span>{channel.category || 'Fanpage'}</span> · <span style={{ fontFamily: 'monospace', opacity: 0.85 }}>ID: {channel.id}</span>
+                    </div>
+
+                    {/* HUY HIỆU NICK FACEBOOK SỞ HỮU TRANG */}
+                    {channel.fbAccountName ? (
+                      <div style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        marginTop: 10,
+                        padding: '4px 10px',
+                        borderRadius: 10,
+                        background: 'rgba(37, 99, 235, 0.12)',
+                        border: '1px solid rgba(56, 189, 248, 0.28)',
+                        color: '#93c5fd',
+                        fontSize: 11.5,
+                        fontWeight: 600
+                      }}>
+                        {channel.fbAccountAvatar ? (
+                          <img src={channel.fbAccountAvatar} alt="" style={{ width: 14, height: 14, borderRadius: '50%', objectFit: 'cover' }} />
+                        ) : (
+                          <Users size={12} style={{ color: '#60a5fa' }} />
+                        )}
+                        <span>Nick FB: <strong style={{ color: '#fff' }}>{channel.fbAccountName}</strong></span>
+                      </div>
+                    ) : (
+                      <div style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        marginTop: 10,
+                        padding: '4px 10px',
+                        borderRadius: 10,
+                        background: 'rgba(255, 255, 255, 0.04)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        color: '#94a3b8',
+                        fontSize: 11
+                      }}>
+                        <KeyRound size={12} style={{ color: '#38bdf8' }} /> Token riêng
+                      </div>
+                    )}
 
                     {/* CẢNH BÁO NẾU TOKEN BỊ HẾT HẠN HOẶC MẤT QUYỀN */}
                     {tokenStatuses[channel.id] && !tokenStatuses[channel.id].isValid && (
-                      <div style={{ marginTop: 8, padding: '6px 10px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: 8, fontSize: 11, color: '#fca5a5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>⚠️ Token hết hạn/mất quyền</span>
+                      <div style={{
+                        marginTop: 12,
+                        padding: '8px 12px',
+                        background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.14), rgba(185, 28, 28, 0.08))',
+                        border: '1px solid rgba(239, 68, 68, 0.35)',
+                        borderRadius: 10,
+                        fontSize: 11.5,
+                        color: '#fca5a5',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: 8
+                      }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
+                          <ShieldAlert size={13} style={{ color: '#f87171', flexShrink: 0 }} /> Token hết hạn / mất quyền
+                        </span>
                         <button
                           type="button"
-                          className="button button-quiet"
-                          style={{ minHeight: 20, padding: '0 6px', fontSize: 10, color: '#00f2fe' }}
+                          className="button button-primary"
+                          style={{ minHeight: 24, padding: '0 10px', fontSize: 10.5, borderRadius: 6, whiteSpace: 'nowrap' }}
                           onClick={() => openUpdateTokenModal(channel.id)}
                         >
                           Cập nhật
@@ -504,20 +798,20 @@ export default function ChannelsPage() {
 
                     {/* Hiển thị nhóm mà Page này thuộc về */}
                     {assignedGroups.length > 0 && (
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
                         {assignedGroups.map((g) => (
                           <span
                             key={g.id}
                             style={{
-                              fontSize: 10.5,
-                              padding: '1px 7px',
+                              fontSize: 11,
+                              padding: '2px 8px',
                               borderRadius: 10,
                               background: 'rgba(255, 255, 255, 0.05)',
                               border: `1px solid ${g.color}66`,
                               color: g.color,
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: 4
+                              gap: 5
                             }}
                           >
                             <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: g.color }} />
@@ -527,24 +821,30 @@ export default function ChannelsPage() {
                       </div>
                     )}
 
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, paddingTop: 10, borderTop: '1px solid rgba(255, 255, 255, 0.05)', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, paddingTop: 12, borderTop: '1px solid rgba(255, 255, 255, 0.07)', gap: 10 }}>
                       <Link
                         href={`/post-planner/compose?pageId=${channel.id}`}
                         className="button button-primary"
-                        style={{ minHeight: 26, padding: '0 10px', fontSize: 11 }}
+                        style={{ minHeight: 32, padding: '0 14px', fontSize: 12, borderRadius: 10 }}
                       >
-                        <PenSquare size={11} /> Viết bài
+                        <PenSquare size={13} /> Viết bài
                       </Link>
-                      <button className="button button-danger" type="button" style={{ minHeight: 26, padding: '0 8px', fontSize: 11 }} onClick={() => handleDisconnect(channel.id, channel.name)} title="Hủy kết nối">
-                        <Trash2 size={12} /> Gỡ
+                      <button
+                        className="button button-danger"
+                        type="button"
+                        style={{ minHeight: 32, padding: '0 12px', fontSize: 12, borderRadius: 10 }}
+                        onClick={() => handleDisconnect(channel.id, channel.name)}
+                        title="Hủy kết nối"
+                      >
+                        <Trash2 size={13} /> Gỡ
                       </button>
                     </div>
                   </article>
                 );
               })}
 
-            <button className="panel channel-card channel-card-add" type="button" onClick={() => setShowManualModal(true)}>
-              <Plus size={24} style={{ color: '#00f2fe' }} />
+            <button className="channel-card channel-card-add" type="button" onClick={() => setShowManualModal(true)}>
+              <Plus size={24} style={{ color: '#38bdf8' }} />
               <strong style={{ display: 'block', marginTop: 10, color: '#fff' }}>Thêm Fanpage mới</strong>
               <span className="muted" style={{ fontSize: 11 }}>Bằng Page ID & Token hoặc Đồng bộ</span>
             </button>
@@ -570,59 +870,59 @@ export default function ChannelsPage() {
               const pagesInGroup = channels.filter((c) => (group.pageIds || []).includes(c.id));
               return (
                 <article
-                  className="panel channel-card rgb-led-card"
+                  className="channel-card"
                   key={group.id}
-                  style={{ borderLeft: `3px solid ${group.color || '#00f2fe'}` }}
+                  style={{ borderLeft: `3px solid ${group.color || '#38bdf8'}` }}
                 >
                   <div className="channel-card-head">
                     <div
                       className="channel-avatar"
                       style={{
-                        backgroundColor: `${group.color || '#00f2fe'}20`,
-                        color: group.color || '#00f2fe',
-                        border: `1px solid ${group.color || '#00f2fe'}66`
+                        backgroundColor: `${group.color || '#38bdf8'}18`,
+                        color: group.color || '#38bdf8',
+                        border: `1.5px solid ${group.color || '#38bdf8'}55`
                       }}
                     >
                       <Layers size={22} />
                     </div>
-                    <span style={{ fontSize: 11, color: group.color || '#00f2fe', background: `${group.color || '#00f2fe'}15`, padding: '2px 8px', borderRadius: 12, fontWeight: 700 }}>
+                    <span style={{ fontSize: 11, color: group.color || '#38bdf8', background: `${group.color || '#38bdf8'}15`, padding: '3px 10px', borderRadius: 12, fontWeight: 700, border: `1px solid ${group.color || '#38bdf8'}33` }}>
                       {pageCount} Fanpage
                     </span>
                   </div>
 
                   <h2 style={{ fontSize: 16, margin: '14px 0 4px', color: '#fff', fontWeight: 800 }}>{group.name}</h2>
-                  <div className="muted" style={{ fontSize: 11.5, marginBottom: 10 }}>
+                  <div className="muted" style={{ fontSize: 11.5, marginBottom: 10, minHeight: 18 }}>
                     {pagesInGroup.length > 0
                       ? pagesInGroup.map((p) => p.name).join(', ')
                       : 'Chưa gán Fanpage nào vào nhóm này'}
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, paddingTop: 10, borderTop: '1px solid rgba(255, 255, 255, 0.05)', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, paddingTop: 12, borderTop: '1px solid rgba(255, 255, 255, 0.07)', gap: 10 }}>
                     <Link
                       href={`/post-planner/compose?groupId=${group.id}`}
                       className="button button-primary"
-                      style={{ minHeight: 26, padding: '0 10px', fontSize: 11 }}
+                      style={{ minHeight: 32, padding: '0 12px', fontSize: 11.5, borderRadius: 10 }}
                     >
-                      <PenSquare size={11} /> Đăng cho nhóm
+                      <PenSquare size={12} /> Đăng cho nhóm
                     </Link>
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button
                         className="button button-quiet"
                         type="button"
-                        style={{ minHeight: 26, padding: '0 8px', fontSize: 11 }}
+                        style={{ minHeight: 32, padding: '0 10px', fontSize: 11.5, borderRadius: 10 }}
                         onClick={() => openEditGroupModal(group)}
                         title="Chỉnh sửa nhóm"
                       >
-                        <Edit2 size={12} />
+                        <Edit2 size={13} />
                       </button>
                       <button
                         className="button button-danger"
                         type="button"
-                        style={{ minHeight: 26, padding: '0 8px', fontSize: 11 }}
+                        style={{ minHeight: 32, padding: '0 10px', fontSize: 11.5, borderRadius: 10 }}
                         onClick={() => handleDeleteGroup(group.id, group.name)}
                         title="Xóa nhóm"
                       >
-                        <Trash2 size={12} />
+                        <Trash2 size={13} />
                       </button>
                     </div>
                   </div>
@@ -630,10 +930,88 @@ export default function ChannelsPage() {
               );
             })}
 
-            <button className="panel channel-card channel-card-add" type="button" onClick={openCreateGroupModal}>
-              <FolderPlus size={24} style={{ color: '#00f2fe' }} />
+            <button className="channel-card channel-card-add" type="button" onClick={openCreateGroupModal}>
+              <FolderPlus size={24} style={{ color: '#38bdf8' }} />
               <strong style={{ display: 'block', marginTop: 10, color: '#fff' }}>Tạo nhóm kênh mới</strong>
               <span className="muted" style={{ fontSize: 11 }}>Gom các Page cùng phân loại</span>
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* VIEW 3: QUẢN LÝ CÁC NICK FACEBOOK ĐÃ KẾT NỐI */}
+      {activeTab === 'accounts' && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+            <span className="muted" style={{ fontSize: 13 }}>
+              Quản lý các tài khoản Facebook cá nhân đã kết nối vào tool. Mỗi tài khoản quản lý một nhóm Fanpage riêng biệt.
+            </span>
+            <button
+              className="button button-primary"
+              type="button"
+              onClick={() => setShowFbAccountModal(true)}
+              style={{ minHeight: 34, fontSize: 12.5 }}
+            >
+              <Plus size={14} /> Thêm nick Facebook
+            </button>
+          </div>
+
+          <div className="channel-grid">
+            {accountList.map((acc) => {
+              const isManual = acc.id === 'manual';
+              const pagesCount = channels.filter((c) => (isManual ? !c.fbAccountId : c.fbAccountId === acc.id)).length;
+              return (
+                <article className="channel-card" key={acc.id}>
+                  <div className="channel-card-head">
+                    <div className="channel-avatar" style={{ overflow: 'hidden', padding: 0 }}>
+                      {acc.avatar ? (
+                        <img src={acc.avatar} alt={acc.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <Users size={22} style={{ color: '#38bdf8', margin: 'auto' }} />
+                      )}
+                    </div>
+                    <span style={{ fontSize: 11, color: '#38bdf8', background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.25)', padding: '3px 10px', borderRadius: 12, fontWeight: 700 }}>
+                      {pagesCount} Fanpage
+                    </span>
+                  </div>
+
+                  <h2 style={{ fontSize: 16, margin: '14px 0 4px', color: '#fff', fontWeight: 800 }}>{acc.name}</h2>
+                  <div className="muted" style={{ fontSize: 11.5, marginBottom: 10 }}>
+                    {isManual ? 'Các Page kết nối bằng Token thủ công' : `Facebook ID: ${acc.id}`}
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, paddingTop: 12, borderTop: '1px solid rgba(255, 255, 255, 0.07)', gap: 10 }}>
+                    <button
+                      type="button"
+                      className="button button-primary"
+                      style={{ minHeight: 32, padding: '0 12px', fontSize: 11.5, borderRadius: 10 }}
+                      onClick={() => {
+                        setSelectedFbFilter(acc.id);
+                        setActiveTab('channels');
+                      }}
+                    >
+                      <Globe2 size={12} /> Xem {pagesCount} Fanpage
+                    </button>
+                    {!isManual && (
+                      <button
+                        className="button button-danger"
+                        type="button"
+                        style={{ minHeight: 32, padding: '0 10px', fontSize: 11.5, borderRadius: 10 }}
+                        onClick={() => handleDisconnectAccount(acc.id, acc.name)}
+                        title="Xóa tài khoản Facebook này"
+                      >
+                        <Trash2 size={13} /> Gỡ nick
+                      </button>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+
+            <button className="channel-card channel-card-add" type="button" onClick={() => setShowFbAccountModal(true)}>
+              <Plus size={24} style={{ color: '#38bdf8' }} />
+              <strong style={{ display: 'block', marginTop: 10, color: '#fff' }}>Thêm nick Facebook</strong>
+              <span className="muted" style={{ fontSize: 11 }}>Nạp toàn bộ Fanpage từ tài khoản</span>
             </button>
           </div>
         </>

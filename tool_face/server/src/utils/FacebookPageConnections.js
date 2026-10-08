@@ -20,17 +20,21 @@ function encryptToken(token) {
 }
 
 function decryptToken(encrypted) {
-  const [version, saltValue, ivValue, tagValue, ciphertextValue] = String(encrypted || '').split('.');
-  if (version !== 'v1' || !saltValue || !ivValue || !tagValue || !ciphertextValue) {
-    throw new Error('Stored Facebook token format is invalid.');
+  try {
+    const [version, saltValue, ivValue, tagValue, ciphertextValue] = String(encrypted || '').split('.');
+    if (version !== 'v1' || !saltValue || !ivValue || !tagValue || !ciphertextValue) {
+      return null;
+    }
+    const salt = Buffer.from(saltValue, 'base64url');
+    const iv = Buffer.from(ivValue, 'base64url');
+    const tag = Buffer.from(tagValue, 'base64url');
+    const ciphertext = Buffer.from(ciphertextValue, 'base64url');
+    const decipher = crypto.createDecipheriv('aes-256-gcm', tokenKey(salt), iv);
+    decipher.setAuthTag(tag);
+    return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8');
+  } catch (err) {
+    return null;
   }
-  const salt = Buffer.from(saltValue, 'base64url');
-  const iv = Buffer.from(ivValue, 'base64url');
-  const tag = Buffer.from(tagValue, 'base64url');
-  const ciphertext = Buffer.from(ciphertextValue, 'base64url');
-  const decipher = crypto.createDecipheriv('aes-256-gcm', tokenKey(salt), iv);
-  decipher.setAuthTag(tag);
-  return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8');
 }
 
 async function ensureSchema() {
@@ -52,6 +56,19 @@ async function ensureSchema() {
         ALTER TABLE dbo.FacebookUsers ADD avatar_url nvarchar(1000) NULL;
       END;
 
+      IF OBJECT_ID(N'dbo.ConnectedFbAccounts', N'U') IS NULL
+      BEGIN
+        CREATE TABLE dbo.ConnectedFbAccounts (
+          app_user_id varchar(64) NOT NULL,
+          fb_user_id varchar(64) NOT NULL,
+          fb_name nvarchar(150) NOT NULL,
+          fb_avatar nvarchar(1000) NULL,
+          access_token_encrypted nvarchar(max) NOT NULL,
+          updated_at datetime2 NOT NULL CONSTRAINT DF_ConnectedFbAccounts_updated_at DEFAULT SYSUTCDATETIME(),
+          CONSTRAINT PK_ConnectedFbAccounts PRIMARY KEY (app_user_id, fb_user_id)
+        );
+      END;
+
       IF OBJECT_ID(N'dbo.FacebookPages', N'U') IS NULL
       BEGIN
         CREATE TABLE dbo.FacebookPages (
@@ -65,6 +82,23 @@ async function ensureSchema() {
           updated_at datetime2 NOT NULL CONSTRAINT DF_FacebookPages_updated_at DEFAULT SYSUTCDATETIME(),
           CONSTRAINT PK_FacebookPages PRIMARY KEY (facebook_user_id, page_id)
         );
+      END;
+
+      IF COL_LENGTH('dbo.FacebookPages', 'fb_account_id') IS NULL
+      BEGIN
+        ALTER TABLE dbo.FacebookPages ADD fb_account_id varchar(64) NULL;
+      END;
+      IF COL_LENGTH('dbo.FacebookPages', 'fb_account_name') IS NULL
+      BEGIN
+        ALTER TABLE dbo.FacebookPages ADD fb_account_name nvarchar(150) NULL;
+      END;
+      IF COL_LENGTH('dbo.FacebookPages', 'fb_account_avatar') IS NULL
+      BEGIN
+        ALTER TABLE dbo.FacebookPages ADD fb_account_avatar nvarchar(1000) NULL;
+      END;
+      IF COL_LENGTH('dbo.FacebookPages', 'is_valid') IS NULL
+      BEGIN
+        ALTER TABLE dbo.FacebookPages ADD is_valid bit NULL;
       END;
 
       IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_FacebookPages_page_id' AND object_id = OBJECT_ID(N'dbo.FacebookPages'))
@@ -131,9 +165,55 @@ async function getStoredUserAccessToken(userId) {
   return encrypted ? decryptToken(encrypted) : null;
 }
 
-async function syncFacebookPages(userId, accessToken) {
+async function syncFacebookPages(userId, accessToken, fbAccountInfo = null) {
   await ensureSchema();
   const version = process.env.FB_GRAPH_VERSION || 'v19.0';
+
+  // Lấy thông tin tài khoản Facebook nếu chưa được truyền
+  let fbUser = fbAccountInfo;
+  if (!fbUser || !fbUser.id) {
+    try {
+      const meRes = await axios.get(`https://graph.facebook.com/${version}/me`, {
+        params: { fields: 'id,name,picture.width(150).height(150)', access_token: accessToken },
+        timeout: 15000
+      });
+      fbUser = {
+        id: meRes.data.id,
+        name: meRes.data.name || 'Facebook User',
+        avatar: meRes.data.picture?.data?.url || null
+      };
+    } catch (err) {
+      console.warn('[syncFacebookPages] Không lấy được thông tin /me:', err.message);
+      fbUser = { id: 'unknown', name: 'Facebook User', avatar: null };
+    }
+  }
+
+  const pool = await getPool();
+
+  // Lưu thông tin Nick Facebook vào dbo.ConnectedFbAccounts
+  if (fbUser.id && fbUser.id !== 'unknown') {
+    try {
+      const encryptedAccToken = encryptToken(accessToken);
+      await pool.request()
+        .input('appUserId', sql.VarChar(64), String(userId))
+        .input('fbUserId', sql.VarChar(64), String(fbUser.id))
+        .input('fbName', sql.NVarChar(150), String(fbUser.name || 'Facebook User').slice(0, 150))
+        .input('fbAvatar', sql.NVarChar(1000), fbUser.avatar || null)
+        .input('fbToken', sql.NVarChar(sql.MAX), encryptedAccToken)
+        .query(`
+          UPDATE dbo.ConnectedFbAccounts
+          SET fb_name=@fbName, fb_avatar=@fbAvatar, access_token_encrypted=@fbToken, updated_at=SYSUTCDATETIME()
+          WHERE app_user_id=@appUserId AND fb_user_id=@fbUserId;
+          IF @@ROWCOUNT = 0
+            INSERT INTO dbo.ConnectedFbAccounts (app_user_id, fb_user_id, fb_name, fb_avatar, access_token_encrypted, updated_at)
+            VALUES (@appUserId, @fbUserId, @fbName, @fbAvatar, @fbToken, SYSUTCDATETIME());
+        `);
+    } catch (saveAccErr) {
+      console.warn('[ConnectedFbAccounts] Lỗi lưu nick Facebook:', saveAccErr.message);
+    }
+  }
+
+  // Tải danh sách Pages của Nick Facebook này
   let nextUrl = `https://graph.facebook.com/${version}/me/accounts`;
   let firstPage = true;
   const pages = [];
@@ -150,13 +230,16 @@ async function syncFacebookPages(userId, accessToken) {
   if (nextUrl) throw new Error('Too many Facebook Pages to synchronize in one request.');
 
   const usablePages = pages.filter((page) => page.id && page.access_token);
-  const pool = await getPool();
   const transaction = new sql.Transaction(pool);
   await transaction.begin();
   try {
-    await new sql.Request(transaction)
-      .input('userId', sql.VarChar(64), String(userId))
-      .query('DELETE FROM dbo.FacebookPages WHERE facebook_user_id=@userId');
+    // Chỉ xóa các Page cũ của chính nick Facebook này, không xóa page của nick khác!
+    if (fbUser.id && fbUser.id !== 'unknown') {
+      await new sql.Request(transaction)
+        .input('userId', sql.VarChar(64), String(userId))
+        .input('fbAccountId', sql.VarChar(64), String(fbUser.id))
+        .query('DELETE FROM dbo.FacebookPages WHERE facebook_user_id=@userId AND fb_account_id=@fbAccountId');
+    }
 
     for (const page of usablePages) {
       await new sql.Request(transaction)
@@ -167,9 +250,19 @@ async function syncFacebookPages(userId, accessToken) {
         .input('link', sql.NVarChar(500), page.link ? String(page.link).slice(0, 500) : null)
         .input('pageToken', sql.NVarChar(sql.MAX), encryptToken(page.access_token))
         .input('tasks', sql.NVarChar(sql.MAX), JSON.stringify(page.tasks || []))
+        .input('fbAccountId', sql.VarChar(64), fbUser.id !== 'unknown' ? String(fbUser.id) : null)
+        .input('fbAccountName', sql.NVarChar(150), fbUser.name ? String(fbUser.name).slice(0, 150) : null)
+        .input('fbAccountAvatar', sql.NVarChar(1000), fbUser.avatar || null)
         .query(`
-          INSERT INTO dbo.FacebookPages (facebook_user_id,page_id,page_name,category,page_link,page_access_token_encrypted,tasks_json,updated_at)
-          VALUES (@userId,@pageId,@pageName,@category,@link,@pageToken,@tasks,SYSUTCDATETIME());
+          UPDATE dbo.FacebookPages
+          SET page_name=@pageName, category=@category, page_link=@link,
+              page_access_token_encrypted=@pageToken, tasks_json=@tasks,
+              fb_account_id=@fbAccountId, fb_account_name=@fbAccountName, fb_account_avatar=@fbAccountAvatar,
+              updated_at=SYSUTCDATETIME()
+          WHERE facebook_user_id=@userId AND page_id=@pageId;
+          IF @@ROWCOUNT = 0
+            INSERT INTO dbo.FacebookPages (facebook_user_id,page_id,page_name,category,page_link,page_access_token_encrypted,tasks_json,fb_account_id,fb_account_name,fb_account_avatar,updated_at)
+            VALUES (@userId,@pageId,@pageName,@category,@link,@pageToken,@tasks,@fbAccountId,@fbAccountName,@fbAccountAvatar,SYSUTCDATETIME());
         `);
     }
     await transaction.commit();
@@ -185,7 +278,10 @@ async function syncFacebookPages(userId, accessToken) {
     link: page.link || null,
     platform: 'facebook',
     connected: true,
-    tasks: page.tasks || []
+    tasks: page.tasks || [],
+    fbAccountId: fbUser.id !== 'unknown' ? fbUser.id : null,
+    fbAccountName: fbUser.name || null,
+    fbAccountAvatar: fbUser.avatar || null
   }));
 }
 
@@ -194,7 +290,13 @@ async function getConnectedPages(userId) {
   const pool = await getPool();
   const result = await pool.request()
     .input('userId', sql.VarChar(64), String(userId))
-    .query('SELECT page_id,page_name,category,page_link,tasks_json FROM dbo.FacebookPages WHERE facebook_user_id=@userId ORDER BY page_name');
+    .query(`
+      SELECT page_id, page_name, category, page_link, tasks_json,
+             fb_account_id, fb_account_name, fb_account_avatar, is_valid
+      FROM dbo.FacebookPages
+      WHERE facebook_user_id=@userId
+      ORDER BY COALESCE(fb_account_name, N''), page_name
+    `);
   return result.recordset.map((page) => ({
     id: page.page_id,
     name: page.page_name,
@@ -202,8 +304,73 @@ async function getConnectedPages(userId) {
     link: page.page_link,
     platform: 'facebook',
     connected: true,
-    tasks: JSON.parse(page.tasks_json || '[]')
+    isValid: page.is_valid !== 0 && page.is_valid !== false,
+    tasks: JSON.parse(page.tasks_json || '[]'),
+    fbAccountId: page.fb_account_id || null,
+    fbAccountName: page.fb_account_name || null,
+    fbAccountAvatar: page.fb_account_avatar || null
   }));
+}
+
+async function getConnectedFbAccounts(userId) {
+  await ensureSchema();
+  const pool = await getPool();
+  const result = await pool.request()
+    .input('userId', sql.VarChar(64), String(userId))
+    .query(`
+      SELECT a.fb_user_id AS id, a.fb_name AS name, a.fb_avatar AS avatar, a.updated_at AS updatedAt,
+             COUNT(p.page_id) AS pageCount
+      FROM dbo.ConnectedFbAccounts a
+      LEFT JOIN dbo.FacebookPages p ON p.facebook_user_id = a.app_user_id AND p.fb_account_id = a.fb_user_id
+      WHERE a.app_user_id = @userId
+      GROUP BY a.fb_user_id, a.fb_name, a.fb_avatar, a.updated_at
+      ORDER BY a.fb_name ASC
+    `);
+  return result.recordset.map((r) => ({
+    id: r.id,
+    name: r.name,
+    avatar: r.avatar,
+    updatedAt: r.updatedAt,
+    pageCount: Number(r.pageCount || 0)
+  }));
+}
+
+async function disconnectFbAccount(userId, fbAccountId) {
+  await ensureSchema();
+  const pool = await getPool();
+  await pool.request()
+    .input('userId', sql.VarChar(64), String(userId))
+    .input('fbAccountId', sql.VarChar(64), String(fbAccountId))
+    .query(`
+      DELETE FROM dbo.ConnectedFbAccounts WHERE app_user_id=@userId AND fb_user_id=@fbAccountId;
+      DELETE FROM dbo.FacebookPages WHERE facebook_user_id=@userId AND fb_account_id=@fbAccountId;
+    `);
+  return true;
+}
+
+async function syncAllConnectedFbAccounts(userId) {
+  await ensureSchema();
+  const pool = await getPool();
+  const accountsRes = await pool.request()
+    .input('userId', sql.VarChar(64), String(userId))
+    .query('SELECT fb_user_id, fb_name, fb_avatar, access_token_encrypted FROM dbo.ConnectedFbAccounts WHERE app_user_id=@userId');
+
+  const results = [];
+  for (const acc of accountsRes.recordset) {
+    try {
+      const token = decryptToken(acc.access_token_encrypted);
+      const pages = await syncFacebookPages(userId, token, {
+        id: acc.fb_user_id,
+        name: acc.fb_name,
+        avatar: acc.fb_avatar
+      });
+      results.push({ id: acc.fb_user_id, name: acc.fb_name, success: true, count: pages.length });
+    } catch (err) {
+      console.warn(`[syncAllConnectedFbAccounts] Lỗi đồng bộ nick ${acc.fb_name}:`, err.message);
+      results.push({ id: acc.fb_user_id, name: acc.fb_name, success: false, error: err.message });
+    }
+  }
+  return results;
 }
 
 async function getStoredPageAccessToken(pageId) {
@@ -275,8 +442,10 @@ async function disconnectFacebookPage(userId, pageId) {
 module.exports = {
   decryptToken,
   disconnectFacebookPage,
+  disconnectFbAccount,
   encryptToken,
   ensureSchema,
+  getConnectedFbAccounts,
   getConnectedPages,
   getStoredPageAccessToken,
   getStoredUserAccessToken,
@@ -284,5 +453,6 @@ module.exports = {
   saveFacebookUser,
   saveManualFacebookPage,
   saveUserAvatar,
+  syncAllConnectedFbAccounts,
   syncFacebookPages
 };

@@ -471,7 +471,7 @@ export default function BulkUpload() {
 
                 {/* Submit Button */}
                 <button
-                  className="button button-primary rgb-led-chip"
+                  className="button button-primary"
                   onClick={handleUpload}
                   disabled={uploadLoading || previewData.validCount === 0}
                   type="button"

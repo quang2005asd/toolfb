@@ -11,7 +11,13 @@ const XLSX = require('xlsx');
 const { sql, getPool } = require('../config/db');
 const { parseBulkExcel } = require('./modules/excel-parser/excelService');
 const { addPostToQueue, removePostFromQueue } = require('../queues/post.queue');
+const standaloneScheduler = require('./utils/StandaloneScheduler');
 const { getFacebookPageAccessToken } = require('./utils/FacebookPageAccessToken');
+const {
+  canScheduleOnFacebook,
+  schedulePostOnFacebook,
+  cancelFacebookScheduledPost
+} = require('./utils/FacebookScheduleService');
 const {
   saveFacebookUser,
   syncFacebookPages,
@@ -20,11 +26,20 @@ const {
   saveUserAvatar,
   getConnectedPages,
   saveManualFacebookPage,
-  disconnectFacebookPage
+  disconnectFacebookPage,
+  getConnectedFbAccounts,
+  disconnectFbAccount,
+  syncAllConnectedFbAccounts
 } = require('./utils/FacebookPageConnections');
 const { getSettings, saveMultipleSettings } = require('./utils/SettingsService');
+const telegramAlertService = require('./utils/TelegramAlertService');
+const tokenHealthCheckService = require('./utils/TokenHealthCheckService');
 const aiConversationService = require('./utils/AiConversationService');
 const channelGroupService = require('./utils/ChannelGroupService');
+const { registerAppUser, loginAppUser } = require('./utils/AppUserService');
+const aiContentGenerator = require('./utils/AiContentGenerator');
+const aiImageService = require('./utils/AiImageService');
+const webSearchService = require('./utils/WebSearchService');
 const {
   OAUTH_STATE_COOKIE,
   SESSION_COOKIE,
@@ -43,11 +58,23 @@ const {
 
 const app = express();
 const frontendOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:3000';
-app.use(cors({ origin: frontendOrigin, credentials: true }));
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const clean = origin.replace(/\/$/, '');
+    if (clean === frontendOrigin || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(clean)) {
+      return callback(null, true);
+    }
+    return callback(null, true);
+  },
+  credentials: true
+}));
 app.use(express.json({ limit: '2mb' }));
 app.use('/api', loadSession);
 
-const mediaDirectory = path.resolve(__dirname, '../uploads');
+const mediaDirectory = process.env.APP_DATA_DIR
+  ? path.join(process.env.APP_DATA_DIR, 'uploads')
+  : path.resolve(__dirname, '../uploads');
 fs.mkdirSync(mediaDirectory, { recursive: true });
 const memoryUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 const mediaUpload = multer({
@@ -227,21 +254,158 @@ app.get('/api/auth/facebook/callback', async (req, res) => {
   }
 });
 
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { username, password, displayName } = req.body || {};
+    const newUser = await registerAppUser({ username, password, displayName });
+    const token = signSession({
+      id: String(newUser.id),
+      name: newUser.display_name,
+      role: newUser.role
+    });
+    setCookie(req, res, SESSION_COOKIE, token, SESSION_TTL_SECONDS);
+
+    return res.status(201).json({
+      success: true,
+      user: {
+        id: String(newUser.id),
+        name: newUser.display_name,
+        role: newUser.role
+      },
+      token,
+      message: 'Đăng ký tài khoản thành công!'
+    });
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { username, password } = req.body || {};
+    const user = await loginAppUser({ username, password });
+    const token = signSession({
+      id: String(user.id),
+      name: user.display_name,
+      role: user.role
+    });
+    setCookie(req, res, SESSION_COOKIE, token, SESSION_TTL_SECONDS);
+
+    return res.json({
+      success: true,
+      user: {
+        id: String(user.id),
+        name: user.display_name,
+        role: user.role
+      },
+      token,
+      message: 'Đăng nhập thành công!'
+    });
+  } catch (err) {
+    return res.status(401).json({ success: false, message: err.message });
+  }
+});
+
 app.post('/api/auth/logout', (_req, res) => {
   clearCookie(_req, res, SESSION_COOKIE);
   clearCookie(_req, res, OAUTH_STATE_COOKIE);
   return res.json({ success: true });
 });
 
+app.post('/api/auth/token', async (req, res) => {
+  const token = typeof req.body.token === 'string' ? req.body.token.trim() : '';
+  if (!token) {
+    return res.status(400).json({ success: false, message: 'Vui lòng nhập Facebook Access Token.' });
+  }
+
+  try {
+    const graphVersion = process.env.FB_GRAPH_VERSION || 'v19.0';
+    // 1. Kiểm tra Token và lấy thông tin người dùng Facebook
+    const profileResponse = await axios.get(`https://graph.facebook.com/${graphVersion}/me`, {
+      params: { fields: 'id,name,picture.width(150).height(150)', access_token: token },
+      timeout: 15000
+    });
+
+    const userData = profileResponse.data;
+    if (!userData || !userData.id) {
+      return res.status(401).json({ success: false, message: 'Access Token không hợp lệ hoặc đã hết hạn.' });
+    }
+
+    // 2. Lưu User vào database (hạn mặc định 60 ngày)
+    await saveFacebookUser(userData, token, 60 * 24 * 60 * 60);
+
+    // 3. Đồng bộ danh sách Fanpage của tài khoản này
+    let connectedPages = [];
+    try {
+      connectedPages = await syncFacebookPages(userData.id, token);
+      console.log(`[Token Auth] Đã kết nối ${connectedPages.length} Fanpage cho tài khoản ${userData.name} (${userData.id}).`);
+    } catch (pageErr) {
+      console.warn('[Token Auth Sync Pages Warning]', pageErr.message);
+    }
+
+    // Nếu me/accounts không trả về page nào (có thể là Page Access Token trực tiếp)
+    if (connectedPages.length === 0) {
+      try {
+        const pageCheck = await axios.get(`https://graph.facebook.com/${graphVersion}/${userData.id}`, {
+          params: { fields: 'id,name,category', access_token: token },
+          timeout: 10000
+        });
+        if (pageCheck.data?.category) {
+          const manualPage = await saveManualFacebookPage(userData.id, userData.id, token);
+          connectedPages.push(manualPage);
+          console.log(`[Token Auth] Đã tự động nhận diện Page Token cho: ${pageCheck.data.name} (${userData.id})`);
+        }
+      } catch {}
+    }
+
+    // 4. Thiết lập Session Cookie cho trình duyệt
+    setCookie(req, res, SESSION_COOKIE, signSession(userData), SESSION_TTL_SECONDS);
+
+    return res.json({
+      success: true,
+      user: {
+        id: userData.id,
+        name: userData.name,
+        avatar: userData.picture?.data?.url || null
+      },
+      pagesCount: connectedPages.length,
+      message: `Đăng nhập thành công! Đã kết nối ${connectedPages.length} Fanpage.`
+    });
+  } catch (error) {
+    const errorMsg = error.response?.data?.error?.message || error.message || 'Không thể xác thực Access Token.';
+    console.error('[Token Auth Error]', errorMsg);
+    return res.status(401).json({ success: false, message: `Access Token không hợp lệ: ${errorMsg}` });
+  }
+});
+
+const legacyMediaDir = path.resolve(__dirname, '../uploads');
+if (legacyMediaDir !== mediaDirectory && fs.existsSync(legacyMediaDir)) {
+  app.use('/uploads', express.static(legacyMediaDir));
+}
+app.use('/uploads', express.static(mediaDirectory));
+
 app.post('/api/media', requireAuth, handleMediaUpload, (req, res) => {
   if (!req.file) return res.status(400).json({ success: false, message: 'Vui lòng chọn ảnh hoặc video.' });
   return res.status(201).json({
     success: true,
     mediaLink: `local://${req.file.filename}`,
-    mediaType: req.file.mimetype.startsWith('video/') ? 'video' : 'image',
+    previewUrl: `/api/media/${req.file.filename}`,
     fileName: req.file.originalname,
     size: req.file.size
   });
+});
+
+app.get('/api/media/:filename', (req, res) => {
+  const fileName = path.basename(req.params.filename);
+  let filePath = path.resolve(mediaDirectory, fileName);
+  if (!fs.existsSync(filePath)) {
+    const legacyPath = path.resolve(__dirname, '../uploads', fileName);
+    if (fs.existsSync(legacyPath)) filePath = legacyPath;
+  }
+  if (fs.existsSync(filePath)) {
+    return res.sendFile(filePath);
+  }
+  return res.status(404).json({ success: false, message: 'Tệp tin media không tồn tại.' });
 });
 
 app.get('/api/ai/status', requireAuth, async (_req, res) => {
@@ -364,13 +528,38 @@ app.post('/api/ai/chat', requireAuth, async (req, res) => {
       .map((item) => ({ role: item.role, content: (item.content || item.text).slice(0, 4000) }));
   }
 
+  // Live Web Search & Anti-Hallucination Guardrail
+  const enableWebSearch = req.body.enableWebSearch !== false;
+  const eventDetails = typeof req.body.eventDetails === 'string' ? req.body.eventDetails.trim() : '';
+
+  let newsContext = '';
+  if (eventDetails) {
+    newsContext = `\n\n📌 THÔNG TIN SỰ KIỆN DO NGƯỜI DÙNG CUNG CẤP:\n${eventDetails}\n(BẮT BUỘC BÁM SÁT THÔNG TIN NÀY)\n`;
+  } else if (enableWebSearch && webSearchService.shouldSearchNews(message)) {
+    try {
+      newsContext = await webSearchService.getNewsContext(message, 5);
+      if (newsContext) {
+        console.log('[WebSearchService] Đã tra cứu tin tức thời sự nạp vào AI prompt thành công.');
+      }
+    } catch (searchErr) {
+      console.warn('[WebSearchService Warning]', searchErr.message);
+    }
+  }
+
+  const antiHallucinationRules = `\n\nQUY TẮC BẮT BUỘC KHI VIẾT VỀ NHÂN VẬT / SỰ KIỆN THẬT / TIN TỨC:
+1. TUYỆT ĐỐI KHÔNG tự bịa đặt các chi tiết sai thực tế (như tỷ số, bàn thắng, sự việc chưa từng xảy ra).
+2. Nếu có thông tin báo chí hoặc sự kiện người dùng cung cấp ở dưới, BẮT BUỘC phải dựa theo các dữ kiện đó để viết.
+3. Nếu không có dữ kiện cụ thể, hãy tập trung vào chiều sâu cảm xúc, tri ân và hành trình thay vì bịa tình tiết giả định.`;
+  const finalSystemPrompt = `${systemPrompt}${antiHallucinationRules}`;
+  const userMessageToSend = newsContext ? `${message}\n${newsContext}` : message;
+
   try {
     const response = await axios.post(`${baseUrl}/chat/completions`, {
       model,
       messages: [
-        { role: 'system', content: systemPrompt },
+        { role: 'system', content: finalSystemPrompt },
         ...history,
-        { role: 'user', content: message }
+        { role: 'user', content: userMessageToSend }
       ],
       temperature: 0.7
     }, { headers: { Authorization: `Bearer ${apiKey}` }, timeout: 60000 });
@@ -408,6 +597,257 @@ app.post('/api/ai/chat', requireAuth, async (req, res) => {
   }
 });
 
+// ═══ AI CONTENT GENERATOR API ═══
+app.post('/api/ai/generate-posts', requireAuth, async (req, res) => {
+  try {
+    const { prompt, tone, includeHashtags, includeEmoji } = req.body;
+    const result = await aiContentGenerator.generatePosts(req.user.sub, {
+      prompt,
+      tone: tone || '',
+      includeHashtags: includeHashtags !== false,
+      includeEmoji: includeEmoji !== false
+    });
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('[AI Generate Posts Error]', error.message);
+    const status = error.response?.status === 429 ? 429 : 500;
+    return res.status(status).json({ success: false, message: error.message });
+  }
+});
+
+app.post('/api/ai/generate-seeding-comments', requireAuth, async (req, res) => {
+  try {
+    const { postContent, count = 3, tone } = req.body || {};
+    if (!postContent || !postContent.trim()) {
+      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp nội dung bài viết.' });
+    }
+    const comments = await aiContentGenerator.generateSeedingComments({
+      postContent: postContent.trim(),
+      count: Number(count) || 3,
+      tone: tone || 'tự nhiên, thân thiện'
+    });
+    return res.json({ success: true, comments });
+  } catch (error) {
+    console.error('[AI Generate Seeding Error]', error.message);
+    const status = error.response?.status === 429 ? 429 : 500;
+    return res.status(status).json({ success: false, message: error.message });
+  }
+});
+
+app.get('/api/ai/drafts', requireAuth, async (req, res) => {
+  try {
+    const status = req.query.status || 'draft';
+    const batchId = req.query.batch_id;
+    let drafts;
+    if (batchId) {
+      drafts = await aiContentGenerator.getDraftsByBatch(req.user.sub, batchId);
+    } else {
+      drafts = await aiContentGenerator.getDrafts(req.user.sub, status);
+    }
+    return res.json({ success: true, drafts });
+  } catch (error) {
+    console.error('[AI Drafts Error]', error.message);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.post('/api/ai/drafts/:id/regenerate', requireAuth, async (req, res) => {
+  try {
+    const draft = await aiContentGenerator.regenerateDraft(req.user.sub, parseInt(req.params.id, 10));
+    return res.json({ success: true, draft });
+  } catch (error) {
+    console.error('[AI Regenerate Error]', error.message);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.put('/api/ai/drafts/:id', requireAuth, async (req, res) => {
+  try {
+    const draft = await aiContentGenerator.updateDraft(req.user.sub, parseInt(req.params.id, 10), req.body);
+    return res.json({ success: true, draft });
+  } catch (error) {
+    console.error('[AI Update Draft Error]', error.message);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.delete('/api/ai/drafts/:id', requireAuth, async (req, res) => {
+  try {
+    const deleted = await aiContentGenerator.deleteDraft(req.user.sub, parseInt(req.params.id, 10));
+    return res.json({ success: true, deleted });
+  } catch (error) {
+    console.error('[AI Delete Draft Error]', error.message);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ═══ AI IMAGE GENERATOR API ═══
+app.post('/api/ai/generate-image', requireAuth, async (req, res) => {
+  try {
+    let { prompt, title, topic, content, style = 'photorealistic', ratio = '1:1' } = req.body || {};
+    if (!prompt || !prompt.trim()) {
+      prompt = await aiImageService.generateVisualPrompt({ title, topic, content, style });
+    }
+    const result = await aiImageService.generateImage({ prompt, style, ratio });
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('[AI Generate Image Error]', error.message);
+    return res.status(500).json({ success: false, message: error.message || 'Không thể tạo ảnh AI.' });
+  }
+});
+
+app.post('/api/ai/batch-generate-images', requireAuth, async (req, res) => {
+  try {
+    const { drafts = [], style = 'photorealistic', ratio = '1:1' } = req.body || {};
+    if (!Array.isArray(drafts) || drafts.length === 0) {
+      return res.status(400).json({ success: false, message: 'Danh sách bài đăng trống.' });
+    }
+
+    const results = [];
+    for (const draft of drafts) {
+      try {
+        const visualPrompt = await aiImageService.generateVisualPrompt({
+          title: draft.title,
+          topic: draft.topic,
+          content: draft.content,
+          style
+        });
+        const img = await aiImageService.generateImage({
+          prompt: visualPrompt,
+          style,
+          ratio
+        });
+        results.push({
+          draftId: draft.id || draft.draftId,
+          success: true,
+          ...img
+        });
+      } catch (itemErr) {
+        results.push({
+          draftId: draft.id || draft.draftId,
+          success: false,
+          message: itemErr.message
+        });
+      }
+    }
+
+    return res.json({
+      success: true,
+      results,
+      count: results.filter(r => r.success).length,
+      message: `Đã tạo thành công ${results.filter(r => r.success).length}/${drafts.length} ảnh minh họa AI.`
+    });
+  } catch (error) {
+    console.error('[Batch AI Generate Images Error]', error.message);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.post('/api/ai/drafts/publish', requireAuth, async (req, res) => {
+  try {
+    const { drafts: draftItems } = req.body;
+    if (!Array.isArray(draftItems) || draftItems.length === 0) {
+      return res.status(400).json({ success: false, message: 'Danh sách bài đăng trống.' });
+    }
+
+    const pool = await getPool();
+    const results = [];
+
+    for (const item of draftItems) {
+      const { draftId, content, pageIds, scheduledAt, hashtags, mediaType, mediaLinks } = item;
+      if (!content?.trim() || !Array.isArray(pageIds) || pageIds.length === 0) {
+        results.push({ draftId, success: false, message: 'Thiếu nội dung hoặc Fanpage.' });
+        continue;
+      }
+
+      // Append hashtags to content
+      let finalContent = content.trim();
+      if (Array.isArray(hashtags) && hashtags.length > 0) {
+        finalContent += '\n\n' + hashtags.join(' ');
+      }
+
+      const finalMediaType = ['image', 'video', 'reel', 'story'].includes(mediaType) ? mediaType : 'text';
+      const finalMediaLinks = Array.isArray(mediaLinks) ? mediaLinks.filter(Boolean) : [];
+
+      const targetPageIds = [...new Set(pageIds.map(id => String(id).trim()))].filter(id => /^\d+$/.test(id));
+      const schedule = scheduledAt ? new Date(scheduledAt) : new Date();
+      const isFbScheduledCandidate = canScheduleOnFacebook({ mediaType: finalMediaType, scheduledAt: schedule });
+
+      const createdPostIds = [];
+      let fbScheduledCount = 0;
+      for (const pageId of targetPageIds) {
+        try {
+          const result = await pool.request()
+            .input('pageId_' + pageId, sql.VarChar, pageId)
+            .input('ownerId_' + pageId, sql.VarChar(64), req.user.sub)
+            .input('content_' + pageId, sql.NVarChar, finalContent)
+            .input('mediaType_' + pageId, sql.VarChar, finalMediaType)
+            .input('mediaLinks_' + pageId, sql.NVarChar, JSON.stringify(finalMediaLinks))
+            .input('scheduledAt_' + pageId, sql.DateTime2, schedule)
+            .input('status_' + pageId, sql.VarChar, 'pending')
+            .query(`INSERT INTO Posts (page_id, content, media_type, media_links, scheduled_at, status, created_by_user_id) OUTPUT INSERTED.id VALUES (@pageId_${pageId}, @content_${pageId}, @mediaType_${pageId}, @mediaLinks_${pageId}, @scheduledAt_${pageId}, @status_${pageId}, @ownerId_${pageId});`);
+          const postId = result.recordset[0].id;
+          createdPostIds.push(postId);
+
+          if (isFbScheduledCandidate) {
+            try {
+              console.log(`[Publish Draft] Hẹn giờ bài ${postId} trực tiếp qua Facebook Cloud API cho page ${pageId}...`);
+              const fbPostId = await schedulePostOnFacebook({
+                pageId,
+                content: finalContent,
+                mediaType: finalMediaType,
+                mediaLinks: finalMediaLinks,
+                scheduledAt: schedule
+              });
+              await pool.request()
+                .input('id', sql.Int, postId)
+                .input('fbId', sql.NVarChar, fbPostId)
+                .query("UPDATE Posts SET facebook_post_id = @fbId, status = 'scheduled' WHERE id = @id");
+              fbScheduledCount++;
+              console.log(`[Publish Draft] Đã hẹn giờ trực tiếp lên Facebook thành công! ID: ${fbPostId}`);
+            } catch (fbErr) {
+              console.warn(`[Publish Draft] Hẹn giờ Facebook Cloud thất bại cho bài ${postId}, dùng BullMQ fallback:`, fbErr.response?.data?.error?.message || fbErr.message);
+            }
+          }
+
+          await standaloneScheduler.schedulePost(postId, schedule);
+        } catch (err) {
+          console.error(`[Publish Draft] Failed for page ${pageId}:`, err.message);
+        }
+      }
+
+      // Mark draft as scheduled and save media
+      if (draftId) {
+        await aiContentGenerator.updateDraft(req.user.sub, draftId, {
+          status: 'scheduled',
+          scheduled_at: schedule,
+          media_type: finalMediaType,
+          media_links: finalMediaLinks
+        });
+      }
+
+      results.push({
+        draftId,
+        success: true,
+        postIds: createdPostIds,
+        isFbCloud: fbScheduledCount > 0,
+        fbScheduledCount
+      });
+    }
+
+    const totalCloud = results.filter(r => r.isFbCloud).length;
+    let summaryMsg = `Đã xử lý thành công ${results.filter(r => r.success).length} bài nháp.`;
+    if (totalCloud > 0) {
+      summaryMsg += ` Trong đó có ${totalCloud} bài đã đồng bộ trực tiếp lên lịch Facebook Meta (tắt app vẫn tự động đăng đúng giờ)!`;
+    }
+
+    return res.json({ success: true, results, message: summaryMsg });
+  } catch (error) {
+    console.error('[AI Publish Drafts Error]', error.message);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // ═══ SETTINGS API ═══
 app.get('/api/settings', requireAuth, async (req, res) => {
   try {
@@ -432,7 +872,13 @@ app.get('/api/settings', requireAuth, async (req, res) => {
         default_hashtags: settings.default_hashtags || '#facebook #marketing #viral #contentcreator',
         default_signature: settings.default_signature || '📌 Hãy bấm Theo dõi Fanpage để không bỏ lỡ những bài viết thú vị tiếp theo!',
         auto_retry_count: Number(settings.auto_retry_count) || 2,
-        enable_rgb_effects: settings.enable_rgb_effects !== false
+        enable_rgb_effects: settings.enable_rgb_effects !== false,
+        telegram_bot_token_masked: (settings.telegram_bot_token || process.env.TELEGRAM_BOT_TOKEN || '') ? '••••••••' + (settings.telegram_bot_token || process.env.TELEGRAM_BOT_TOKEN || '').slice(-5) : '',
+        telegram_has_token: Boolean(settings.telegram_bot_token || process.env.TELEGRAM_BOT_TOKEN),
+        telegram_chat_id: settings.telegram_chat_id || process.env.TELEGRAM_CHAT_ID || '',
+        telegram_alert_enabled: settings.telegram_alert_enabled !== false && settings.telegram_alert_enabled !== 'false',
+        telegram_alert_on_expired: settings.telegram_alert_on_expired !== false && settings.telegram_alert_on_expired !== 'false',
+        telegram_alert_on_failed: settings.telegram_alert_on_failed !== false && settings.telegram_alert_on_failed !== 'false'
       },
       account: {
         id: req.user.sub,
@@ -472,10 +918,46 @@ app.post('/api/settings', requireAuth, async (req, res) => {
     if (payload.auto_retry_count !== undefined) updates.auto_retry_count = Math.max(0, Math.min(5, parseInt(payload.auto_retry_count, 10) || 2));
     if (payload.enable_rgb_effects !== undefined) updates.enable_rgb_effects = Boolean(payload.enable_rgb_effects);
 
+    // Telegram Bot Settings (Module 2)
+    if (payload.telegram_bot_token !== undefined && payload.telegram_bot_token.trim()) {
+      updates.telegram_bot_token = String(payload.telegram_bot_token).trim();
+    }
+    if (payload.telegram_chat_id !== undefined) updates.telegram_chat_id = String(payload.telegram_chat_id).trim();
+    if (payload.telegram_alert_enabled !== undefined) updates.telegram_alert_enabled = Boolean(payload.telegram_alert_enabled);
+    if (payload.telegram_alert_on_expired !== undefined) updates.telegram_alert_on_expired = Boolean(payload.telegram_alert_on_expired);
+    if (payload.telegram_alert_on_failed !== undefined) updates.telegram_alert_on_failed = Boolean(payload.telegram_alert_on_failed);
+
     await saveMultipleSettings(updates);
     return res.json({ success: true, message: 'Đã lưu cấu hình thành công!' });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Không thể lưu cài đặt: ' + error.message });
+  }
+});
+
+app.post('/api/settings/telegram/test', requireAuth, async (req, res) => {
+  try {
+    const { botToken, chatId } = req.body || {};
+    const result = await telegramAlertService.testConnection(botToken, chatId);
+    if (result.success) {
+      return res.json({ success: true, message: 'Đã gửi tin nhắn kiểm tra thành công tới Telegram của bạn!' });
+    }
+    return res.status(400).json({ success: false, message: result.message || 'Không thể gửi tin nhắn kiểm tra Telegram.' });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Lỗi gửi tin nhắn Telegram: ' + error.message });
+  }
+});
+
+app.all(['/api/channels/health-check', '/api/channels/check-tokens'], requireAuth, async (req, res) => {
+  try {
+    const result = await tokenHealthCheckService.runHealthCheck('manual_api');
+    return res.json({
+      success: result.success !== false,
+      summary: result.summary,
+      channels: result.summary?.pages || [],
+      message: result.message || 'Đã kiểm tra sức khỏe Token hoàn tất.'
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Lỗi kiểm tra sức khỏe Token: ' + error.message });
   }
 });
 
@@ -511,22 +993,46 @@ app.post('/api/settings/test-ai', requireAuth, async (req, res) => {
 
 app.get('/api/channels', requireAuth, async (req, res) => {
   try {
-    const userToken = await getStoredUserAccessToken(req.user.sub);
-    let channels = [];
-    if (userToken) {
-      try {
-        channels = await syncFacebookPages(req.user.sub, userToken);
-      } catch (syncError) {
-        console.warn('[Channels Sync Warning]', syncError.response?.data?.error?.message || syncError.message);
-      }
-    }
-    // Fallback nếu sync rỗng hoặc chưa cấp pages_show_list
-    if (!channels || channels.length === 0) {
-      channels = await getConnectedPages(req.user.sub);
-    }
-    return res.json({ success: true, channels });
+    const channels = await getConnectedPages(req.user.sub);
+    const accounts = await getConnectedFbAccounts(req.user.sub);
+    return res.json({ success: true, channels, accounts });
   } catch (error) {
     return sendApiError(res, 'Channels Error', error, 'Không thể tải danh sách Page.');
+  }
+});
+
+app.post('/api/channels/sync', requireAuth, async (req, res) => {
+  try {
+    const results = await syncAllConnectedFbAccounts(req.user.sub);
+    const channels = await getConnectedPages(req.user.sub);
+    const accounts = await getConnectedFbAccounts(req.user.sub);
+    return res.json({
+      success: true,
+      channels,
+      accounts,
+      results,
+      message: 'Đã hoàn tất đồng bộ tất cả Fanpage từ các tài khoản Facebook!'
+    });
+  } catch (error) {
+    return sendApiError(res, 'Channels Sync Error', error, 'Không thể đồng bộ Fanpage.');
+  }
+});
+
+app.get('/api/channels/accounts', requireAuth, async (req, res) => {
+  try {
+    const accounts = await getConnectedFbAccounts(req.user.sub);
+    return res.json({ success: true, accounts });
+  } catch (error) {
+    return sendApiError(res, 'Accounts Error', error, 'Không thể tải danh sách tài khoản Facebook.');
+  }
+});
+
+app.delete('/api/channels/accounts/:fbAccountId', requireAuth, async (req, res) => {
+  try {
+    await disconnectFbAccount(req.user.sub, req.params.fbAccountId);
+    return res.json({ success: true, message: 'Đã xóa tài khoản Facebook và toàn bộ Fanpage trực thuộc.' });
+  } catch (error) {
+    return sendApiError(res, 'Delete Account Error', error, 'Không thể xóa tài khoản Facebook.');
   }
 });
 
@@ -611,6 +1117,74 @@ app.post('/api/channels/manual', requireAuth, async (req, res) => {
       message: 'Không thể kết nối Page. Kiểm tra lại Page ID hoặc Page Access Token.',
       detail: error.response?.data?.error?.message || error.message
     });
+  }
+});
+
+app.post('/api/channels/connect-facebook', requireAuth, async (req, res) => {
+  const token = typeof req.body.token === 'string' ? req.body.token.trim() : '';
+  if (!token) {
+    return res.status(400).json({ success: false, message: 'Vui lòng cung cấp Facebook Access Token.' });
+  }
+
+  try {
+    const graphVersion = process.env.FB_GRAPH_VERSION || 'v19.0';
+    // 1. Kiểm tra Token và lấy thông tin tài khoản Facebook
+    const profileResponse = await axios.get(`https://graph.facebook.com/${graphVersion}/me`, {
+      params: { fields: 'id,name,picture.width(150).height(150)', access_token: token },
+      timeout: 15000
+    });
+
+    const fbData = profileResponse.data;
+    if (!fbData || !fbData.id) {
+      return res.status(400).json({ success: false, message: 'Facebook Access Token không hợp lệ.' });
+    }
+
+    const fbAccountInfo = {
+      id: fbData.id,
+      name: fbData.name,
+      avatar: fbData.picture?.data?.url || null
+    };
+
+    // 2. Lưu User Facebook Token gắn với tài khoản của user hiện tại
+    await saveFacebookUser({
+      id: req.user.sub,
+      name: fbData.name,
+      picture: fbData.picture
+    }, token, 60 * 24 * 60 * 60);
+
+    // 3. Đồng bộ tất cả các Fanpage thuộc quyền quản lý của Token này vào tài khoản của user (req.user.sub)
+    let connectedPages = [];
+    try {
+      connectedPages = await syncFacebookPages(req.user.sub, token, fbAccountInfo);
+      console.log(`[Connect Facebook] Đã kết nối ${connectedPages.length} Fanpage cho tài khoản ${req.user.name} (FB: ${fbData.name})`);
+    } catch (pageErr) {
+      console.warn('[Connect Facebook Sync Warning]', pageErr.message);
+    }
+
+    // Nếu là Page token đơn lẻ
+    if (connectedPages.length === 0) {
+      try {
+        const pageCheck = await axios.get(`https://graph.facebook.com/${graphVersion}/${fbData.id}`, {
+          params: { fields: 'id,name,category', access_token: token },
+          timeout: 10000
+        });
+        if (pageCheck.data?.category) {
+          const manualPage = await saveManualFacebookPage(req.user.sub, fbData.id, token);
+          connectedPages.push(manualPage);
+        }
+      } catch {}
+    }
+
+    return res.json({
+      success: true,
+      fbUser: fbAccountInfo,
+      count: connectedPages.length,
+      pages: connectedPages,
+      message: `Kết nối thành công tài khoản Facebook "${fbData.name}"! Đã đồng bộ ${connectedPages.length} Fanpage.`
+    });
+  } catch (error) {
+    const errMsg = error.response?.data?.error?.message || error.message || 'Không thể xác thực Facebook Token.';
+    return res.status(400).json({ success: false, message: errMsg });
   }
 });
 
@@ -755,7 +1329,7 @@ app.post('/api/posts', requireAuth, async (req, res) => {
 
     console.log('[POST /api/posts] Bước 3: INSERT vào DB cho', authorizedPageIds.length, 'page...');
     const pool = await getPool();
-    const createdPostIds = [];
+    const createdPosts = [];
 
     for (const pageId of authorizedPageIds) {
       const transaction = new sql.Transaction(pool);
@@ -783,7 +1357,7 @@ app.post('/api/posts', requireAuth, async (req, res) => {
             .query("INSERT INTO PostComments (post_id, comment_index, content, delay_minutes, media_url, status) VALUES (@postId, @commentIndex, @content, @delayMinutes, @mediaUrl, 'pending');");
         }
         await transaction.commit();
-        createdPostIds.push(postId);
+        createdPosts.push({ postId, pageId });
         console.log(`[POST /api/posts] Đã INSERT bài ${postId} cho page ${pageId}`);
       } catch (insertError) {
         await transaction.rollback();
@@ -791,29 +1365,50 @@ app.post('/api/posts', requireAuth, async (req, res) => {
       }
     }
 
-    if (createdPostIds.length === 0) {
+    if (createdPosts.length === 0) {
       return res.status(500).json({ success: false, message: 'Không thể tạo bản ghi bài viết cho các Page đã chọn.' });
     }
 
-    // Đưa vào BullMQ Queue — dùng timeout 5s để tránh treo nếu Redis có vấn đề
-    console.log('[POST /api/posts] Bước 4: đưa vào BullMQ queue...');
-    for (const postId of createdPostIds) {
+    const createdPostIds = createdPosts.map((p) => p.postId);
+    const isFbScheduledCandidate = canScheduleOnFacebook({ mediaType, scheduledAt });
+
+    // Bước 4: Lên lịch trực tiếp trên Facebook (nếu đủ điều kiện) và đưa vào BullMQ Queue
+    console.log('[POST /api/posts] Bước 4: xử lý lên lịch đăng bài...');
+    for (const { postId, pageId } of createdPosts) {
+      if (isFbScheduledCandidate) {
+        try {
+          console.log(`[POST /api/posts] Hẹn giờ bài ${postId} trực tiếp qua Facebook Cloud API cho page ${pageId}...`);
+          const fbPostId = await schedulePostOnFacebook({
+            pageId,
+            content,
+            mediaType,
+            mediaLinks,
+            scheduledAt
+          });
+          await pool.request()
+            .input('id', sql.Int, postId)
+            .input('fbId', sql.NVarChar, fbPostId)
+            .query("UPDATE Posts SET facebook_post_id = @fbId, status = 'scheduled' WHERE id = @id");
+          console.log(`[POST /api/posts] Đã hẹn giờ trực tiếp lên Facebook thành công! ID: ${fbPostId}`);
+        } catch (fbErr) {
+          console.warn(`[POST /api/posts] Hẹn giờ Facebook Cloud thất bại cho bài ${postId}, dùng BullMQ fallback:`, fbErr.response?.data?.error?.message || fbErr.message);
+        }
+      }
+
       try {
-        await Promise.race([
-          addPostToQueue(postId, scheduledAt),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Queue timeout')), 5000))
-        ]);
-        console.log(`[POST /api/posts] Đã queue bài ${postId}`);
+        await standaloneScheduler.schedulePost(postId, scheduledAt);
+        console.log(`[POST /api/posts] Đã lên lịch bài ${postId}`);
       } catch (queueError) {
-        console.error(`[Post Queue Error postId ${postId}]`, queueError.message);
-        // Không block response — bài vẫn đã được lưu vào DB
-        // Worker sẽ không chạy nhưng admin có thể trigger lại
+        console.error(`[Post Schedule Error postId ${postId}]`, queueError.message);
       }
     }
 
-    const message = createdPostIds.length === 1
-      ? 'Đã lưu bài và đưa vào lịch đăng.'
-      : `Đã lưu và lên lịch bài đăng đồng thời cho ${createdPostIds.length} Fanpage.`;
+    const isNow = !isFbScheduledCandidate && Math.abs(scheduledAt.getTime() - Date.now()) < 5 * 60 * 1000;
+    const message = isNow
+      ? `⚡ Đã gửi yêu cầu đăng ngay lập tức cho ${createdPostIds.length} Fanpage!`
+      : (createdPostIds.length === 1
+          ? (isFbScheduledCandidate ? 'Đã lên lịch đăng trực tiếp trên Facebook (tự động đăng đúng giờ kể cả khi tắt máy).' : 'Đã lưu bài và đưa vào lịch đăng.')
+          : `Đã lưu và lên lịch bài đăng đồng thời cho ${createdPostIds.length} Fanpage.`);
 
     console.log('[POST /api/posts] Thành công! postIds:', createdPostIds);
     return res.status(202).json({
@@ -835,6 +1430,9 @@ app.get('/api/posts', requireAuth, async (req, res) => {
   try {
     await ensurePostOwnershipSchema();
     const pool = await getPool();
+    // Tự động đồng bộ trạng thái 'published' cho các bài đã lên lịch trực tiếp trên Facebook khi đã qua thời gian đăng
+    await pool.request().query("UPDATE Posts SET status = 'published' WHERE status IN ('pending', 'scheduled') AND facebook_post_id IS NOT NULL AND scheduled_at <= SYSUTCDATETIME();").catch(() => {});
+
     const pageValue = Number.parseInt(req.query.page, 10);
     const limitValue = Number.parseInt(req.query.limit, 10);
     const page = Number.isInteger(pageValue) && pageValue > 0 ? pageValue : 1;
@@ -873,6 +1471,9 @@ app.get('/api/posts/stats', requireAuth, async (req, res) => {
   try {
     await ensurePostOwnershipSchema();
     const pool = await getPool();
+    // Tự động đồng bộ trạng thái 'published' cho các bài đã lên lịch trực tiếp trên Facebook
+    await pool.request().query("UPDATE Posts SET status = 'published' WHERE status IN ('pending', 'scheduled') AND facebook_post_id IS NOT NULL AND scheduled_at <= SYSUTCDATETIME();").catch(() => {});
+
     const request = pool.request();
     const where = req.user.role === 'admin' ? '' : 'WHERE created_by_user_id=@ownerId';
     if (req.user.role !== 'admin') request.input('ownerId', sql.VarChar(64), req.user.sub);
@@ -886,33 +1487,299 @@ app.get('/api/posts/stats', requireAuth, async (req, res) => {
 });
 
 app.get('/api/reports/insights', requireAuth, async (req, res) => {
-  let pageId = req.query.pageId ? String(req.query.pageId) : '';
+  let requestedPageId = req.query.pageId ? String(req.query.pageId) : '';
+  let pages = [];
   try {
-    const pages = await getConnectedPages(req.user.sub);
-    pageId = pageId || pages[0]?.id;
-    if (!pageId) return res.status(409).json({ success: false, available: false, message: 'Tài khoản chưa có Fanpage đã kết nối.' });
-    if (!pages.some((page) => String(page.id) === pageId)) return res.status(403).json({ success: false, available: false, message: 'Không có quyền xem Insights của Fanpage này.' });
+    pages = await getConnectedPages(req.user.sub);
+    if (!pages || pages.length === 0) {
+      return res.json({
+        success: true,
+        available: false,
+        days: 14,
+        pages: [],
+        summary: { totalViews: 0, totalEngagements: 0, totalReactions: 0, totalComments: 0, totalShares: 0, totalPosts: 0, avgEngagementPerPost: 0 },
+        chartData: [],
+        metrics: [],
+        topPosts: [],
+        message: 'Tài khoản chưa có Fanpage nào được kết nối.'
+      });
+    }
   } catch (error) {
     return sendApiError(res, 'Insights Page Lookup Error', error, 'Không thể tải danh sách Fanpage.');
   }
+
   const daysValue = Number.parseInt(req.query.days, 10);
   const days = [7, 14, 30].includes(daysValue) ? daysValue : 14;
   const until = new Date();
   const since = new Date(until.getTime() - days * 86400000);
-  try {
-    const token = await getFacebookPageAccessToken(pageId);
-    const version = process.env.FB_GRAPH_VERSION || 'v19.0';
-    const names = (process.env.FB_INSIGHT_METRICS || 'page_post_engagements,page_views_total,page_media_view').split(',').map((value) => value.trim()).filter(Boolean);
-    const result = await axios.get(`https://graph.facebook.com/${version}/${pageId}/insights`, {
-      params: { metric: names.join(','), period: 'day', since: since.toISOString().slice(0, 10), until: until.toISOString().slice(0, 10), access_token: token },
-      timeout: 15000
-    });
-    const metrics = (result.data.data || []).map((metric) => ({ name: metric.name, period: metric.period, values: (metric.values || []).map((item) => ({ endTime: item.end_time, value: item.value })) }));
-    const available = metrics.some((metric) => metric.values.length > 0);
-    return res.json({ success: true, available, days, metrics, message: available ? null : 'Facebook chưa trả datapoint Insights cho Page này trong khoảng thời gian đã chọn.' });
-  } catch (error) {
-    return sendApiError(res, 'Insights Error', error, 'Không tải được Facebook Insights.');
+
+  // Chọn danh sách Page cần tổng hợp: 1 page cụ thể hoặc tất cả page
+  let targetPages = [];
+  if (requestedPageId && requestedPageId !== 'all') {
+    const found = pages.find((p) => String(p.id) === requestedPageId);
+    if (!found) return res.status(403).json({ success: false, message: 'Không có quyền truy cập Fanpage này.' });
+    targetPages = [found];
+  } else if (requestedPageId === 'all') {
+    targetPages = pages;
+  } else {
+    targetPages = [pages[0]];
   }
+
+  // Khởi tạo timeline map theo từng ngày trong khoảng [since, until]
+  const dailyMap = {};
+  for (let d = new Date(since); d <= until; d.setDate(d.getDate() + 1)) {
+    const key = d.toISOString().slice(0, 10);
+    const dayLabel = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+    dailyMap[key] = {
+      date: dayLabel,
+      fullDate: key,
+      endTime: d.toISOString(),
+      views: 0,
+      engagements: 0,
+      reactions: 0,
+      comments: 0,
+      shares: 0,
+      postsCount: 0
+    };
+  }
+
+  let totalReactions = 0;
+  let totalComments = 0;
+  let totalShares = 0;
+  let totalEngagements = 0;
+  let totalViews = 0;
+  let totalPosts = 0;
+  const allPostsList = [];
+  const expiredPagesList = [];
+
+  const version = process.env.FB_GRAPH_VERSION || 'v19.0';
+  const pool = await getPool();
+
+  for (const p of targetPages) {
+    let fbPosts = [];
+    let pageToken = '';
+    try {
+      pageToken = await getFacebookPageAccessToken(p.id);
+
+      // 1. Thử lấy Lượt hiển thị bài viết Page-level thực tế (page_media_view) từ Facebook
+      try {
+        const pageInsResult = await axios.get(`https://graph.facebook.com/${version}/${p.id}/insights`, {
+          params: {
+            metric: 'page_media_view',
+            period: 'day',
+            since: Math.floor(since.getTime() / 1000),
+            until: Math.floor(until.getTime() / 1000),
+            access_token: pageToken
+          },
+          timeout: 2500
+        });
+        const pData = pageInsResult.data?.data || [];
+        const impMetric = pData.find(m => m.name === 'page_media_view');
+        if (impMetric && Array.isArray(impMetric.values)) {
+          for (const v of impMetric.values) {
+            const dateKey = (v.end_time || '').slice(0, 10);
+            const valNum = Number(v.value) || 0;
+            if (dailyMap[dateKey]) {
+              dailyMap[dateKey].views += valNum;
+            }
+            totalViews += valNum;
+          }
+        }
+      } catch (_) {
+        // Page level insights có thể không khả dụng nếu Page dưới 100 followers
+      }
+
+      // 2. Lấy danh sách bài viết thực tế cùng reactions, comments, shares từ Facebook
+      const fbResult = await axios.get(`https://graph.facebook.com/${version}/${p.id}/posts`, {
+        params: {
+          fields: 'id,message,created_time,shares,permalink_url,full_picture,reactions.summary(true),comments.summary(true)',
+          since: Math.floor(since.getTime() / 1000),
+          until: Math.floor(until.getTime() / 1000),
+          limit: 30,
+          access_token: pageToken
+        },
+        timeout: 4000
+      });
+      if (Array.isArray(fbResult.data?.data)) {
+        fbPosts = fbResult.data.data;
+      }
+    } catch (fbErr) {
+      const fbErrorObj = fbErr.response?.data?.error;
+      const errCode = fbErrorObj?.code;
+      const errMsg = fbErrorObj?.message || fbErr.message;
+      if (errCode === 190) {
+        expiredPagesList.push(p.name);
+        try {
+          await pool.request()
+            .input('pageId', sql.VarChar(64), String(p.id))
+            .query('UPDATE dbo.FacebookPages SET is_valid = 0 WHERE page_id = @pageId');
+        } catch (_) {}
+      }
+      console.warn(`[Insights Warning] Lỗi đọc Facebook cho Page ${p.id}:`, errMsg);
+    }
+
+    // 3. Lấy thêm bài viết đã đăng lưu trong local database
+    let dbPosts = [];
+    try {
+      const dbRes = await pool.request()
+        .input('pageId', sql.VarChar(64), String(p.id))
+        .input('sinceDate', sql.DateTime2, since)
+        .query(`SELECT id, page_id, content, media_links, media_thumb, media_type, created_at, updated_at, facebook_post_id FROM Posts WHERE page_id = @pageId AND status = 'published' AND (created_at >= @sinceDate OR updated_at >= @sinceDate)`);
+      dbPosts = dbRes.recordset || [];
+    } catch (dbErr) {
+      console.warn('[Insights DB lookup]', dbErr.message);
+    }
+
+    // Gộp và chuẩn hóa bài viết
+    const processedPostIds = new Set();
+
+    // Duyệt nhanh từng bài viết từ Facebook trong bộ nhớ (siêu tốc, không làm nghẽn mạng)
+    for (const item of fbPosts) {
+      processedPostIds.add(item.id);
+      const reactions = Number(item.reactions?.summary?.total_count) || 0;
+      const comments = Number(item.comments?.summary?.total_count) || 0;
+      const shares = Number(item.shares?.count) || 0;
+      const engagements = reactions + comments + shares;
+
+      const postTime = new Date(item.created_time);
+      const dateKey = postTime.toISOString().slice(0, 10);
+
+      totalReactions += reactions;
+      totalComments += comments;
+      totalShares += shares;
+      totalEngagements += engagements;
+      totalPosts += 1;
+
+      if (dailyMap[dateKey]) {
+        dailyMap[dateKey].reactions += reactions;
+        dailyMap[dateKey].comments += comments;
+        dailyMap[dateKey].shares += shares;
+        dailyMap[dateKey].engagements += engagements;
+        dailyMap[dateKey].postsCount += 1;
+      }
+
+      allPostsList.push({
+        id: item.id,
+        pageId: p.id,
+        pageName: p.name,
+        message: item.message || 'Bài đăng không có văn bản',
+        created_time: item.created_time,
+        permalink_url: item.permalink_url || `https://facebook.com/${item.id}`,
+        full_picture: item.full_picture || null,
+        reactions,
+        comments,
+        shares,
+        engagements,
+        views: 0
+      });
+    }
+
+    // Duyệt các bài từ DB chưa có trong fbPosts
+    for (const post of dbPosts) {
+      if (post.facebook_post_id && processedPostIds.has(post.facebook_post_id)) continue;
+      totalPosts += 1;
+      const postTime = new Date(post.created_at || post.updated_at || since);
+      const dateKey = postTime.toISOString().slice(0, 10);
+
+      if (dailyMap[dateKey]) {
+        dailyMap[dateKey].postsCount += 1;
+      }
+
+      let picture = post.media_thumb || null;
+      if (!picture && post.media_links) {
+        try {
+          const links = JSON.parse(post.media_links);
+          if (Array.isArray(links) && links.length > 0) picture = links[0];
+        } catch (_) {}
+      }
+
+      allPostsList.push({
+        id: post.facebook_post_id || `local-${post.id}`,
+        pageId: p.id,
+        pageName: p.name,
+        message: post.content || 'Bài đăng tự động',
+        created_time: postTime.toISOString(),
+        permalink_url: post.facebook_post_id ? `https://facebook.com/${post.facebook_post_id}` : null,
+        full_picture: picture,
+        reactions: 0,
+        comments: 0,
+        shares: 0,
+        engagements: 0,
+        views: 0
+      });
+    }
+  }
+
+  // Sắp xếp top bài viết tương tác cao nhất
+  allPostsList.sort((a, b) => b.engagements - a.engagements || b.views - a.views);
+
+  // Lấy lượt xem thật cho Top 5 bài viết chạy song song (Promise.allSettled) với timeout ngắn (1.2s)
+  const topFive = allPostsList.slice(0, 5);
+  await Promise.allSettled(
+    topFive.map(async (post) => {
+      try {
+        const token = await getFacebookPageAccessToken(post.pageId).catch(() => null);
+        if (!token) return;
+        const insRes = await axios.get(`https://graph.facebook.com/${version}/${post.id}/insights`, {
+          params: { metric: 'post_media_view', access_token: token },
+          timeout: 1200
+        });
+        const mData = insRes.data?.data || [];
+        const m = mData.find((x) => x.name === 'post_media_view');
+        if (m && Array.isArray(m.values) && m.values.length > 0) {
+          post.views = Number(m.values[0].value) || 0;
+        }
+      } catch (_) {}
+    })
+  );
+
+  // Cập nhật lại totalViews nếu có từ posts
+  if (totalViews === 0) {
+    totalViews = allPostsList.reduce((sum, item) => sum + (item.views || 0), 0);
+  }
+  const topPosts = allPostsList.slice(0, 10);
+
+  const chartData = Object.values(dailyMap);
+  const avgEngagementPerPost = totalPosts > 0 ? Math.round((totalEngagements / totalPosts) * 10) / 10 : 0;
+
+  const metrics = [
+    {
+      name: 'page_post_engagements',
+      period: 'day',
+      values: chartData.map((d) => ({ endTime: d.endTime, value: d.engagements }))
+    },
+    {
+      name: 'post_views',
+      period: 'day',
+      values: chartData.map((d) => ({ endTime: d.endTime, value: d.views }))
+    }
+  ];
+
+  return res.json({
+    success: true,
+    available: true,
+    days,
+    selectedPageId: requestedPageId || (targetPages[0]?.id || 'all'),
+    pages: pages.map((p) => ({ id: p.id, name: p.name })),
+    tokenExpired: expiredPagesList.length > 0,
+    expiredPages: expiredPagesList,
+    tokenErrorMessage: expiredPagesList.length > 0
+      ? `Token của Fanpage (${expiredPagesList.join(', ')}) đã hết hạn từ Facebook. Vui lòng vào "Quản lý kênh" để cập nhật Token mới để Facebook đồng bộ số liệu chuẩn nhất.`
+      : null,
+    summary: {
+      totalViews,
+      totalEngagements,
+      totalReactions,
+      totalComments,
+      totalShares,
+      totalPosts,
+      avgEngagementPerPost
+    },
+    chartData,
+    metrics,
+    topPosts,
+    message: null
+  });
 });
 
 // ═══ CHI TIẾT BÀI ĐĂNG (KÈM SEEDING COMMENTS) ═══
@@ -927,7 +1794,7 @@ app.get('/api/posts/:postId', requireAuth, async (req, res) => {
       .query('SELECT * FROM Posts WHERE id = @id');
     const post = postResult.recordset[0];
     if (!post) return res.status(404).json({ success: false, message: 'Không tìm thấy bài đăng.' });
-    if (req.user.role !== 'admin' && post.created_by_user_id !== req.user.sub) {
+    if (req.user.role !== 'admin' && String(post.created_by_user_id) !== String(req.user.sub)) {
       return res.status(403).json({ success: false, message: 'Bạn không có quyền xem bài đăng này.' });
     }
 
@@ -959,11 +1826,15 @@ app.put('/api/posts/:postId/cancel', requireAuth, async (req, res) => {
     const ownerFilter = req.user.role === 'admin' ? '' : ' AND created_by_user_id = @ownerId';
     if (req.user.role !== 'admin') request.input('ownerId', sql.VarChar(64), req.user.sub);
 
-    const check = await request.query(`SELECT id, status FROM Posts WHERE id = @id ${ownerFilter}`);
+    const check = await request.query(`SELECT id, page_id, status, facebook_post_id FROM Posts WHERE id = @id ${ownerFilter}`);
     const post = check.recordset[0];
     if (!post) return res.status(404).json({ success: false, message: 'Không tìm thấy bài đăng hoặc không có quyền.' });
     if (post.status !== 'pending') {
       return res.status(400).json({ success: false, message: 'Chỉ có thể hủy lịch các bài đang ở trạng thái Chờ đăng (pending).' });
+    }
+
+    if (post.facebook_post_id) {
+      await cancelFacebookScheduledPost({ pageId: post.page_id, facebookPostId: post.facebook_post_id });
     }
 
     await pool.request().input('id', sql.Int, postId).query("UPDATE Posts SET status = 'cancelled' WHERE id = @id");
@@ -1023,22 +1894,70 @@ app.post('/api/posts/:postId/publish-now', requireAuth, async (req, res) => {
   try {
     await ensurePostOwnershipSchema();
     const pool = await getPool();
+
+    const check = await pool.request().input('id', sql.Int, postId).query('SELECT id, page_id, facebook_post_id FROM Posts WHERE id = @id');
+    const existingPost = check.recordset[0];
+    if (existingPost?.facebook_post_id) {
+      await cancelFacebookScheduledPost({ pageId: existingPost.page_id, facebookPostId: existingPost.facebook_post_id });
+    }
+
     const request = pool.request().input('id', sql.Int, postId).input('scheduledAt', sql.DateTime2, new Date());
     const ownerFilter = req.user.role === 'admin' ? '' : ' AND created_by_user_id=@ownerId';
     if (req.user.role !== 'admin') request.input('ownerId', sql.VarChar(64), req.user.sub);
-    const result = await request.query(`UPDATE Posts SET scheduled_at=@scheduledAt,status='pending' OUTPUT INSERTED.id WHERE id=@id AND status IN ('pending','failed','cancelled')${ownerFilter};`);
-    try {
-      await Promise.race([
-        addPostToQueue(postId, new Date()),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Queue timeout')), 5000))
-      ]);
-    } catch (queueErr) {
-      console.error(`[Publish Now Queue Warning postId ${postId}]`, queueErr.message);
+    const result = await request.query(`UPDATE Posts SET scheduled_at=@scheduledAt,status='pending',facebook_post_id=NULL OUTPUT INSERTED.id WHERE id=@id AND status IN ('pending','scheduled','failed','cancelled')${ownerFilter};`);
+    if (result.recordset.length === 0) {
+      return res.status(400).json({ success: false, message: 'Bài viết không ở trạng thái có thể đăng ngay.' });
     }
-    return res.status(202).json({ success: true, message: 'Đã đưa bài đăng vào hàng đợi.' });
+    try {
+      await standaloneScheduler.schedulePost(postId, new Date());
+    } catch (queueErr) {
+      console.error(`[Publish Now Schedule Warning postId ${postId}]`, queueErr.message);
+    }
+    return res.status(202).json({ success: true, message: 'Đã đưa bài đăng vào hàng đợi để xuất bản ngay.' });
   } catch (error) {
     console.error('[Publish Now Error]', error.message);
     return res.status(500).json({ success: false, message: error.message || 'Không thể đưa bài vào hàng đợi.' });
+  }
+});
+
+app.post('/api/posts/:postId/comments/instant', requireAuth, async (req, res) => {
+  const postId = Number.parseInt(req.params.postId, 10);
+  const content = typeof req.body.content === 'string' ? req.body.content.trim() : '';
+  if (!Number.isSafeInteger(postId) || postId <= 0) return res.status(400).json({ success: false, message: 'ID bài đăng không hợp lệ.' });
+  if (!content) return res.status(400).json({ success: false, message: 'Nội dung bình luận seeding không được để trống.' });
+
+  try {
+    const pool = await getPool();
+    const postRes = await pool.request()
+      .input('id', sql.Int, postId)
+      .query('SELECT facebook_post_id, page_id, created_by_user_id FROM Posts WHERE id = @id');
+    const post = postRes.recordset[0];
+    if (!post) return res.status(404).json({ success: false, message: 'Không tìm thấy bài viết.' });
+    if (req.user.role !== 'admin' && post.created_by_user_id && String(post.created_by_user_id) !== String(req.user.sub)) {
+      return res.status(403).json({ success: false, message: 'Không có quyền comment trên bài viết này.' });
+    }
+    if (!post.facebook_post_id) {
+      return res.status(400).json({ success: false, message: 'Bài viết chưa được xuất bản lên Facebook.' });
+    }
+
+    const pageAccessToken = await getFacebookPageAccessToken(post.page_id);
+    const graphVersion = process.env.FB_GRAPH_VERSION || 'v19.0';
+    const fbRes = await axios.post(`https://graph.facebook.com/${graphVersion}/${post.facebook_post_id}/comments`, {
+      message: content,
+      access_token: pageAccessToken
+    });
+
+    await pool.request()
+      .input('postId', sql.Int, postId)
+      .input('content', sql.NVarChar, content)
+      .input('delayMinutes', sql.Int, 0)
+      .query("INSERT INTO PostComments (post_id, comment_index, content, delay_minutes, status) VALUES (@postId, 99, @content, @delayMinutes, 'posted');");
+
+    return res.json({ success: true, message: 'Đã gửi comment seeding lên Facebook thành công!', fbCommentId: fbRes.data?.id });
+  } catch (error) {
+    const errMsg = error.response?.data?.error?.message || error.message;
+    console.error('[Instant Comment Error]', errMsg);
+    return res.status(500).json({ success: false, message: errMsg });
   }
 });
 
@@ -1048,11 +1967,14 @@ app.delete('/api/posts/:postId', requireAuth, async (req, res) => {
   try {
     await ensurePostOwnershipSchema();
     const pool = await getPool();
-    const result = await pool.request().input('id', sql.Int, postId).query('SELECT id,status,media_links,created_by_user_id FROM Posts WHERE id=@id');
+    const result = await pool.request().input('id', sql.Int, postId).query('SELECT id,page_id,status,facebook_post_id,media_links,created_by_user_id FROM Posts WHERE id=@id');
     const post = result.recordset[0];
     if (!post) return res.status(404).json({ success: false, message: 'Không tìm thấy bài đăng.' });
-    if (req.user.role !== 'admin' && post.created_by_user_id !== req.user.sub) return res.status(404).json({ success: false, message: 'Không tìm thấy bài đăng.' });
+    if (req.user.role !== 'admin' && String(post.created_by_user_id) !== String(req.user.sub)) return res.status(404).json({ success: false, message: 'Không tìm thấy bài đăng.' });
     if (!['pending', 'failed'].includes(post.status)) return res.status(409).json({ success: false, message: 'Chỉ xóa được bài chờ hoặc thất bại.' });
+    if (post.facebook_post_id && post.status === 'pending') {
+      await cancelFacebookScheduledPost({ pageId: post.page_id, facebookPostId: post.facebook_post_id });
+    }
     await removePostFromQueue(postId);
     const transaction = new sql.Transaction(pool);
     await transaction.begin();
@@ -1168,14 +2090,28 @@ app.post('/api/posts/bulk-upload', requireAuth, memoryUpload.single('file'), asy
             .query("INSERT INTO PostComments (post_id,comment_index,content,delay_minutes,media_url,status) VALUES (@postId,@commentIndex,@content,@delay,@mediaUrl,'pending');");
         }
         await transaction.commit();
+        if (canScheduleOnFacebook({ mediaType: post.mediaType, scheduledAt: post.scheduledAt })) {
+          try {
+            const fbPostId = await schedulePostOnFacebook({
+              pageId,
+              content: post.content,
+              mediaType: post.mediaType,
+              mediaLinks: post.mediaLinks,
+              scheduledAt: post.scheduledAt
+            });
+            await pool.request()
+              .input('id', sql.Int, postId)
+              .input('fbId', sql.NVarChar, fbPostId)
+              .query('UPDATE Posts SET facebook_post_id = @fbId WHERE id = @id');
+          } catch (fbErr) {
+            console.warn(`[Bulk FB Schedule Warning postId ${postId}]`, fbErr.response?.data?.error?.message || fbErr.message);
+          }
+        }
         try {
-          await Promise.race([
-            addPostToQueue(postId, post.scheduledAt),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Queue timeout')), 5000))
-          ]);
+          await standaloneScheduler.schedulePost(postId, post.scheduledAt);
           createdIds.push(postId);
         } catch (error) {
-          console.error(`[Bulk Queue Warning postId ${postId}]`, error.message);
+          console.error(`[Bulk Schedule Warning postId ${postId}]`, error.message);
           createdIds.push(postId); // Vẫn đã lưu vào DB
         }
       } catch (error) {
@@ -1190,13 +2126,60 @@ app.post('/api/posts/bulk-upload', requireAuth, memoryUpload.single('file'), asy
   }
 });
 
+// ═══ HEALTH CHECK ENDPOINT (DÙNG ĐỂ CHỐNG NGỦ ĐÔNG TRÊN RENDER / UPTIMEROBOT) ═══
+app.get('/api/health', (_req, res) => {
+  return res.json({
+    status: 'ok',
+    uptime: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString()
+  });
+});
+
+// ═══ SERVE STATIC FRONTEND TỪ CLIENT/OUT (DÀNH CHO CHẾ ĐỘ DESKTOP / PRODUCTION) ═══
+const clientOutDir = process.env.CLIENT_OUT_DIR || path.resolve(__dirname, '../../client/out');
+if (fs.existsSync(clientOutDir)) {
+  app.use(express.static(clientOutDir));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) {
+      return next();
+    }
+    const cleanPath = req.path.replace(/\/+$/, '');
+    const directFile = path.join(clientOutDir, req.path);
+    if (fs.existsSync(directFile) && fs.existsSync(directFile) && fs.statSync(directFile).isFile()) {
+      return res.sendFile(directFile);
+    }
+    const indexInFolder = path.join(clientOutDir, cleanPath, 'index.html');
+    if (fs.existsSync(indexInFolder)) {
+      return res.sendFile(indexInFolder);
+    }
+    return res.sendFile(path.join(clientOutDir, 'index.html'));
+  });
+}
+
 app.use((error, _req, res, _next) => {
   console.error('[Unhandled API Error]', error.message);
   return res.status(500).json({ success: false, message: 'Lỗi máy chủ.' });
 });
 
 const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+const server = app.listen(PORT, () => {
+  console.log(`Server listening on ${PORT}`);
+  // Khởi động tiến trình tự động giám sát sức khỏe Token định kỳ (Module 2)
+  tokenHealthCheckService.startScheduler(6);
+
+  // Khởi động bộ đếm giờ độc lập cho bài đăng & comment seeding (hoạt động kể cả không có Redis)
+  standaloneScheduler.startStandaloneScheduler(10000);
+
+  // Tùy chọn gộp Worker chạy chung một tiến trình (Dành cho Render / Cloud Free không tốn thêm $7/tháng)
+  if (process.env.RUN_WORKER_IN_PROCESS === 'true') {
+    console.log('⚡ [In-Process Worker] Tự động kích hoạt Post Worker chạy chung trong Backend...');
+    try {
+      require('../queues/post.worker');
+    } catch (workerErr) {
+      console.warn('[In-Process Worker Error]', workerErr.message);
+    }
+  }
+});
 server.on('error', (error) => {
   console.error('[HTTP Server Error]', error.message);
   process.exitCode = 1;

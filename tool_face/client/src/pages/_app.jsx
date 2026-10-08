@@ -15,6 +15,7 @@ export default function App({ Component, pageProps }) {
     const routesToPrefetch = [
       '/dashboard',
       '/ai-studio',
+      '/ai-studio/generate',
       '/post-planner/compose',
       '/post-planner/list',
       '/post-planner/calendar',

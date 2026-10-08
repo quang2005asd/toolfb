@@ -22,12 +22,38 @@ import {
   Ban
 } from 'lucide-react';
 
+function parseDateSafe(val) {
+  if (!val) return null;
+  if (typeof val === 'number') {
+    const d = new Date(val);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  const num = Number(val);
+  if (!Number.isNaN(num) && num > 100000000000) {
+    const d = new Date(num);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  const d = new Date(val);
+  if (!Number.isNaN(d.getTime())) return d;
+  const d2 = new Date(String(val).replace(' ', 'T'));
+  if (!Number.isNaN(d2.getTime())) return d2;
+  return null;
+}
+
+function formatDateTime(val, fallback = 'Đăng ngay') {
+  const d = parseDateSafe(val);
+  return d ? d.toLocaleString('vi-VN') : fallback;
+}
+
 function PostDetailModal({ postId, onClose, onRefresh, channelName }) {
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
   const [analyticsError, setAnalyticsError] = useState('');
+  const [instantComment, setInstantComment] = useState('');
+  const [sendingInstant, setSendingInstant] = useState(false);
+  const [instantMessage, setInstantMessage] = useState({ text: '', type: '' });
 
   useEffect(() => {
     if (!postId) return;
@@ -54,6 +80,26 @@ function PostDetailModal({ postId, onClose, onRefresh, channelName }) {
       setAnalyticsError(err.response?.data?.message || 'Không thể lấy dữ liệu tương tác từ Facebook.');
     } finally {
       setLoadingAnalytics(false);
+    }
+  };
+
+  const handleSendInstantComment = async () => {
+    if (!instantComment.trim()) return;
+    setSendingInstant(true);
+    setInstantMessage({ text: '', type: '' });
+    try {
+      const res = await postApi.postInstantComment(postId, instantComment.trim());
+      if (res.success) {
+        setInstantMessage({ text: '✅ Đã gửi comment lên Facebook thành công!', type: 'success' });
+        setInstantComment('');
+        const updated = await postApi.getPostDetail(postId);
+        if (updated.success && updated.post) setPost(updated.post);
+        if (onRefresh) onRefresh();
+      }
+    } catch (err) {
+      setInstantMessage({ text: err.response?.data?.message || err.message || 'Lỗi gửi comment.', type: 'error' });
+    } finally {
+      setSendingInstant(false);
     }
   };
 
@@ -84,7 +130,7 @@ function PostDetailModal({ postId, onClose, onRefresh, channelName }) {
       }}
     >
       <div
-        className="panel rgb-led-card"
+        className="panel"
         style={{
           width: '100%',
           maxWidth: 680,
@@ -124,13 +170,13 @@ function PostDetailModal({ postId, onClose, onRefresh, channelName }) {
                 <div>
                   <span className="muted" style={{ fontSize: 11 }}>Lịch đăng:</span>
                   <div style={{ fontWeight: 600, marginTop: 2, fontSize: 12.5 }}>
-                    {post.scheduled_at ? new Date(post.scheduled_at).toLocaleString('vi-VN') : 'Đăng ngay'}
+                    {formatDateTime(post.scheduled_at, 'Đăng ngay')}
                   </div>
                 </div>
                 <div>
                   <span className="muted" style={{ fontSize: 11 }}>Tạo lúc:</span>
                   <div style={{ fontWeight: 600, marginTop: 2, fontSize: 12.5 }}>
-                    {post.created_at ? new Date(post.created_at).toLocaleString('vi-VN') : '—'}
+                    {formatDateTime(post.created_at, '—')}
                   </div>
                 </div>
               </div>
@@ -220,7 +266,7 @@ function PostDetailModal({ postId, onClose, onRefresh, channelName }) {
               {/* Seeding Comments */}
               {Array.isArray(post.comments) && post.comments.length > 0 && (
                 <div>
-                  <label className="field-label">Seeding Comments tự động ({post.comments.length}):</label>
+                  <label className="field-label">Seeding Comments ({post.comments.length}):</label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {post.comments.map((cm, idx) => (
                       <div key={idx} style={{ padding: '8px 12px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: 8, fontSize: 12.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -229,6 +275,63 @@ function PostDetailModal({ postId, onClose, onRefresh, channelName }) {
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Đăng Seeding Ngay Cho Bài Đã Xuất Bản */}
+              {post.status === 'published' && post.facebook_post_id && (
+                <div style={{ background: 'rgba(0, 242, 254, 0.04)', border: '1px solid rgba(0, 242, 254, 0.25)', borderRadius: 10, padding: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#00f2fe', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <MessageCircle size={15} /> Gửi Comment Seeding tức thì lên Facebook
+                    </span>
+                    <span className="muted" style={{ fontSize: 11 }}>Bình luận trực tiếp bằng quyền Page</span>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+                    <span className="muted" style={{ fontSize: 11, alignSelf: 'center' }}>Mẫu nhanh:</span>
+                    <button
+                      type="button"
+                      className="button button-quiet"
+                      style={{ minHeight: 22, padding: '0 8px', fontSize: 11, borderRadius: 12, background: 'rgba(0, 242, 254, 0.08)', color: '#38bdf8' }}
+                      onClick={() => setInstantComment('Anh/chị cần tư vấn hoặc báo giá nhanh vui lòng inbox Page hoặc liên hệ Hotline/Zalo nhé ạ! 📞✨')}
+                    >
+                      Hotline/Zalo
+                    </button>
+                    <button
+                      type="button"
+                      className="button button-quiet"
+                      style={{ minHeight: 22, padding: '0 8px', fontSize: 11, borderRadius: 12, background: 'rgba(245, 158, 11, 0.08)', color: '#fbbf24' }}
+                      onClick={() => setInstantComment('Mọi người để lại bình luận để Ad gửi thông tin chi tiết qua inbox ngay nhé! 🎁💬')}
+                    >
+                      Kêu gọi Inbox
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input
+                      className="field"
+                      placeholder="Nhập nội dung bình luận muốn đăng ngay lên Facebook..."
+                      value={instantComment}
+                      onChange={(e) => setInstantComment(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleSendInstantComment(); }}
+                    />
+                    <button
+                      className="button button-primary"
+                      type="button"
+                      style={{ minHeight: 36, whiteSpace: 'nowrap' }}
+                      disabled={sendingInstant || !instantComment.trim()}
+                      onClick={handleSendInstantComment}
+                    >
+                      {sendingInstant ? 'Đang gửi…' : 'Gửi lên FB'}
+                    </button>
+                  </div>
+
+                  {instantMessage.text && (
+                    <div style={{ marginTop: 8, fontSize: 12, color: instantMessage.type === 'success' ? '#10b981' : '#f87171' }}>
+                      {instantMessage.text}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -249,6 +352,8 @@ export default function PostListPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [selectedPostId, setSelectedPostId] = useState(null);
+  const [publishingId, setPublishingId] = useState(null);
+  const [toastNotice, setToastNotice] = useState('');
   const pageSize = 10;
 
   const fetchPosts = useCallback(async () => {
@@ -277,12 +382,21 @@ export default function PostListPage() {
   // Hàm xử lý kích hoạt đăng ngay / Thử lại
   const handlePublishNow = async (id) => {
     if (!confirm("Bạn có chắc chắn muốn đăng bài viết này lên Fanpage ngay lập tức?")) return;
+    setPublishingId(id);
+    setToastNotice('');
     try {
       await postApi.triggerPostNow(id);
-      alert("Đã gửi yêu cầu đăng bài vào hàng đợi thành công!");
-      fetchPosts();
+      setToastNotice(`🚀 Đã gửi yêu cầu đăng ngay bài viết #${id}! Đang xử lý xuất bản lên Facebook...`);
+      // Đợi 1.5 giây để worker hoàn tất và tự làm mới danh sách
+      setTimeout(async () => {
+        await fetchPosts();
+        setPublishingId(null);
+        setToastNotice(`✅ Bài viết #${id} đã được xuất bản lên Facebook thành công!`);
+        setTimeout(() => setToastNotice(''), 5000);
+      }, 1500);
     } catch (err) {
       alert("Lỗi khi đăng bài: " + (err.response?.data?.message || err.message));
+      setPublishingId(null);
     }
   };
 
@@ -310,7 +424,21 @@ export default function PostListPage() {
   };
 
   // Trả về badge màu cho từng trạng thái
-  const renderStatusBadge = (status) => {
+  const renderStatusBadge = (post) => {
+    const status = post.status;
+    const parsedSched = parseDateSafe(post.scheduled_at);
+    const isFuture = parsedSched && parsedSched.getTime() > Date.now();
+    if (status === 'scheduled' || (post.facebook_post_id && isFuture)) {
+      return (
+        <span
+          className="status-pill"
+          style={{ background: 'rgba(0, 242, 254, 0.15)', color: '#00f2fe', border: '1px solid rgba(0, 242, 254, 0.4)' }}
+          title="Đã lên lịch hẹn giờ trực tiếp trên Facebook"
+        >
+          Đã lên lịch
+        </span>
+      );
+    }
     switch (status) {
       case 'published':
         return <span className="status-pill published">Đã đăng</span>;
@@ -333,7 +461,7 @@ export default function PostListPage() {
           <button className="button button-secondary" onClick={fetchPosts} type="button">
             <RefreshCw size={15} /> Làm mới
           </button>
-          <Link href="/post-planner/compose" className="button button-primary rgb-led-chip">
+          <Link href="/post-planner/compose" className="button button-primary">
             <Plus size={15} /> Tạo bài
           </Link>
         </div>
@@ -366,6 +494,11 @@ export default function PostListPage() {
             </select>
           </div>
         </div>
+        {toastNotice && (
+          <div className="notice" style={{ margin: 14, background: 'rgba(16, 185, 129, 0.15)', borderColor: 'rgba(16, 185, 129, 0.4)', color: '#34d399' }}>
+            {toastNotice}
+          </div>
+        )}
         {error && <div className="notice" style={{ margin: 14 }}>{error}</div>}
         <div className="table-wrap">
           <table className="data-table">
@@ -419,10 +552,10 @@ export default function PostListPage() {
                   <td>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}>
                       <CalendarClock size={14} />
-                      {post.scheduled_at ? new Date(post.scheduled_at).toLocaleString('vi-VN') : 'Đăng ngay'}
+                      {formatDateTime(post.scheduled_at, 'Đăng ngay')}
                     </span>
                   </td>
-                  <td>{renderStatusBadge(post.status)}</td>
+                  <td>{renderStatusBadge(post)}</td>
                   <td>
                     <div className="table-tools">
                       {/* NÚT XEM CHI TIẾT */}
@@ -436,8 +569,8 @@ export default function PostListPage() {
                         <Eye size={13} />
                       </button>
 
-                      {/* NÚT HỦY LỊCH (NẾU ĐANG PENDING) */}
-                      {post.status === 'pending' && (
+                      {/* NÚT HỦY LỊCH (NẾU ĐANG PENDING HOẶC SCHEDULED) */}
+                      {['pending', 'scheduled'].includes(post.status) && (
                         <button
                           className="button button-quiet"
                           style={{ minHeight: 28, padding: '0 8px', color: '#eab308' }}
@@ -449,21 +582,23 @@ export default function PostListPage() {
                         </button>
                       )}
 
-                      {/* NÚT ĐĂNG NGAY / THỬ LẠI (CHO PENDING / FAILED / CANCELLED) */}
-                      {['pending', 'failed', 'cancelled'].includes(post.status) && (
+                      {/* NÚT ĐĂNG NGAY / THỬ LẠI (CHO PENDING / FAILED / CANCELLED / SCHEDULED) */}
+                      {['pending', 'scheduled', 'failed', 'cancelled'].includes(post.status) && (
                         <button
-                          className="button button-primary rgb-led-chip"
+                          className="button button-primary"
                           style={{ minHeight: 28, padding: '0 10px', fontSize: 11 }}
                           onClick={() => handlePublishNow(post.id)}
+                          disabled={publishingId === post.id}
                           type="button"
                           title="Đưa vào hàng đợi đăng ngay"
                         >
-                          <Send size={12} /> {post.status === 'failed' ? 'Thử lại' : 'Đăng ngay'}
+                          <Send size={12} className={publishingId === post.id ? 'spin' : ''} />
+                          {publishingId === post.id ? ' Đang gửi…' : (post.status === 'failed' ? ' Thử lại' : ' Đăng ngay')}
                         </button>
                       )}
 
                       {/* NÚT XÓA BÀI */}
-                      {['pending', 'failed', 'cancelled'].includes(post.status) && (
+                      {['pending', 'scheduled', 'failed', 'cancelled'].includes(post.status) && (
                         <button
                           className="button button-danger"
                           style={{ minHeight: 28, padding: '0 8px' }}

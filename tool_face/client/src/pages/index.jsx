@@ -407,7 +407,7 @@ export default function LandingPage() {
                   Bắt trọn xu hướng video ngắn Reels với tỷ lệ dọc 9:16, tin Story biến mất sau 24h và bài viết dạng Album ghép ảnh thông minh tự động tối ưu tỉ lệ hiển thị trên bảng tin.
                 </p>
               </div>
-              <Link href="/post-planner/compose" prefetch={true} className="button button-primary rgb-led-chip" style={{ padding: '12px 24px', fontSize: 13.5, fontWeight: 700 }}>
+              <Link href="/post-planner/compose" prefetch={true} className="button button-primary" style={{ padding: '12px 24px', fontSize: 13.5, fontWeight: 700 }}>
                 Tạo bài ngay <ArrowRight size={15} />
               </Link>
             </div>

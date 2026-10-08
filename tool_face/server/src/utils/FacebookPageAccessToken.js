@@ -1,11 +1,32 @@
 const axios = require('axios');
-const { getStoredPageAccessToken } = require('./FacebookPageConnections');
+const { getStoredPageAccessToken, encryptToken } = require('./FacebookPageConnections');
+const { sql, getPool } = require('../../config/db');
 
 const graphVersion = process.env.FB_GRAPH_VERSION || 'v19.0';
 
 async function getFacebookPageAccessToken(pageId) {
-  const storedPageToken = await getStoredPageAccessToken(pageId);
-  if (storedPageToken) return storedPageToken;
+  let storedPageToken = await getStoredPageAccessToken(pageId);
+  if (storedPageToken) {
+    // Nếu token lưu trong DB là User Token, Facebook sẽ từ chối unpublished post với lỗi #200.
+    // Ta tự động lấy Page Access Token từ Facebook và cập nhật vào DB
+    try {
+      const pageInfo = await axios.get(`https://graph.facebook.com/${graphVersion}/${pageId}`, {
+        params: { fields: 'access_token', access_token: storedPageToken },
+        timeout: 10000
+      });
+      if (pageInfo.data?.access_token && pageInfo.data.access_token !== storedPageToken) {
+        console.log(`[Token Converter] Đã tự động nâng cấp User Token thành Page Token cho Fanpage ${pageId}`);
+        const pool = await getPool();
+        const encrypted = encryptToken(pageInfo.data.access_token);
+        await pool.request()
+          .input('pageId', sql.VarChar(64), String(pageId))
+          .input('token', sql.NVarChar(sql.MAX), encrypted)
+          .query('UPDATE dbo.FacebookPages SET page_access_token_encrypted=@token WHERE page_id=@pageId');
+        return pageInfo.data.access_token;
+      }
+    } catch {}
+    return storedPageToken;
+  }
 
   const configuredToken = process.env.FACEBOOK_PAGE_ACCESS_TOKEN;
   if (!configuredToken) {

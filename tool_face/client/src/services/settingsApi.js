@@ -17,6 +17,14 @@ export const settingsApi = {
   testAi: async (params) => {
     const response = await api.post('/settings/test-ai', params);
     return response.data;
+  },
+  testTelegram: async (params) => {
+    const response = await api.post('/settings/telegram/test', params);
+    return response.data;
+  },
+  runTokenHealthCheck: async () => {
+    const response = await api.post('/channels/health-check');
+    return response.data;
   }
 };
 

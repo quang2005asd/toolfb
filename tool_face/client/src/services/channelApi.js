@@ -26,6 +26,12 @@ export const channelApi = {
     lastChannelsFetchTime = 0;
   },
 
+  connectFacebookToken: async (token) => {
+    channelApi.invalidateCache();
+    const response = await api.post('/channels/connect-facebook', { token });
+    return response.data;
+  },
+
   addManual: async (pageId, pageToken) => {
     channelApi.invalidateCache();
     const response = await api.post('/channels/manual', { pageId, pageToken });
@@ -35,6 +41,23 @@ export const channelApi = {
   disconnect: async (pageId) => {
     channelApi.invalidateCache();
     const response = await api.delete(`/channels/${pageId}`);
+    return response.data;
+  },
+
+  syncAll: async () => {
+    channelApi.invalidateCache();
+    const response = await api.post('/channels/sync');
+    return response.data;
+  },
+
+  getAccounts: async () => {
+    const response = await api.get('/channels/accounts');
+    return response.data;
+  },
+
+  disconnectAccount: async (fbAccountId) => {
+    channelApi.invalidateCache();
+    const response = await api.delete(`/channels/accounts/${fbAccountId}`);
     return response.data;
   },
 

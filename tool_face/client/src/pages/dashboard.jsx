@@ -30,6 +30,29 @@ import postApi from '../services/postApi';
 import channelApi from '../services/channelApi';
 import useAuth from '../hooks/useAuth';
 
+function parseDateSafe(val) {
+  if (!val) return null;
+  if (typeof val === 'number') {
+    const d = new Date(val);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  const num = Number(val);
+  if (!Number.isNaN(num) && num > 100000000000) {
+    const d = new Date(num);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  const d = new Date(val);
+  if (!Number.isNaN(d.getTime())) return d;
+  const d2 = new Date(String(val).replace(' ', 'T'));
+  if (!Number.isNaN(d2.getTime())) return d2;
+  return null;
+}
+
+function formatDateSafe(val, fallback = 'Đăng trực tiếp') {
+  const d = parseDateSafe(val);
+  return d ? d.toLocaleString('vi-VN') : fallback;
+}
+
 export default function DashboardHomePage() {
   const { user } = useAuth();
   const [stats, setStats] = useState({ total: 0, pending: 0, published: 0, failed: 0 });
@@ -132,11 +155,17 @@ export default function DashboardHomePage() {
 
   // Find the next upcoming scheduled post
   const nextUpcomingPost = useMemo(() => {
-    const pendings = posts.filter(
-      (p) => p.status === 'pending' && p.scheduled_at && new Date(p.scheduled_at) > new Date()
-    );
+    const pendings = posts.filter((p) => {
+      if (!['pending', 'scheduled'].includes(p.status) || !p.scheduled_at) return false;
+      const d = parseDateSafe(p.scheduled_at);
+      return d && d.getTime() > Date.now();
+    });
     if (!pendings.length) return null;
-    return [...pendings].sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at))[0];
+    return [...pendings].sort((a, b) => {
+      const da = parseDateSafe(a.scheduled_at)?.getTime() || 0;
+      const db = parseDateSafe(b.scheduled_at)?.getTime() || 0;
+      return da - db;
+    })[0];
   }, [posts]);
 
   // Compute 7-day distribution from posts
@@ -152,7 +181,7 @@ export default function DashboardHomePage() {
     ];
 
     posts.forEach((p) => {
-      const date = p.scheduled_at ? new Date(p.scheduled_at) : p.created_at ? new Date(p.created_at) : null;
+      const date = parseDateSafe(p.scheduled_at) || parseDateSafe(p.created_at);
       if (date) {
         const d = date.getDay();
         const found = days.find((item) => item.dayIndex === d);
@@ -258,7 +287,7 @@ export default function DashboardHomePage() {
             <Link className="button button-secondary" href="/post-planner/bulk-upload">
               <FileSpreadsheet size={15} /> Tải Excel
             </Link>
-            <Link className="button button-primary rgb-led-chip" href="/post-planner/compose">
+            <Link className="button button-primary" href="/post-planner/compose">
               <PenLine size={15} /> Viết bài mới
             </Link>
           </div>
@@ -313,7 +342,7 @@ export default function DashboardHomePage() {
                     </div>
                     <div className="dashboard-spotlight-meta">
                       <span>
-                        📅 Xuất bản lúc: <strong style={{ color: '#00f2fe' }}>{new Date(nextUpcomingPost.scheduled_at).toLocaleString('vi-VN')}</strong>
+                        📅 Xuất bản lúc: <strong style={{ color: '#00f2fe' }}>{formatDateSafe(nextUpcomingPost.scheduled_at, 'Đang chờ')}</strong>
                       </span>
                       <span>
                         📱 Fanpage:{' '}
@@ -358,7 +387,7 @@ export default function DashboardHomePage() {
                   </Link>
                 </div>
               ) : (
-                <Link className="button button-primary rgb-led-chip" href="/post-planner/compose" style={{ minHeight: 38, fontSize: 12.5 }}>
+                <Link className="button button-primary" href="/post-planner/compose" style={{ minHeight: 38, fontSize: 12.5 }}>
                   <PenLine size={14} /> Lên lịch ngay
                 </Link>
               )}
@@ -643,7 +672,7 @@ export default function DashboardHomePage() {
                               📱 {channel?.name || post.page_id || 'Fanpage'}
                             </small>
                             <small style={{ color: 'var(--dim)' }}>
-                              🕒 {post.scheduled_at ? new Date(post.scheduled_at).toLocaleString('vi-VN') : 'Đăng trực tiếp'}
+                              🕒 {formatDateSafe(post.scheduled_at, 'Đăng trực tiếp')}
                             </small>
                           </div>
                         </div>
@@ -873,7 +902,7 @@ export default function DashboardHomePage() {
             <div className="custom-glass-tooltip-meta">
               <span>📱 {channel?.name || post.page_id || 'Fanpage'}</span>
               <span>•</span>
-              <span>🕒 {post.scheduled_at ? new Date(post.scheduled_at).toLocaleString('vi-VN') : 'Đăng trực tiếp'}</span>
+              <span>🕒 {formatDateSafe(post.scheduled_at, 'Đăng trực tiếp')}</span>
             </div>
 
             <div className="custom-glass-tooltip-body">

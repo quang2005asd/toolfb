@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import {
   Bot,
   MessageSquare,
@@ -20,9 +21,13 @@ import {
   Plus,
   PanelLeftClose,
   PanelLeftOpen,
-  MessageSquarePlus
+  MessageSquarePlus,
+  Wand2,
+  Image as ImageIcon,
+  Stamp
 } from 'lucide-react';
 import MainLayout from '../../components/layout/MainLayout';
+import AiImageStudioModal, { resolveMediaUrl } from '../../components/AiImageStudioModal';
 import aiApi from '../../services/aiApi';
 
 /* ── Prompt Templates ── */
@@ -92,6 +97,29 @@ export default function AIStudioPage() {
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [currentTitle, setCurrentTitle] = useState('');
   const [loadingConv, setLoadingConv] = useState(false);
+  const router = useRouter();
+  const [studioOpen, setStudioOpen] = useState(false);
+  const [activeDraftForStudio, setActiveDraftForStudio] = useState(null);
+
+  const handleOpenStudioForMessage = (messageText) => {
+    const cleanTitle = messageText ? messageText.slice(0, 80).replace(/\n/g, ' ') : '';
+    setActiveDraftForStudio({
+      title: cleanTitle,
+      content: messageText || '',
+      topic: cleanTitle
+    });
+    setStudioOpen(true);
+  };
+
+  const handleApplyStudioMedia = (mediaItem) => {
+    const newMsg = {
+      role: 'assistant',
+      text: '✨ Đã tạo ảnh minh họa cho nội dung bài viết!',
+      media: mediaItem,
+      sourceContent: activeDraftForStudio?.content || ''
+    };
+    setMessages((prev) => [...prev, newMsg]);
+  };
 
   const conversationRef = useRef(null);
   const textareaRef = useRef(null);
@@ -359,6 +387,36 @@ export default function AIStudioPage() {
             <div className="ai-header-actions">
               <button
                 type="button"
+                className="ai-btn-ghost"
+                onClick={() => handleOpenStudioForMessage(prompt || '')}
+                style={{
+                  background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(0, 242, 254, 0.15))',
+                  border: '1px solid rgba(168, 85, 247, 0.4)',
+                  color: '#c084fc',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}
+              >
+                <Sparkles size={14} color="#00f2fe" /> AI Vẽ ảnh & Watermark
+              </button>
+              <Link
+                href="/ai-studio/generate"
+                className="ai-btn-ghost"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(0, 242, 254, 0.15), rgba(79, 172, 254, 0.15))',
+                  border: '1px solid rgba(0, 242, 254, 0.35)',
+                  color: '#00f2fe',
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}
+              >
+                <Wand2 size={14} /> Tạo hàng loạt bài viết
+              </Link>
+              <button
+                type="button"
                 className={`ai-btn-ghost ${showTemplates ? 'active' : ''}`}
                 onClick={() => setShowTemplates((v) => !v)}
               >
@@ -418,6 +476,51 @@ export default function AIStudioPage() {
                     >
                       {msg.text}
                     </div>
+
+                    {/* AI Generated / Watermarked Media Card in Chat */}
+                    {msg.media && (
+                      <div style={{
+                        marginTop: 10, marginBottom: 10, borderRadius: 12, overflow: 'hidden',
+                        border: '1px solid rgba(0,242,254,0.35)', maxWidth: 420,
+                        background: 'rgba(2, 6, 23, 0.75)', boxShadow: '0 8px 24px rgba(0,0,0,0.5)'
+                      }}>
+                        <img
+                          src={resolveMediaUrl(msg.media.previewUrl || msg.media.mediaLink)}
+                          alt="AI Visual"
+                          style={{ width: '100%', maxHeight: 280, objectFit: 'contain', display: 'block', background: 'rgba(0,0,0,0.4)' }}
+                        />
+                        <div style={{
+                          padding: '10px 12px', display: 'flex', gap: 8, alignItems: 'center',
+                          background: 'rgba(5, 10, 25, 0.85)', backdropFilter: 'blur(8px)',
+                          borderTop: '1px solid rgba(255,255,255,0.08)'
+                        }}>
+                          <Link
+                            href={`/post-planner/compose?content=${encodeURIComponent(msg.sourceContent || msg.text || '')}&mediaLink=${encodeURIComponent(msg.media.mediaLink)}&previewUrl=${encodeURIComponent(resolveMediaUrl(msg.media.previewUrl))}`}
+                            className="ai-action-btn primary"
+                            style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, flex: 1, justifyContent: 'center' }}
+                          >
+                            <PenSquare size={13} /> Tạo bài viết với ảnh này
+                          </Link>
+                          <button
+                            type="button"
+                            className="ai-action-btn"
+                            onClick={() => {
+                              setActiveDraftForStudio({
+                                title: msg.text?.slice(0, 60),
+                                content: msg.sourceContent || msg.text,
+                                mediaList: [msg.media]
+                              });
+                              setStudioOpen(true);
+                            }}
+                            title="Chỉnh sửa hoặc đóng dấu bản quyền cho ảnh này"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          >
+                            <Stamp size={13} /> Đóng dấu
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     {msg.role === 'assistant' && !msg.isError && (
                       <div className="ai-msg-actions">
                         <button
@@ -430,6 +533,15 @@ export default function AIStudioPage() {
                           ) : (
                             <><Copy size={13} /> Sao chép</>
                           )}
+                        </button>
+                        <button
+                          type="button"
+                          className="ai-action-btn"
+                          style={{ color: '#00f2fe', borderColor: 'rgba(0,242,254,0.3)', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          onClick={() => handleOpenStudioForMessage(msg.text)}
+                          title="Tự động vẽ ảnh minh họa AI phù hợp với bài viết này"
+                        >
+                          <Sparkles size={13} color="#00f2fe" /> Vẽ ảnh AI
                         </button>
                         <Link
                           href={`/post-planner/compose?content=${encodeURIComponent(msg.text)}`}
@@ -516,6 +628,16 @@ export default function AIStudioPage() {
                     <Layers size={14} />
                     Mẫu gợi ý
                   </button>
+                  <button
+                    type="button"
+                    className="ai-tool-btn"
+                    onClick={() => handleOpenStudioForMessage(prompt || '')}
+                    title="Mở studio vẽ ảnh AI và đóng dấu bản quyền"
+                    style={{ color: '#00f2fe' }}
+                  >
+                    <ImageIcon size={14} />
+                    Vẽ ảnh & Watermark
+                  </button>
                 </div>
                 <div className="ai-composer-right">
                   <span className="ai-composer-hint">Enter gửi • Shift+Enter xuống dòng</span>
@@ -533,6 +655,14 @@ export default function AIStudioPage() {
           </div>
         </main>
       </div>
+
+      {/* ═══ AI IMAGE & WATERMARK STUDIO MODAL ═══ */}
+      <AiImageStudioModal
+        isOpen={studioOpen}
+        onClose={() => setStudioOpen(false)}
+        initialDraft={activeDraftForStudio}
+        onApplyMedia={handleApplyStudioMedia}
+      />
     </MainLayout>
   );
 }

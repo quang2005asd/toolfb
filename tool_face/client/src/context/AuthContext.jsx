@@ -9,17 +9,24 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Check auth once on application mount
+  // Check auth once on application mount or when navigating to protected route
   useEffect(() => {
     if (!router.isReady) return;
     
-    // Skip auth call on login page
-    if (router.pathname === '/login') {
+    // On login page or root, do not force redirect
+    if (router.pathname === '/login' || router.pathname === '/') {
+      setLoading(false);
+      return;
+    }
+
+    // If user is already loaded, no need to refetch
+    if (user) {
       setLoading(false);
       return;
     }
 
     let active = true;
+    setLoading(true);
     authApi.me()
       .then((result) => {
         if (active) {
@@ -29,10 +36,8 @@ export function AuthProvider({ children }) {
       .catch(() => {
         if (active) {
           setUser(null);
-          if (router.pathname !== '/login' && router.pathname !== '/') {
-            const returnUrl = router.asPath || '/';
-            router.replace(`/login?next=${encodeURIComponent(returnUrl)}`);
-          }
+          const returnUrl = router.asPath || '/';
+          router.replace(`/login?next=${encodeURIComponent(returnUrl)}`);
         }
       })
       .finally(() => {
@@ -40,15 +45,7 @@ export function AuthProvider({ children }) {
       });
 
     return () => { active = false; };
-  }, [router.isReady]); // Only on app mount or router ready
-
-  // Handle route change protections without resetting loading or refetching
-  useEffect(() => {
-    if (!loading && !user && router.pathname !== '/login' && router.pathname !== '/') {
-      const returnUrl = router.asPath || '/';
-      router.replace(`/login?next=${encodeURIComponent(returnUrl)}`);
-    }
-  }, [router.pathname, user, loading]);
+  }, [router.isReady, router.pathname, user]);
 
   const logout = useCallback(async () => {
     try {

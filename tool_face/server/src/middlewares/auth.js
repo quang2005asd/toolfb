@@ -110,13 +110,27 @@ function verifySession(token) {
 
 function loadSession(req, _res, next) {
   const cookies = parseCookies(req.headers.cookie);
-  req.user = verifySession(cookies[SESSION_COOKIE]);
+  let session = verifySession(cookies[SESSION_COOKIE]);
+  if (!session && req.headers.authorization) {
+    const authHeader = req.headers.authorization;
+    if (authHeader.startsWith('Bearer ')) {
+      session = verifySession(authHeader.slice(7).trim());
+    }
+  }
+  req.user = session;
   next();
 }
 
 function originIsAllowed(req) {
   const origin = req.get('origin');
-  return !origin || origin === clientOrigin();
+  if (!origin) return true;
+  const cleanOrigin = origin.replace(/\/$/, '');
+  if (cleanOrigin === clientOrigin()) return true;
+  // Cho phép mọi origin localhost khi chạy ứng dụng Desktop hoặc Dev
+  if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(cleanOrigin)) {
+    return true;
+  }
+  return false;
 }
 
 function requireAuth(req, res, next) {

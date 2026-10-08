@@ -31,7 +31,8 @@ import {
   Zap,
   AlertCircle,
   Eye,
-  Play
+  Play,
+  Users
 } from 'lucide-react';
 import MainLayout from '../../components/layout/MainLayout';
 import postApi from '../../services/postApi';
@@ -86,7 +87,8 @@ function FacebookMockupPreview({
   mediaPreviewUrl,
   uploadedMedia,
   mediaList = [],
-  scheduledAt
+  scheduledAt,
+  comments = []
 }) {
   const renderFormattedContent = (text) => {
     if (!text) return 'Chưa nhập nội dung bài viết.';
@@ -323,6 +325,34 @@ function FacebookMockupPreview({
           <Share2 size={16} /> Chia sẻ
         </button>
       </div>
+
+      {Array.isArray(comments) && comments.filter((c) => c && c.content && c.content.trim()).length > 0 && (
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', padding: '10px 14px', background: 'rgba(255,255,255,0.02)' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#00f2fe', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+            <Sparkles size={12} color="#00f2fe" /> Comment mồi tự động ({comments.filter((c) => c && c.content && c.content.trim()).length}):
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+            {comments.filter((c) => c && c.content && c.content.trim()).map((c, idx) => (
+              <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#1877f2', color: '#fff', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  f
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '6px 12px', flex: 1, border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ fontSize: 11.5, fontWeight: 700, color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>{pageName || 'Fanpage'}</span>
+                    <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 400 }}>
+                      {Number(c.delayMinutes) > 0 ? `Sau ${c.delayMinutes} phút` : 'Đăng cùng bài'}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#e2e8f0', marginTop: 2, lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>
+                    {c.content}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -344,6 +374,7 @@ export default function ComposePage() {
   const [selectedPageIds, setSelectedPageIds] = useState([]);
   const [channelLoading, setChannelLoading] = useState(true);
   const [channelError, setChannelError] = useState('');
+  const [isPublishNow, setIsPublishNow] = useState(false);
   const [scheduledAt, setScheduledAt] = useState(() => {
     const date = new Date(Date.now() + 60 * 60 * 1000);
     date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
@@ -375,6 +406,8 @@ export default function ComposePage() {
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiResult, setAiResult] = useState('');
   const [aiError, setAiError] = useState('');
+  const [aiWebSearch, setAiWebSearch] = useState(true);
+  const [aiEventDetails, setAiEventDetails] = useState('');
 
   const contentRef = useRef(null);
 
@@ -431,7 +464,22 @@ export default function ComposePage() {
     if (router.query.content && typeof router.query.content === 'string') {
       setContent(router.query.content);
     }
-  }, [router.query.content]);
+    if (router.query.mediaLink && typeof router.query.mediaLink === 'string') {
+      const link = router.query.mediaLink;
+      const preview = (typeof router.query.previewUrl === 'string' && router.query.previewUrl)
+        ? router.query.previewUrl
+        : (link.startsWith('local://') ? `http://localhost:5000/api/media/${link.slice(8)}` : link);
+      const mediaItem = {
+        mediaLink: link,
+        previewUrl: preview,
+        mediaType: 'image'
+      };
+      setMediaList([mediaItem]);
+      setUploadedMedia(mediaItem);
+      setMediaPreviewUrl(preview);
+      setPostType('feed');
+    }
+  }, [router.query.content, router.query.mediaLink, router.query.previewUrl]);
 
   const togglePageSelection = (pageId) => {
     setSelectedPageIds((prev) =>
@@ -483,17 +531,22 @@ export default function ComposePage() {
     const now = new Date();
     let target = new Date();
     if (preset === 'now') {
-      target = new Date(now.getTime() + 60 * 1000);
-    } else if (preset === 'plus1h') {
-      target = new Date(now.getTime() + 60 * 60 * 1000);
-    } else if (preset === 'tonight') {
-      target.setHours(20, 0, 0, 0);
-      if (target <= now) {
+      setIsPublishNow(true);
+      target = new Date(now.getTime());
+      showToast('info', '⚡ Chế độ: Đăng ngay lập tức sau khi lưu');
+    } else {
+      setIsPublishNow(false);
+      if (preset === 'plus1h') {
+        target = new Date(now.getTime() + 60 * 60 * 1000);
+      } else if (preset === 'tonight') {
+        target.setHours(20, 0, 0, 0);
+        if (target <= now) {
+          target.setDate(target.getDate() + 1);
+        }
+      } else if (preset === 'tomorrowMorning') {
         target.setDate(target.getDate() + 1);
+        target.setHours(8, 0, 0, 0);
       }
-    } else if (preset === 'tomorrowMorning') {
-      target.setDate(target.getDate() + 1);
-      target.setHours(8, 0, 0, 0);
     }
     target.setMinutes(target.getMinutes() - target.getTimezoneOffset());
     setScheduledAt(target.toISOString().slice(0, 16));
@@ -509,7 +562,10 @@ export default function ComposePage() {
     setAiResult('');
     try {
       const fullPrompt = `Hãy viết một bài đăng Facebook hấp dẫn theo phong cách "${aiTone}".\nChủ đề: ${aiPrompt.trim()}\nYêu cầu: Có tiêu đề ngắn gọn thu hút, nội dung chia đoạn dễ đọc, chèn emoji phù hợp và kèm 3-5 hashtag ở cuối.`;
-      const res = await aiApi.chat(fullPrompt);
+      const res = await aiApi.chat(fullPrompt, [], null, {
+        enableWebSearch: aiWebSearch,
+        eventDetails: aiEventDetails.trim()
+      });
       if (res.reply) {
         setAiResult(res.reply);
       } else {
@@ -528,7 +584,63 @@ export default function ComposePage() {
       setShowAiModal(false);
       setAiResult('');
       setAiPrompt('');
+      setAiEventDetails('');
     }
+  };
+
+  // ── Auto Seeding AI State & Handlers ──
+  const [aiSeedingLoading, setAiSeedingLoading] = useState(false);
+
+  const handleGenerateAiSeeding = async () => {
+    if (!content.trim()) {
+      showToast('error', 'Vui lòng nhập nội dung bài viết trước để AI phân tích và viết comment mồi phù hợp!');
+      return;
+    }
+    setAiSeedingLoading(true);
+    try {
+      showToast('info', '🤖 AI đang phân tích bài viết để gợi ý 3 bình luận mồi tương tác...');
+      const res = await aiApi.generateSeedingComments({
+        postContent: content.trim(),
+        count: 3
+      });
+      if (res.success && Array.isArray(res.comments) && res.comments.length > 0) {
+        setComments(res.comments);
+        showToast('success', `✨ AI đã tạo xong ${res.comments.length} comment seeding! Bạn có thể chỉnh sửa nội dung hoặc phút trễ.`);
+      } else {
+        showToast('error', 'AI không sinh được comment seeding. Vui lòng thử lại.');
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Lỗi khi gọi AI seeding.';
+      showToast('error', msg);
+    } finally {
+      setAiSeedingLoading(false);
+    }
+  };
+
+  const addQuickTemplate = (templateType) => {
+    if (comments.length >= 5) {
+      showToast('error', 'Tối đa 5 comment seeding cho mỗi bài đăng.');
+      return;
+    }
+    let newComment = { content: '', delayMinutes: 0 };
+    if (templateType === 'hotline') {
+      newComment = {
+        content: 'Anh/chị cần tư vấn nhanh hoặc nhận báo giá ưu đãi độc quyền vui lòng inbox Fanpage hoặc liên hệ Hotline/Zalo: 09xx.xxx.xxx nhé ạ! 📞✨',
+        delayMinutes: 0
+      };
+    } else if (templateType === 'inbox') {
+      newComment = {
+        content: 'Mọi người để lại dấu chấm (.) hoặc bình luận bên dưới để Ad gửi thông tin chi tiết qua tin nhắn ngay nha! 🎁💬',
+        delayMinutes: 2
+      };
+    } else if (templateType === 'feedback') {
+      newComment = {
+        content: 'Chương trình ưu đãi còn áp dụng trong hôm nay không shop ơi? -> Dạ ưu đãi vẫn còn áp dụng đến hết tuần này nhé bạn ơi! Nhanh tay inbox ad giữ suất nhé ạ 🥰',
+        delayMinutes: 5
+      };
+    }
+    setComments((prev) => [...prev, newComment]);
+    showToast('success', 'Đã thêm mẫu comment seeding! Bạn có thể sửa lại nội dung.');
   };
 
   const createScheduledPost = async () => {
@@ -537,11 +649,11 @@ export default function ComposePage() {
       return;
     }
     if (selectedPageIds.length === 0) {
-      showToast('error', 'Vui lòng chọn ít nhất một Fanpage trước khi lên lịch.');
+      showToast('error', 'Vui lòng chọn ít nhất một Fanpage trước khi đăng.');
       return;
     }
     if (uploadingMedia) {
-      showToast('error', 'Đợi ảnh/video tải lên xong trước khi lưu lịch.');
+      showToast('error', 'Đợi ảnh/video tải lên xong trước khi lưu bài.');
       return;
     }
     if (postType === 'reel' && (!uploadedMedia || uploadedMedia.mediaType !== 'video')) {
@@ -549,7 +661,7 @@ export default function ComposePage() {
       return;
     }
     const parsedDate = scheduledAt ? new Date(scheduledAt) : new Date();
-    if (Number.isNaN(parsedDate.getTime())) {
+    if (!isPublishNow && Number.isNaN(parsedDate.getTime())) {
       showToast('error', 'Thời gian đăng bài không hợp lệ, vui lòng kiểm tra lại.');
       return;
     }
@@ -569,13 +681,15 @@ export default function ComposePage() {
         ? mediaList.map((m) => m.mediaLink)
         : (uploadedMedia ? [uploadedMedia.mediaLink] : []);
 
+      const scheduledTimeToSend = isPublishNow ? new Date().toISOString() : parsedDate.toISOString();
+
       const result = await postApi.createPost({
         pageIds: selectedPageIds,
         content: content.trim(),
         mediaType: finalMediaType,
         mediaLinks: finalMediaLinks,
         comments,
-        scheduledAt: parsedDate.toISOString()
+        scheduledAt: scheduledTimeToSend
       });
 
       if (!result.success) throw new Error(result.message || 'Máy chủ trả về lỗi không xác định.');
@@ -585,11 +699,11 @@ export default function ComposePage() {
         : [result.postId].filter(Boolean);
 
       setCreatedPostIds(ids);
-      const msg = result.message || `Đã lên lịch thành công cho ${ids.length} Fanpage!`;
+      const msg = result.message || (isPublishNow ? `Đã gửi yêu cầu đăng ngay cho ${ids.length} Fanpage!` : `Đã lên lịch thành công cho ${ids.length} Fanpage!`);
       setNotice(msg);
       showToast('success', msg);
     } catch (error) {
-      const errMsg = error.response?.data?.message || error.message || 'Không thể tạo lịch đăng. Vui lòng thử lại.';
+      const errMsg = error.response?.data?.message || error.message || 'Không thể tạo bài đăng. Vui lòng thử lại.';
       setNotice(errMsg);
       showToast('error', errMsg);
     } finally {
@@ -1237,6 +1351,7 @@ export default function ComposePage() {
                     uploadedMedia={uploadedMedia}
                     mediaList={mediaList}
                     scheduledAt={scheduledAt}
+                    comments={comments}
                   />
                 </div>
                 <div style={{ textAlign: 'center', marginTop: 12 }}>
@@ -1318,6 +1433,71 @@ export default function ComposePage() {
                 </div>
               )}
 
+              {/* CHỌN NHANH THEO NICK FACEBOOK */}
+              {(() => {
+                const fbAccounts = [];
+                const map = {};
+                for (const c of channels) {
+                  if (c.fbAccountId && !map[c.fbAccountId]) {
+                    map[c.fbAccountId] = true;
+                    fbAccounts.push({
+                      id: c.fbAccountId,
+                      name: c.fbAccountName || 'Nick Facebook',
+                      avatar: c.fbAccountAvatar || null
+                    });
+                  }
+                }
+                if (fbAccounts.length <= 1) return null;
+                return (
+                  <div style={{ marginBottom: 14, padding: '10px 12px', background: 'rgba(59, 130, 246, 0.05)', borderRadius: 10, border: '1px solid rgba(59, 130, 246, 0.15)' }}>
+                    <div style={{ fontSize: 11.5, color: '#93c5fd', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Users size={13} style={{ color: '#60a5fa' }} /> Chọn nhanh theo Nick Facebook ({fbAccounts.length} nick):
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {fbAccounts.map((acc) => {
+                        const accPages = channels.filter((c) => c.fbAccountId === acc.id).map((c) => c.id);
+                        const isAllSelected = accPages.length > 0 && accPages.every((pid) => selectedPageIds.includes(pid));
+                        return (
+                          <button
+                            key={acc.id}
+                            type="button"
+                            onClick={() => {
+                              if (isAllSelected) {
+                                setSelectedPageIds((prev) => prev.filter((id) => !accPages.includes(id)));
+                              } else {
+                                setSelectedPageIds((prev) => [...new Set([...prev, ...accPages])]);
+                              }
+                            }}
+                            style={{
+                              background: isAllSelected ? 'rgba(59, 130, 246, 0.25)' : 'rgba(255, 255, 255, 0.04)',
+                              border: `1px solid ${isAllSelected ? '#3b82f6' : 'rgba(255, 255, 255, 0.1)'}`,
+                              color: isAllSelected ? '#93c5fd' : '#cbd5e1',
+                              borderRadius: 16,
+                              padding: '4px 12px',
+                              fontSize: 12,
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 6,
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            {acc.avatar ? (
+                              <img src={acc.avatar} alt="" style={{ width: 14, height: 14, borderRadius: '50%' }} />
+                            ) : (
+                              <Users size={12} />
+                            )}
+                            <span>{acc.name} ({accPages.length})</span>
+                            {isAllSelected && <Check size={12} />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {channelLoading && <p className="muted">Đang tải danh sách Fanpage…</p>}
               {channelError && <div className="notice">{channelError}</div>}
 
@@ -1328,7 +1508,6 @@ export default function ComposePage() {
                     <div
                       key={channel.id}
                       onClick={() => togglePageSelection(channel.id)}
-                      className={isChecked ? 'rgb-led-card' : ''}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -1336,8 +1515,9 @@ export default function ComposePage() {
                         padding: '12px 14px',
                         borderRadius: 12,
                         cursor: 'pointer',
-                        background: isChecked ? '#0a0f1d' : 'rgba(255, 255, 255, 0.02)',
-                        border: isChecked ? 'none' : '1px solid rgba(255, 255, 255, 0.08)',
+                        background: isChecked ? 'linear-gradient(135deg, rgba(14, 165, 233, 0.16), rgba(37, 99, 235, 0.16))' : 'rgba(255, 255, 255, 0.02)',
+                        border: isChecked ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.08)',
+                        boxShadow: isChecked ? '0 4px 14px rgba(14, 165, 233, 0.18)' : 'none',
                         transition: 'all 0.15s ease'
                       }}
                     >
@@ -1346,8 +1526,28 @@ export default function ComposePage() {
                       </div>
                       <span className="fb-mark">f</span>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, color: '#fff', fontSize: 13.5 }}>{channel.name}</div>
-                        <div className="muted" style={{ fontSize: 11 }}>Facebook · {channel.category || 'Fanpage'} · ID: {channel.id}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 700, color: '#fff', fontSize: 13.5 }}>{channel.name}</span>
+                          {channel.fbAccountName && (
+                            <span style={{
+                              fontSize: 10.5,
+                              color: '#93c5fd',
+                              background: 'rgba(59, 130, 246, 0.15)',
+                              border: '1px solid rgba(59, 130, 246, 0.3)',
+                              borderRadius: 10,
+                              padding: '1px 7px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4
+                            }}>
+                              {channel.fbAccountAvatar && (
+                                <img src={channel.fbAccountAvatar} alt="" style={{ width: 12, height: 12, borderRadius: '50%' }} />
+                              )}
+                              Nick: {channel.fbAccountName}
+                            </span>
+                          )}
+                        </div>
+                        <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>Facebook · {channel.category || 'Fanpage'} · ID: {channel.id}</div>
                       </div>
                       {isChecked && (
                         <span style={{ fontSize: 11, color: '#00f2fe', background: 'rgba(0, 242, 254, 0.15)', padding: '2px 8px', borderRadius: 10 }}>
@@ -1371,122 +1571,285 @@ export default function ComposePage() {
               <h2>Thời gian & Comment Seeding</h2>
             </div>
             <div className="panel-body">
-              <div style={{ marginBottom: 10 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <label className="field-label" htmlFor="scheduled-at" style={{ margin: 0 }}>Thời gian đăng bài *</label>
-                  <span className="muted" style={{ fontSize: 11 }}>Chọn giờ vàng tương tác cao</span>
-                </div>
+              <div style={{ marginBottom: 16 }}>
+                <label className="field-label" style={{ marginBottom: 8, display: 'block' }}>Chế độ xuất bản *</label>
 
-                {/* HÀNG NÚT CHỌN NHANH THỜI GIAN */}
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+                {/* 2 LỰA CHỌN CHẾ ĐỘ RÕ RÀNG */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
                   <button
                     type="button"
-                    className="time-preset-pill"
-                    onClick={() => setQuickPresetTime('now')}
-                    title="Đăng ngay lập tức sau khi lưu"
+                    onClick={() => {
+                      setIsPublishNow(true);
+                      const now = new Date();
+                      const localNow = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+                      setScheduledAt(localNow.toISOString().slice(0, 16));
+                      showToast('info', '⚡ Đã chọn: Đăng ngay lập tức lên Facebook');
+                    }}
+                    style={{
+                      padding: '12px 14px',
+                      borderRadius: 10,
+                      cursor: 'pointer',
+                      border: isPublishNow ? '2px solid #f59e0b' : '1px solid rgba(255,255,255,0.12)',
+                      background: isPublishNow ? 'rgba(245, 158, 11, 0.16)' : 'rgba(255,255,255,0.03)',
+                      color: isPublishNow ? '#fbbf24' : 'var(--muted)',
+                      textAlign: 'left',
+                      transition: 'all 0.2s ease',
+                      boxShadow: isPublishNow ? '0 0 16px rgba(245, 158, 11, 0.3)' : 'none'
+                    }}
                   >
-                    ⚡ Đăng ngay
+                    <div style={{ fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, color: isPublishNow ? '#fbbf24' : '#fff' }}>
+                      ⚡ Đăng ngay lập tức
+                    </div>
+                    <div style={{ fontSize: 11, marginTop: 4, opacity: 0.85, lineHeight: 1.3 }}>
+                      Xuất bản trực tiếp lên Facebook ngay khi bạn bấm nút
+                    </div>
                   </button>
-                  <button
-                    type="button"
-                    className="time-preset-pill"
-                    onClick={() => setQuickPresetTime('plus1h')}
-                    title="Lên lịch sau 1 tiếng nữa"
-                  >
-                    ⏰ Sau 1 giờ
-                  </button>
-                  <button
-                    type="button"
-                    className="time-preset-pill"
-                    onClick={() => setQuickPresetTime('tonight')}
-                    title="Lên lịch vào khung giờ vàng 20:00 tối"
-                  >
-                    🌙 Tối nay (20:00)
-                  </button>
-                  <button
-                    type="button"
-                    className="time-preset-pill"
-                    onClick={() => setQuickPresetTime('tomorrowMorning')}
-                    title="Lên lịch vào 08:00 sáng mai"
-                  >
-                    ☀️ Sáng mai (08:00)
-                  </button>
-                </div>
 
-                <input
-                  id="scheduled-at"
-                  className="field"
-                  type="datetime-local"
-                  value={scheduledAt}
-                  onChange={(event) => setScheduledAt(event.target.value)}
-                />
-              </div>
-              <p className="muted" style={{ fontSize: 11, marginTop: 4, marginBottom: 16 }}>
-                💡 Nếu chọn giờ hiện tại, bài sẽ được đưa vào hàng đợi đăng ngay lập tức.
-              </p>
-
-              {/* Comment Seeding */}
-              <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)', paddingTop: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <span style={{ fontWeight: 700, fontSize: 13, color: '#fff' }}>
-                    <MessageCircle size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />
-                    Comment seeding tự động ({comments.length}/5)
-                  </span>
                   <button
-                    className="button button-secondary"
                     type="button"
-                    style={{ minHeight: 26, padding: '0 8px', fontSize: 11 }}
-                    onClick={() => setComments((items) => items.length < 5 ? [...items, { content: '', delayMinutes: 0 }] : items)}
-                    disabled={comments.length >= 5}
+                    onClick={() => {
+                      setIsPublishNow(false);
+                      showToast('info', '⏰ Đã chọn: Lên lịch hẹn giờ tự động');
+                    }}
+                    style={{
+                      padding: '12px 14px',
+                      borderRadius: 10,
+                      cursor: 'pointer',
+                      border: !isPublishNow ? '2px solid #00f2fe' : '1px solid rgba(255,255,255,0.12)',
+                      background: !isPublishNow ? 'rgba(0, 242, 254, 0.12)' : 'rgba(255,255,255,0.03)',
+                      color: !isPublishNow ? '#00f2fe' : 'var(--muted)',
+                      textAlign: 'left',
+                      transition: 'all 0.2s ease',
+                      boxShadow: !isPublishNow ? '0 0 16px rgba(0, 242, 254, 0.25)' : 'none'
+                    }}
                   >
-                    <Plus size={13} /> Thêm comment
+                    <div style={{ fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, color: !isPublishNow ? '#00f2fe' : '#fff' }}>
+                      ⏰ Lên lịch hẹn giờ
+                    </div>
+                    <div style={{ fontSize: 11, marginTop: 4, opacity: 0.85, lineHeight: 1.3 }}>
+                      Chọn ngày giờ vàng để hệ thống tự động xuất bản
+                    </div>
                   </button>
                 </div>
 
-                {comments.map((comment, index) => (
-                  <div className="comment-entry" key={index} style={{ marginBottom: 8 }}>
+                {isPublishNow ? (
+                  <div style={{ padding: '12px 14px', borderRadius: 10, background: 'rgba(245, 158, 11, 0.08)', border: '1px dashed rgba(245, 158, 11, 0.35)', color: '#fcd34d', fontSize: 12.5, lineHeight: 1.4 }}>
+                    🚀 <strong>Chế độ Đăng ngay đang bật:</strong> Bài viết sẽ được gửi lập tức đến Facebook Graph API và xuất bản lên <strong>{selectedPageIds.length} Fanpage</strong> đã chọn ngay sau khi bạn bấm xác nhận.
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <label className="field-label" htmlFor="scheduled-at" style={{ margin: 0 }}>Thời gian lên lịch *</label>
+                      <span className="muted" style={{ fontSize: 11 }}>Chọn giờ vàng tương tác cao</span>
+                    </div>
+
+                    {/* HÀNG NÚT CHỌN NHANH THỜI GIAN HẸN GIỜ */}
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+                      <button
+                        type="button"
+                        className="time-preset-pill"
+                        onClick={() => setQuickPresetTime('plus1h')}
+                        title="Lên lịch sau 1 tiếng nữa"
+                      >
+                        ⏰ Sau 1 giờ
+                      </button>
+                      <button
+                        type="button"
+                        className="time-preset-pill"
+                        onClick={() => setQuickPresetTime('tonight')}
+                        title="Lên lịch vào khung giờ vàng 20:00 tối"
+                      >
+                        🌙 Tối nay (20:00)
+                      </button>
+                      <button
+                        type="button"
+                        className="time-preset-pill"
+                        onClick={() => setQuickPresetTime('tomorrowMorning')}
+                        title="Lên lịch vào 08:00 sáng mai"
+                      >
+                        ☀️ Sáng mai (08:00)
+                      </button>
+                    </div>
+
                     <input
+                      id="scheduled-at"
                       className="field"
-                      aria-label={`Nội dung comment ${index + 1}`}
-                      placeholder={`Nội dung seeding ${index + 1}...`}
-                      value={comment.content}
-                      onChange={(event) =>
-                        setComments((items) =>
-                          items.map((item, itemIndex) =>
-                            itemIndex === index ? { ...item, content: event.target.value } : item
-                          )
-                        )
-                      }
+                      type="datetime-local"
+                      value={scheduledAt}
+                      onChange={(event) => {
+                        setScheduledAt(event.target.value);
+                        setIsPublishNow(false);
+                      }}
                     />
-                    <label className="comment-delay">
-                      <span className="muted">Sau</span>
-                      <input
-                        className="field"
-                        type="number"
-                        min="0"
-                        max="10080"
-                        aria-label={`Độ trễ comment ${index + 1} phút`}
-                        value={comment.delayMinutes}
-                        onChange={(event) =>
-                          setComments((items) =>
-                            items.map((item, itemIndex) =>
-                              itemIndex === index ? { ...item, delayMinutes: Number(event.target.value) } : item
-                            )
-                          )
-                        }
-                      />
-                      <span className="muted">phút</span>
-                    </label>
+                    <p className="muted" style={{ fontSize: 11, marginTop: 4, marginBottom: 0 }}>
+                      💡 Khuyến nghị hẹn trước ít nhất 15 phút để Facebook đồng bộ lịch đăng chuẩn xác nhất.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Comment Seeding Boost */}
+              <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap', gap: 8 }}>
+                  <div>
+                    <span style={{ fontWeight: 700, fontSize: 13.5, color: '#fff', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <MessageCircle size={15} style={{ color: '#00f2fe' }} />
+                      Comment Seeding Boost ({comments.length}/5)
+                    </span>
+                    <span className="muted" style={{ fontSize: 11, display: 'block', marginTop: 2 }}>
+                      Tự động bình luận mồi sau khi đăng để kích thích thuật toán Facebook đẩy Reach & Feed
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8 }}>
                     <button
-                      className="button button-danger"
+                      className="button button-secondary"
                       type="button"
-                      aria-label={`Xóa comment ${index + 1}`}
-                      onClick={() => setComments((items) => items.filter((_, itemIndex) => itemIndex !== index))}
+                      style={{
+                        minHeight: 28,
+                        padding: '0 10px',
+                        fontSize: 11.5,
+                        background: 'linear-gradient(135deg, rgba(0, 242, 254, 0.15), rgba(79, 70, 229, 0.2))',
+                        border: '1px solid #00f2fe',
+                        color: '#00f2fe',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                      onClick={handleGenerateAiSeeding}
+                      disabled={aiSeedingLoading || !content.trim()}
+                      title="AI đọc bài viết và tự động gợi ý 3 comment mồi chốt đơn"
                     >
-                      <Trash2 size={13} />
+                      <Sparkles size={13} style={{ marginRight: 4 }} />
+                      {aiSeedingLoading ? 'AI đang viết…' : '✨ AI Gợi ý Seeding'}
+                    </button>
+                    <button
+                      className="button button-quiet"
+                      type="button"
+                      style={{ minHeight: 28, padding: '0 8px', fontSize: 11.5 }}
+                      onClick={() => setComments((items) => items.length < 5 ? [...items, { content: '', delayMinutes: 0 }] : items)}
+                      disabled={comments.length >= 5}
+                    >
+                      <Plus size={13} style={{ marginRight: 2 }} /> Thêm ô
                     </button>
                   </div>
-                ))}
+                </div>
+
+                {/* Quick Templates Bar */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 12, marginTop: 8, padding: '8px 10px', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 8, border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                  <span className="muted" style={{ fontSize: 11, fontWeight: 500 }}>Mẫu nhanh:</span>
+                  <button
+                    type="button"
+                    onClick={() => addQuickTemplate('hotline')}
+                    className="button button-quiet"
+                    style={{ minHeight: 22, padding: '0 8px', fontSize: 11, borderRadius: 12, background: 'rgba(0, 242, 254, 0.08)', color: '#38bdf8' }}
+                  >
+                    📞 Hotline / Zalo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => addQuickTemplate('inbox')}
+                    className="button button-quiet"
+                    style={{ minHeight: 22, padding: '0 8px', fontSize: 11, borderRadius: 12, background: 'rgba(245, 158, 11, 0.08)', color: '#fbbf24' }}
+                  >
+                    💬 Kêu gọi Inbox (chấm)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => addQuickTemplate('feedback')}
+                    className="button button-quiet"
+                    style={{ minHeight: 22, padding: '0 8px', fontSize: 11, borderRadius: 12, background: 'rgba(16, 185, 129, 0.08)', color: '#34d399' }}
+                  >
+                    ⭐ Feedback mồi Q&A
+                  </button>
+                  {comments.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setComments([])}
+                      className="button button-quiet"
+                      style={{ minHeight: 22, padding: '0 8px', fontSize: 10.5, marginLeft: 'auto', color: '#f87171' }}
+                    >
+                      Xóa tất cả
+                    </button>
+                  )}
+                </div>
+
+                {/* Danh sách Comment */}
+                {comments.length === 0 ? (
+                  <div style={{ padding: '16px 14px', borderRadius: 10, background: 'rgba(255, 255, 255, 0.02)', border: '1px dashed rgba(255, 255, 255, 0.12)', textAlign: 'center' }}>
+                    <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+                      Chưa có comment seeding nào. Bấm <strong>"✨ AI Gợi ý Seeding"</strong> để AI tự động phân tích bài viết và tạo 3 bình luận mồi, hoặc chọn <strong>Mẫu nhanh</strong> phía trên.
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {comments.map((comment, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.03)',
+                          border: '1px solid rgba(255, 255, 255, 0.08)',
+                          borderRadius: 10,
+                          padding: '10px 12px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 8
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 11.5, fontWeight: 700, color: '#00f2fe' }}>
+                            Comment #{index + 1}
+                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11.5 }}>
+                              <span className="muted">Đăng sau:</span>
+                              <input
+                                className="field"
+                                type="number"
+                                min="0"
+                                max="1440"
+                                style={{ width: 60, minHeight: 24, padding: '2px 6px', fontSize: 11.5, textAlign: 'center' }}
+                                value={comment.delayMinutes}
+                                onChange={(event) =>
+                                  setComments((items) =>
+                                    items.map((item, itemIndex) =>
+                                      itemIndex === index ? { ...item, delayMinutes: Math.max(0, Number(event.target.value) || 0) } : item
+                                    )
+                                  )
+                                }
+                              />
+                              <span className="muted">phút</span>
+                            </div>
+                            <button
+                              className="button button-danger"
+                              type="button"
+                              style={{ minHeight: 24, padding: '0 6px' }}
+                              aria-label={`Xóa comment ${index + 1}`}
+                              onClick={() => setComments((items) => items.filter((_, itemIndex) => itemIndex !== index))}
+                              title="Xóa comment này"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </div>
+
+                        <textarea
+                          className="field"
+                          rows={2}
+                          placeholder={`Nội dung comment seeding #${index + 1} (chỉnh sửa tùy ý)...`}
+                          value={comment.content}
+                          onChange={(event) =>
+                            setComments((items) =>
+                              items.map((item, itemIndex) =>
+                                itemIndex === index ? { ...item, content: event.target.value } : item
+                              )
+                            )
+                          }
+                          style={{ resize: 'vertical', minHeight: 46, fontSize: 12.5 }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </section>
@@ -1497,7 +1860,7 @@ export default function ComposePage() {
       {step === 2 && (
         <section className="panel">
           <div className="panel-heading">
-            <h2>Kiểm tra bài viết trước khi lên lịch</h2>
+            <h2>{isPublishNow ? '⚡ Xác nhận xuất bản bài viết ngay lập tức' : 'Kiểm tra bài viết trước khi lên lịch'}</h2>
           </div>
           <div className="panel-body" style={{ maxWidth: 820 }}>
             {/* Danh sách các page sẽ nhận bài */}
@@ -1543,6 +1906,7 @@ export default function ComposePage() {
                 uploadedMedia={uploadedMedia}
                 mediaList={mediaList}
                 scheduledAt={scheduledAt}
+                comments={comments}
               />
             </div>
 
@@ -1590,25 +1954,43 @@ export default function ComposePage() {
         </button>
 
         {step < 2 && (
-          <button
-            className="button button-primary"
-            type="button"
-            onClick={() => {
-              if (step === 0 && !content.trim()) {
-                setNotice('Nhập nội dung bài viết trước khi tiếp tục.');
-                return;
-              }
-              if (step === 1 && selectedPageIds.length === 0) {
-                setNotice('Vui lòng chọn ít nhất một Fanpage đăng bài.');
-                return;
-              }
-              setNotice('');
-              setStep(step + 1);
-            }}
-            disabled={step === 1 && (channelLoading || selectedPageIds.length === 0)}
-          >
-            Tiếp tục <ArrowRight size={15} />
-          </button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {step === 1 && isPublishNow && selectedPageIds.length > 0 && (
+              <button
+                className="button button-primary"
+                type="button"
+                onClick={createScheduledPost}
+                disabled={saving || uploadingMedia || selectedPageIds.length === 0}
+                style={{
+                  background: 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
+                  borderColor: '#f59e0b',
+                  boxShadow: '0 0 16px rgba(245, 158, 11, 0.4)',
+                  fontWeight: 700
+                }}
+              >
+                {saving ? '⚡ Đang xuất bản…' : `⚡ Đăng ngay (${selectedPageIds.length} Page)`} <Send size={15} />
+              </button>
+            )}
+            <button
+              className={step === 1 && isPublishNow ? "button button-secondary" : "button button-primary"}
+              type="button"
+              onClick={() => {
+                if (step === 0 && !content.trim()) {
+                  setNotice('Nhập nội dung bài viết trước khi tiếp tục.');
+                  return;
+                }
+                if (step === 1 && selectedPageIds.length === 0) {
+                  setNotice('Vui lòng chọn ít nhất một Fanpage đăng bài.');
+                  return;
+                }
+                setNotice('');
+                setStep(step + 1);
+              }}
+              disabled={step === 1 && (channelLoading || selectedPageIds.length === 0)}
+            >
+              {step === 1 ? 'Xem trước & xác nhận' : 'Tiếp tục'} <ArrowRight size={15} />
+            </button>
+          </div>
         )}
 
         {step === 2 && createdPostIds.length === 0 && (
@@ -1617,8 +1999,16 @@ export default function ComposePage() {
             type="button"
             onClick={createScheduledPost}
             disabled={saving || uploadingMedia || selectedPageIds.length === 0}
+            style={isPublishNow ? {
+              background: 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
+              borderColor: '#f59e0b',
+              boxShadow: '0 0 20px rgba(245, 158, 11, 0.45)',
+              fontWeight: 700
+            } : undefined}
           >
-            {saving ? 'Đang lưu lịch…' : `Lên lịch đăng (${selectedPageIds.length} Page)`} <Send size={15} />
+            {saving
+              ? (isPublishNow ? '⚡ Đang xuất bản lên Facebook…' : 'Đang lưu lịch…')
+              : (isPublishNow ? `⚡ Đăng ngay lập tức (${selectedPageIds.length} Page)` : `Lên lịch đăng (${selectedPageIds.length} Page)`)} <Send size={15} />
           </button>
         )}
 
@@ -1645,7 +2035,7 @@ export default function ComposePage() {
           }}
         >
           <div
-            className="panel rgb-led-card"
+            className="panel"
             style={{
               width: '100%',
               maxWidth: 580,
@@ -1688,6 +2078,38 @@ export default function ComposePage() {
                     {tone}
                   </button>
                 ))}
+              </div>
+
+              {/* Tùy chọn Tra cứu tin tức Live */}
+              <div style={{ marginBottom: 12, display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', background: 'rgba(0, 242, 254, 0.06)', borderRadius: 10, border: '1px solid rgba(0, 242, 254, 0.25)' }}>
+                <input
+                  type="checkbox"
+                  id="ai-web-search-toggle"
+                  checked={aiWebSearch}
+                  onChange={(e) => setAiWebSearch(e.target.checked)}
+                  style={{ accentColor: '#00f2fe', width: 17, height: 17, marginTop: 2, cursor: 'pointer' }}
+                />
+                <label htmlFor="ai-web-search-toggle" style={{ fontSize: 12, color: '#e2e8f0', cursor: 'pointer', margin: 0, lineHeight: 1.45 }}>
+                  🌐 <strong style={{ color: '#00f2fe' }}>Tự động tra cứu tin tức thời sự trên mạng (Google News)</strong>: Khi viết về sự kiện "hôm nay", tin mới hoặc drama, hệ thống sẽ tự cập nhật tin tức báo chí mới nhất để AI viết chuẩn 100%, chống bịa đặt.
+                </label>
+              </div>
+
+              {/* Chi tiết sự kiện tùy chọn */}
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <label className="field-label" htmlFor="ai-event-details" style={{ margin: 0, fontSize: 12 }}>
+                    Chi tiết sự kiện / Tin vắn nguồn (Tùy chọn)
+                  </label>
+                  <span className="muted" style={{ fontSize: 11 }}>Dán link hoặc tóm tắt sự kiện</span>
+                </div>
+                <input
+                  id="ai-event-details"
+                  className="field"
+                  placeholder="Ví dụ: Messi đá trận chia tay tuyển QG, Ronaldo đăng tâm thư xin lỗi..."
+                  value={aiEventDetails}
+                  onChange={(e) => setAiEventDetails(e.target.value)}
+                  style={{ width: '100%', fontSize: 12.5 }}
+                />
               </div>
 
               <button
