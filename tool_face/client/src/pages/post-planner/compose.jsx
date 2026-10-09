@@ -1185,13 +1185,13 @@ export default function ComposePage() {
                     </div>
 
                     {showEmojiPicker && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '8px 10px', background: 'rgba(10, 16, 32, 0.95)', border: '1px solid rgba(0, 242, 254, 0.25)', borderRadius: 8, marginBottom: 8 }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '8px 10px', background: 'var(--panel)', border: '1px solid var(--border-subtle)', borderRadius: 10, marginBottom: 8, boxShadow: 'var(--shadow-md)' }}>
                         {popularEmojis.map((emoji) => (
                           <button key={emoji} type="button" onClick={() => insertEmoji(emoji)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', padding: 4 }} title={`Chèn ${emoji}`}>
                             {emoji}
                           </button>
                         ))}
-                        <div style={{ width: '100%', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: 6, marginTop: 4, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        <div style={{ width: '100%', borderTop: '1px solid var(--line)', paddingTop: 6, marginTop: 4, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                           <span className="muted" style={{ fontSize: 11, alignSelf: 'center' }}>Tag nhanh:</span>
                           {popularHashtags.map((tag) => (
                             <button key={tag} type="button" onClick={() => insertHashtag(tag)} className="button button-quiet" style={{ minHeight: 20, padding: '0 6px', fontSize: 10.5 }}>
@@ -1915,22 +1915,58 @@ export default function ComposePage() {
               <div
                 className="notice"
                 style={{
-                  marginTop: 16,
-                  borderColor: createdPostIds.length > 0 ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)',
-                  color: createdPostIds.length > 0 ? '#10b981' : '#ef4444'
+                  marginTop: 18,
+                  padding: '14px 18px',
+                  borderRadius: 14,
+                  background: createdPostIds.length > 0 ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.10)',
+                  backdropFilter: 'var(--apple-glass-blur)',
+                  WebkitBackdropFilter: 'var(--apple-glass-blur)',
+                  border: createdPostIds.length > 0 ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid rgba(239, 68, 68, 0.35)',
+                  color: createdPostIds.length > 0 ? '#10b981' : '#ef4444',
+                  fontWeight: 700,
+                  fontSize: 13.5,
+                  boxShadow: createdPostIds.length > 0 ? '0 4px 16px rgba(16, 185, 129, 0.15)' : 'none'
                 }}
               >
-                {notice}
+                {createdPostIds.length > 0 ? '🎉 ' : '⚠️ '}{notice}
               </div>
             )}
 
             {createdPostIds.length > 0 && (
-              <div style={{ marginTop: 14, display: 'flex', gap: 10 }}>
-                <Link href="/post-planner/list" className="button button-secondary">
-                  Xem danh sách bài đăng ({createdPostIds.length})
+              <div style={{ marginTop: 18, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                <Link
+                  href="/post-planner/list"
+                  className="button button-primary"
+                  style={{
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    border: '1px solid rgba(16, 185, 129, 0.5)',
+                    boxShadow: '0 4px 16px rgba(16, 185, 129, 0.35)',
+                    padding: '10px 20px',
+                    fontWeight: 700
+                  }}
+                >
+                  <Check size={16} /> Xem danh sách bài đã tạo ({createdPostIds.length})
                 </Link>
-                <Link href="/post-planner/calendar" className="button button-quiet">
-                  Xem lịch Calendar
+                <Link
+                  href="/post-planner/calendar"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '10px 18px',
+                    borderRadius: 12,
+                    background: 'var(--apple-glass-bg-subtle)',
+                    backdropFilter: 'var(--apple-glass-blur)',
+                    WebkitBackdropFilter: 'var(--apple-glass-blur)',
+                    border: 'var(--apple-glass-border)',
+                    borderTop: 'var(--apple-glass-border-top)',
+                    color: 'var(--ink)',
+                    textDecoration: 'none',
+                    fontWeight: 600,
+                    fontSize: 13
+                  }}
+                >
+                  <CalendarDays size={15} /> Xem lịch Calendar
                 </Link>
               </div>
             )}

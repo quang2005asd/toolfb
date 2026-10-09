@@ -253,19 +253,21 @@ export default function DashboardPage() {
               Tổng hợp Lượt xem & Tương tác bài viết
             </h2>
             {/* Chế độ xem biểu đồ */}
-            <div style={{ display: 'inline-flex', background: 'rgba(255,255,255,0.05)', borderRadius: 8, padding: 2 }}>
+            <div style={{ display: 'inline-flex', background: 'rgba(0, 0, 0, 0.04)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid var(--line)', borderRadius: 10, padding: 3, gap: 2 }}>
               <button
                 type="button"
                 onClick={() => setChartMode('engagements')}
                 style={{
-                  background: chartMode === 'engagements' ? 'rgba(56, 189, 248, 0.25)' : 'transparent',
-                  border: 'none',
-                  color: chartMode === 'engagements' ? '#fff' : 'var(--muted)',
+                  background: chartMode === 'engagements' ? 'rgba(37, 99, 235, 0.15)' : 'transparent',
+                  border: chartMode === 'engagements' ? '1px solid rgba(37, 99, 235, 0.35)' : '1px solid transparent',
+                  color: chartMode === 'engagements' ? 'var(--blue)' : 'var(--muted)',
                   fontSize: 11.5,
                   fontWeight: 700,
-                  padding: '4px 10px',
-                  borderRadius: 6,
-                  cursor: 'pointer'
+                  padding: '5px 12px',
+                  borderRadius: 8,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: chartMode === 'engagements' ? '0 2px 6px rgba(37, 99, 235, 0.12)' : 'none'
                 }}
               >
                 Tương tác ({summary.totalEngagements})
@@ -274,14 +276,16 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => setChartMode('views')}
                 style={{
-                  background: chartMode === 'views' ? 'rgba(56, 189, 248, 0.25)' : 'transparent',
-                  border: 'none',
-                  color: chartMode === 'views' ? '#fff' : 'var(--muted)',
+                  background: chartMode === 'views' ? 'rgba(37, 99, 235, 0.15)' : 'transparent',
+                  border: chartMode === 'views' ? '1px solid rgba(37, 99, 235, 0.35)' : '1px solid transparent',
+                  color: chartMode === 'views' ? 'var(--blue)' : 'var(--muted)',
                   fontSize: 11.5,
                   fontWeight: 700,
-                  padding: '4px 10px',
-                  borderRadius: 6,
-                  cursor: 'pointer'
+                  padding: '5px 12px',
+                  borderRadius: 8,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: chartMode === 'views' ? '0 2px 6px rgba(37, 99, 235, 0.12)' : 'none'
                 }}
               >
                 Lượt xem ({summary.totalViews})
@@ -290,14 +294,16 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => setChartMode('reactions')}
                 style={{
-                  background: chartMode === 'reactions' ? 'rgba(56, 189, 248, 0.25)' : 'transparent',
-                  border: 'none',
-                  color: chartMode === 'reactions' ? '#fff' : 'var(--muted)',
+                  background: chartMode === 'reactions' ? 'rgba(37, 99, 235, 0.15)' : 'transparent',
+                  border: chartMode === 'reactions' ? '1px solid rgba(37, 99, 235, 0.35)' : '1px solid transparent',
+                  color: chartMode === 'reactions' ? 'var(--blue)' : 'var(--muted)',
                   fontSize: 11.5,
                   fontWeight: 700,
-                  padding: '4px 10px',
-                  borderRadius: 6,
-                  cursor: 'pointer'
+                  padding: '5px 12px',
+                  borderRadius: 8,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: chartMode === 'reactions' ? '0 2px 6px rgba(37, 99, 235, 0.12)' : 'none'
                 }}
               >
                 Cảm xúc ({summary.totalReactions})

@@ -29,6 +29,7 @@ import MainLayout from '../components/layout/MainLayout';
 import postApi from '../services/postApi';
 import channelApi from '../services/channelApi';
 import useAuth from '../hooks/useAuth';
+import { resolveMediaUrl } from '../components/AiImageStudioModal';
 
 function parseDateSafe(val) {
   if (!val) return null;
@@ -256,7 +257,7 @@ export default function DashboardHomePage() {
                   <span className="float-dot green" /> BullMQ Engine: Đang chạy
                 </span>
                 <span className="dashboard-badge-chip">
-                  <Radio size={11} /> Meta Graph API v19.0
+                  <Radio size={11} /> Meta Graph API v22.0
                 </span>
                 <span className="dashboard-badge-chip purple">
                   <ShieldCheck size={11} /> {channels.length} Fanpage kết nối
@@ -640,22 +641,52 @@ export default function DashboardHomePage() {
                   return (
                     <div className="post-row" key={post.id}>
                       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', overflow: 'hidden' }}>
-                        <div
-                          style={{
-                            width: 34,
-                            height: 34,
-                            borderRadius: 10,
-                            background: 'rgba(255, 255, 255, 0.04)',
-                            border: `1px solid ${meta.color}40`,
-                            display: 'grid',
-                            placeItems: 'center',
-                            color: meta.color,
-                            flexShrink: 0,
-                            marginTop: 2
-                          }}
-                        >
-                          <FormatIcon size={16} />
-                        </div>
+                        {post.media_link ? (
+                          <div
+                            className="media-thumbnail-card"
+                            style={{
+                              width: 44,
+                              height: 44,
+                              flexShrink: 0,
+                              borderRadius: 10,
+                              marginTop: 2,
+                              cursor: 'pointer'
+                            }}
+                            onMouseEnter={(e) => handleShowPreview(post, e)}
+                            onMouseLeave={handleHidePreview}
+                          >
+                            {post.media_type === 'video' || post.media_link?.match(/\.mp4/i) ? (
+                              <div style={{ width: '100%', height: '100%', background: '#000', display: 'grid', placeItems: 'center', color: '#fff' }}>
+                                <VideoIcon size={18} />
+                              </div>
+                            ) : (
+                              <img
+                                src={resolveMediaUrl(post.media_link)}
+                                alt={`Post #${post.id}`}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                              />
+                            )}
+                          </div>
+                        ) : (
+                          <div
+                            style={{
+                              width: 40,
+                              height: 40,
+                              borderRadius: 10,
+                              background: 'var(--apple-glass-bg-subtle)',
+                              backdropFilter: 'var(--apple-glass-blur)',
+                              border: `1px solid ${meta.color}40`,
+                              display: 'grid',
+                              placeItems: 'center',
+                              color: meta.color,
+                              flexShrink: 0,
+                              marginTop: 2
+                            }}
+                          >
+                            <FormatIcon size={18} />
+                          </div>
+                        )}
                         <div style={{ overflow: 'hidden' }}>
                           <strong
                             style={{ cursor: 'pointer' }}

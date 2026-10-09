@@ -378,7 +378,7 @@ export default function AIStudioPage() {
                   ) : (
                     <>
                       <span className="ai-status-dot offline" />
-                      Chưa cấu hình — <Link href="/settings" style={{ color: '#00f2fe' }}>Cài đặt API Key</Link>
+                      Chưa cấu hình — <Link href="/settings" style={{ color: 'var(--blue)' }}>Cài đặt API Key</Link>
                     </>
                   )}
                 </span>
@@ -390,23 +390,23 @@ export default function AIStudioPage() {
                 className="ai-btn-ghost"
                 onClick={() => handleOpenStudioForMessage(prompt || '')}
                 style={{
-                  background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(0, 242, 254, 0.15))',
-                  border: '1px solid rgba(168, 85, 247, 0.4)',
-                  color: '#c084fc',
+                  background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.12), rgba(37, 99, 235, 0.12))',
+                  border: '1px solid rgba(168, 85, 247, 0.35)',
+                  color: 'var(--purple)',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 6
                 }}
               >
-                <Sparkles size={14} color="#00f2fe" /> AI Vẽ ảnh & Watermark
+                <Sparkles size={14} color="var(--purple)" /> AI Vẽ ảnh & Watermark
               </button>
               <Link
                 href="/ai-studio/generate"
                 className="ai-btn-ghost"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(0, 242, 254, 0.15), rgba(79, 172, 254, 0.15))',
-                  border: '1px solid rgba(0, 242, 254, 0.35)',
-                  color: '#00f2fe',
+                  background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(79, 172, 254, 0.12))',
+                  border: '1px solid rgba(37, 99, 235, 0.35)',
+                  color: 'var(--blue)',
                   textDecoration: 'none',
                   display: 'inline-flex',
                   alignItems: 'center',

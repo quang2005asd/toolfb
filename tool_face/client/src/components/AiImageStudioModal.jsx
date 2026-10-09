@@ -327,24 +327,24 @@ export default function AiImageStudioModal({
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9999,
       background: 'rgba(15, 23, 42, 0.45)',
-      backdropFilter: 'blur(8px)',
+      backdropFilter: 'blur(16px) saturate(180%)',
+      WebkitBackdropFilter: 'blur(16px) saturate(180%)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: 16
     }}>
-      <div className="panel" style={{
+      <div className="panel modal-card" style={{
         width: '100%', maxWidth: 960, maxHeight: '92vh',
         display: 'flex', flexDirection: 'column',
-        borderRadius: 20, overflow: 'hidden',
-        background: 'var(--panel)',
-        border: '1px solid var(--line)',
-        boxShadow: '0 20px 50px -10px rgba(70, 55, 40, 0.15)'
+        borderRadius: 24, overflow: 'hidden',
+        border: '1px solid rgba(220, 214, 202, 0.7)',
+        borderTop: '1px solid rgba(255, 255, 255, 1)',
+        boxShadow: '0 28px 70px -10px rgba(70, 55, 40, 0.16), inset 0 1px 2px rgba(255, 255, 255, 1)'
       }}>
         {/* Header */}
         <div style={{
           padding: '16px 24px',
-          borderBottom: '1px solid var(--line)',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: 'var(--panel)'
+          borderBottom: '1px solid rgba(220, 214, 202, 0.55)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{

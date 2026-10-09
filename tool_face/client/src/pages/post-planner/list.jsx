@@ -19,8 +19,12 @@ import {
   Share2,
   AlertCircle,
   CheckCircle2,
-  Ban
+  Ban,
+  Image as ImageIcon,
+  Film,
+  FileText
 } from 'lucide-react';
+import { resolveMediaUrl } from '../../components/AiImageStudioModal';
 
 function parseDateSafe(val) {
   if (!val) return null;
@@ -120,8 +124,9 @@ function PostDetailModal({ postId, onClose, onRefresh, channelName }) {
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.75)',
-        backdropFilter: 'blur(4px)',
+        backgroundColor: 'rgba(15, 23, 42, 0.45)',
+        backdropFilter: 'blur(24px) saturate(190%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(190%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -135,7 +140,11 @@ function PostDetailModal({ postId, onClose, onRefresh, channelName }) {
           width: '100%',
           maxWidth: 680,
           maxHeight: '90vh',
-          overflowY: 'auto'
+          overflowY: 'auto',
+          borderRadius: 24,
+          boxShadow: '0 32px 80px -10px rgba(15, 23, 42, 0.28), inset 0 1px 2px rgba(255, 255, 255, 1)',
+          border: '1px solid rgba(220, 214, 202, 0.65)',
+          borderTop: '1px solid rgba(255, 255, 255, 0.98)'
         }}
       >
         <div className="panel-heading">
@@ -158,7 +167,7 @@ function PostDetailModal({ postId, onClose, onRefresh, channelName }) {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {/* Thông tin Meta */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, background: 'rgba(255, 255, 255, 0.03)', padding: 12, borderRadius: 10, border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, background: 'var(--panel)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', padding: 14, borderRadius: 14, border: '1px solid var(--line)', borderTop: '1px solid rgba(255, 255, 255, 0.8)', boxShadow: '0 2px 8px rgba(70, 55, 40, 0.02)' }}>
                 <div>
                   <span className="muted" style={{ fontSize: 11 }}>Trạng thái:</span>
                   <div style={{ fontWeight: 700, marginTop: 2 }}>{post.status}</div>
@@ -239,16 +248,16 @@ function PostDetailModal({ postId, onClose, onRefresh, channelName }) {
 
                     {analytics ? (
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, textAlign: 'center' }}>
-                        <div style={{ background: 'rgba(0,0,0,0.3)', padding: '10px 8px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.06)' }}>
-                          <span style={{ fontSize: 18, color: '#38bdf8' }}>❤️ {analytics.likes}</span>
+                        <div style={{ background: 'var(--panel)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', padding: '12px 8px', borderRadius: 12, border: '1px solid var(--line)', borderTop: '1px solid rgba(255, 255, 255, 0.8)', boxShadow: '0 2px 6px rgba(70, 55, 40, 0.02)' }}>
+                          <span style={{ fontSize: 18, color: '#38bdf8', fontWeight: 800 }}>❤️ {analytics.likes}</span>
                           <span className="muted" style={{ display: 'block', fontSize: 11, marginTop: 2 }}>Lượt thích</span>
                         </div>
-                        <div style={{ background: 'rgba(0,0,0,0.3)', padding: '10px 8px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.06)' }}>
-                          <span style={{ fontSize: 18, color: '#10b981' }}>💬 {analytics.comments}</span>
+                        <div style={{ background: 'var(--panel)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', padding: '12px 8px', borderRadius: 12, border: '1px solid var(--line)', borderTop: '1px solid rgba(255, 255, 255, 0.8)', boxShadow: '0 2px 6px rgba(70, 55, 40, 0.02)' }}>
+                          <span style={{ fontSize: 18, color: '#10b981', fontWeight: 800 }}>💬 {analytics.comments}</span>
                           <span className="muted" style={{ display: 'block', fontSize: 11, marginTop: 2 }}>Bình luận</span>
                         </div>
-                        <div style={{ background: 'rgba(0,0,0,0.3)', padding: '10px 8px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.06)' }}>
-                          <span style={{ fontSize: 18, color: '#f59e0b' }}>↗️ {analytics.shares}</span>
+                        <div style={{ background: 'var(--panel)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', padding: '12px 8px', borderRadius: 12, border: '1px solid var(--line)', borderTop: '1px solid rgba(255, 255, 255, 0.8)', boxShadow: '0 2px 6px rgba(70, 55, 40, 0.02)' }}>
+                          <span style={{ fontSize: 18, color: '#f59e0b', fontWeight: 800 }}>↗️ {analytics.shares}</span>
                           <span className="muted" style={{ display: 'block', fontSize: 11, marginTop: 2 }}>Lượt chia sẻ</span>
                         </div>
                       </div>
@@ -545,9 +554,31 @@ export default function PostListPage() {
                     </span>
                   </td>
                   <td>
-                    <span style={{ fontSize: 12, textTransform: 'capitalize' }}>
-                      {post.media_type || 'text'}
-                    </span>
+                    {post.media_link ? (
+                      <div
+                        className="media-thumbnail-card"
+                        style={{ width: 44, height: 44, cursor: 'pointer' }}
+                        onClick={() => setSelectedPostId(post.id)}
+                        title="Bấm để xem ảnh chi tiết"
+                      >
+                        {post.media_type === 'video' || post.media_link?.match(/\.mp4/i) ? (
+                          <div style={{ width: '100%', height: '100%', background: '#000', display: 'grid', placeItems: 'center', color: '#fff' }}>
+                            <Film size={18} />
+                          </div>
+                        ) : (
+                          <img
+                            src={resolveMediaUrl(post.media_link)}
+                            alt="thumb"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        )}
+                      </div>
+                    ) : (
+                      <span className="glass-pill-badge" style={{ fontSize: 11, color: 'var(--muted)' }}>
+                        <FileText size={12} /> Text
+                      </span>
+                    )}
                   </td>
                   <td>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}>

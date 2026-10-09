@@ -18,7 +18,8 @@ import {
   Users,
   ShieldCheck,
   ShieldAlert,
-  Activity
+  Activity,
+  Radio
 } from 'lucide-react';
 import MainLayout from '../../components/layout/MainLayout';
 import channelApi from '../../services/channelApi';
@@ -340,70 +341,28 @@ export default function ChannelsPage() {
       {notice && <div className="notice" style={{ marginBottom: 14, borderColor: 'rgba(16, 185, 129, 0.4)', color: '#10b981' }}>{notice}</div>}
       {error && <div className="notice" style={{ marginBottom: 14, borderColor: 'rgba(239, 68, 68, 0.4)', color: '#ef4444' }}>{error}</div>}
 
-      {/* Tabs chuyển đổi giữa Kênh, Nhóm kênh và Tài khoản Facebook */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 18, borderBottom: '1px solid var(--line)', paddingBottom: 10, flexWrap: 'wrap' }}>
+      {/* Tabs chuyển đổi giữa Kênh, Nhóm kênh và Tài khoản Facebook (Apple Frosted Glass) */}
+      <div className="step-strip" role="tablist" style={{ marginBottom: 20 }}>
         <button
           type="button"
           onClick={() => setActiveTab('channels')}
-          style={{
-            background: activeTab === 'channels' ? 'var(--blue)' : 'var(--panel)',
-            border: activeTab === 'channels' ? '1px solid var(--blue)' : '1px solid var(--line)',
-            color: activeTab === 'channels' ? '#ffffff' : 'var(--ink)',
-            borderRadius: 10,
-            padding: '8px 18px',
-            fontSize: 13,
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            boxShadow: activeTab === 'channels' ? '0 4px 14px rgba(37, 99, 235, 0.22)' : 'none',
-            transition: 'all 0.2s ease'
-          }}
+          className={`step-button${activeTab === 'channels' ? ' is-current' : ''}`}
         >
-          <Globe2 size={15} /> Tất cả Fanpage ({channels.length})
+          <Globe2 size={15} style={{ marginRight: 6 }} /> Tất cả Fanpage ({channels.length})
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('groups')}
-          style={{
-            background: activeTab === 'groups' ? 'var(--blue)' : 'var(--panel)',
-            border: activeTab === 'groups' ? '1px solid var(--blue)' : '1px solid var(--line)',
-            color: activeTab === 'groups' ? '#ffffff' : 'var(--ink)',
-            borderRadius: 10,
-            padding: '8px 18px',
-            fontSize: 13,
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            boxShadow: activeTab === 'groups' ? '0 4px 14px rgba(37, 99, 235, 0.22)' : 'none',
-            transition: 'all 0.2s ease'
-          }}
+          className={`step-button${activeTab === 'groups' ? ' is-current' : ''}`}
         >
-          <Layers size={15} /> Nhóm kênh ({groups.length})
+          <Layers size={15} style={{ marginRight: 6 }} /> Nhóm kênh ({groups.length})
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('accounts')}
-          style={{
-            background: activeTab === 'accounts' ? 'var(--blue)' : 'var(--panel)',
-            border: activeTab === 'accounts' ? '1px solid var(--blue)' : '1px solid var(--line)',
-            color: activeTab === 'accounts' ? '#ffffff' : 'var(--ink)',
-            borderRadius: 10,
-            padding: '8px 18px',
-            fontSize: 13,
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            boxShadow: activeTab === 'accounts' ? '0 4px 14px rgba(37, 99, 235, 0.22)' : 'none',
-            transition: 'all 0.2s ease'
-          }}
+          className={`step-button${activeTab === 'accounts' ? ' is-current' : ''}`}
         >
-          <Users size={15} /> Nick Facebook đã kết nối ({accountList.length})
+          <Users size={15} style={{ marginRight: 6 }} /> Nick Facebook đã kết nối ({accountList.length})
         </button>
       </div>
 
@@ -616,11 +575,11 @@ export default function ChannelsPage() {
                 style={{ minHeight: 32, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                 title="Kiểm tra kết nối và token của tất cả Fanpage"
               >
-                <Activity size={14} className={checkingTokens ? 'animate-spin' : ''} style={{ color: '#00f2fe' }} />
+                <Activity size={14} className={checkingTokens ? 'animate-spin' : ''} style={{ color: 'var(--blue)' }} />
                 {checkingTokens ? 'Đang kiểm tra token…' : 'Kiểm tra sức khỏe Token'}
               </button>
               <div className="muted" style={{ fontSize: 12 }}>
-                Tổng cộng: <strong style={{ color: '#00f2fe' }}>{channels.length}</strong> Fanpage ({accountList.length} tài khoản FB)
+                Tổng cộng: <strong style={{ color: 'var(--blue)' }}>{channels.length}</strong> Fanpage ({accountList.length} tài khoản FB)
               </div>
             </div>
           </div>
@@ -1019,29 +978,56 @@ export default function ChannelsPage() {
 
       {loading && <section className="panel" style={{ marginTop: 16 }}><div className="panel-body muted">Đang đồng bộ thông tin từ máy chủ…</div></section>}
 
-      {/* Hướng dẫn đồng bộ tự động */}
-      <section className="panel" style={{ marginTop: 18 }}>
+      {/* Hướng dẫn kết nối Fanpage - Glass Visual Cards */}
+      <section className="panel" style={{ marginTop: 22 }}>
         <div className="panel-heading">
-          <h2><CircleHelp size={16} style={{ verticalAlign: 'middle', marginRight: 8, color: 'var(--blue)' }} />Hướng dẫn kết nối Fanpage</h2>
+          <h2><CircleHelp size={16} style={{ verticalAlign: 'middle', marginRight: 8, color: 'var(--blue)' }} />Phương thức kết nối Fanpage</h2>
         </div>
-        <div className="panel-body" style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--muted)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20 }}>
-            <div>
-              <strong style={{ color: 'var(--blue)', display: 'block', marginBottom: 6 }}>Cách 1: Đồng bộ tự động qua Facebook Login</strong>
-              <p style={{ margin: '0 0 8px' }}>
-                Để Facebook cho phép hệ thống tự đọc danh sách Page, trong <strong>Meta Developer Console</strong> của bạn cần thêm quyền:
-              </p>
-              <ul style={{ margin: 0, paddingLeft: 20 }}>
-                <li><code>pages_show_list</code>: Xem danh sách Fanpage bạn quản trị</li>
-                <li><code>pages_manage_posts</code>: Quyền đăng bài tự động</li>
-                <li><code>pages_read_engagement</code>: Đọc báo cáo tương tác</li>
-              </ul>
+        <div className="panel-body">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
+            <div style={{
+              background: 'var(--apple-glass-bg-subtle)',
+              border: 'var(--apple-glass-border)',
+              borderTop: 'var(--apple-glass-border-top)',
+              borderRadius: 16, padding: '18px 20px',
+              display: 'flex', flexDirection: 'column', gap: 10
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(37, 99, 235, 0.12)', display: 'grid', placeItems: 'center', color: 'var(--blue)' }}>
+                  <Radio size={18} />
+                </div>
+                <div>
+                  <strong style={{ fontSize: 13.5, color: 'var(--ink)' }}>Đồng bộ qua Facebook Login</strong>
+                  <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>Tự động tải danh sách Page từ nick cá nhân</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+                <span className="glass-pill-badge" style={{ fontSize: 11 }}>pages_show_list</span>
+                <span className="glass-pill-badge" style={{ fontSize: 11 }}>pages_manage_posts</span>
+                <span className="glass-pill-badge" style={{ fontSize: 11 }}>pages_read_engagement</span>
+              </div>
             </div>
-            <div>
-              <strong style={{ color: '#10b981', display: 'block', marginBottom: 6 }}>Cách 2: Nhập Page Access Token trực tiếp</strong>
-              <p style={{ margin: '0 0 8px' }}>
-                Nếu không muốn cấu hình quyền phức tạp trên Meta Developer, bạn chỉ cần bấm nút <strong>"Thêm qua Page Token"</strong> ở trên, dán Page ID và Page Access Token là có thể đăng bài ngay lập tức!
-              </p>
+
+            <div style={{
+              background: 'var(--apple-glass-bg-subtle)',
+              border: 'var(--apple-glass-border)',
+              borderTop: 'var(--apple-glass-border-top)',
+              borderRadius: 16, padding: '18px 20px',
+              display: 'flex', flexDirection: 'column', gap: 10
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(16, 185, 129, 0.12)', display: 'grid', placeItems: 'center', color: '#10b981' }}>
+                  <ShieldCheck size={18} />
+                </div>
+                <div>
+                  <strong style={{ fontSize: 13.5, color: 'var(--ink)' }}>Thêm qua Page Access Token</strong>
+                  <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>Không cần cấp quyền Meta App phức tạp</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+                <span className="glass-pill-badge" style={{ fontSize: 11, color: '#10b981' }}>⚡ 1-Click kết nối</span>
+                <span className="glass-pill-badge" style={{ fontSize: 11, color: 'var(--blue)' }}>🔒 Token vĩnh viễn</span>
+              </div>
             </div>
           </div>
         </div>

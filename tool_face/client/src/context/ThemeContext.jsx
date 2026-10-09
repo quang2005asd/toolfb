@@ -14,14 +14,17 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     try {
       const saved = localStorage.getItem('toolfb_theme');
-      // Mặc định Tone Trắng Sang Trọng (light) theo yêu cầu của người dùng
       const initial = saved === 'dark' ? 'dark' : 'light';
       setThemeState(initial);
       document.documentElement.setAttribute('data-theme', initial);
-      if (initial === 'light') {
-        document.body.classList.add('light-mode');
-      } else {
+      if (initial === 'dark') {
+        document.documentElement.classList.add('dark');
+        document.body.classList.add('dark-mode');
         document.body.classList.remove('light-mode');
+      } else {
+        document.documentElement.classList.remove('dark');
+        document.body.classList.add('light-mode');
+        document.body.classList.remove('dark-mode');
       }
     } catch (_) {}
     setMounted(true);
@@ -33,10 +36,14 @@ export function ThemeProvider({ children }) {
       localStorage.setItem('toolfb_theme', newTheme);
     } catch (_) {}
     document.documentElement.setAttribute('data-theme', newTheme);
-    if (newTheme === 'light') {
-      document.body.classList.add('light-mode');
-    } else {
+    if (newTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.body.classList.add('dark-mode');
       document.body.classList.remove('light-mode');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.body.classList.add('light-mode');
+      document.body.classList.remove('dark-mode');
     }
   };
 

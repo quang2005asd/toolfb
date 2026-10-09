@@ -216,16 +216,20 @@ export default function BulkUpload() {
             {/* Default Channel Fallback Selector */}
             <div
               style={{
-                background: 'rgba(255, 255, 255, 0.02)',
+                background: 'var(--panel)',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
                 border: '1px solid var(--line)',
-                borderRadius: '12px',
+                borderTop: '1px solid rgba(255, 255, 255, 0.9)',
+                borderRadius: '14px',
                 padding: '14px 18px',
                 marginBottom: '18px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 flexWrap: 'wrap',
-                gap: '12px'
+                gap: '12px',
+                boxShadow: '0 4px 14px rgba(70, 55, 40, 0.03), inset 0 1px 1px rgba(255, 255, 255, 0.8)'
               }}
             >
               <div>
@@ -269,17 +273,20 @@ export default function BulkUpload() {
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               style={{
-                transition: 'all 0.2s ease',
+                transition: 'all 0.22s ease',
                 border: isDragOver
-                  ? '2px dashed #00f2fe'
+                  ? '2px dashed #2563eb'
                   : file
-                  ? '1.5px solid rgba(0, 242, 254, 0.4)'
-                  : '1.5px dashed rgba(255, 255, 255, 0.16)',
+                  ? '1.5px solid rgba(37, 99, 235, 0.45)'
+                  : '1.5px dashed rgba(220, 214, 202, 0.85)',
                 background: isDragOver
-                  ? 'rgba(0, 242, 254, 0.05)'
+                  ? 'rgba(37, 99, 235, 0.08)'
                   : file
-                  ? 'rgba(0, 242, 254, 0.02)'
-                  : '#070a14',
+                  ? 'rgba(37, 99, 235, 0.03)'
+                  : 'rgba(255, 255, 255, 0.65)',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+                borderRadius: '16px',
                 padding: '32px 20px',
                 cursor: 'pointer'
               }}
@@ -433,7 +440,7 @@ export default function BulkUpload() {
           {previewLoading && (
             <div
               className="panel"
-              style={{ padding: '36px', textAlign: 'center', color: '#00f2fe' }}
+              style={{ padding: '36px', textAlign: 'center', color: 'var(--blue)' }}
             >
               <RefreshCw size={28} className="spin" style={{ margin: '0 auto 12px' }} />
               <div style={{ fontWeight: 700, fontSize: '15px' }}>Đang phân tích dữ liệu tệp Excel...</div>
@@ -500,9 +507,13 @@ export default function BulkUpload() {
               <div
                 style={{
                   overflowX: 'auto',
-                  borderRadius: '10px',
+                  borderRadius: '14px',
                   border: '1px solid var(--line)',
-                  background: '#070a14'
+                  borderTop: '1px solid rgba(255, 255, 255, 0.9)',
+                  background: 'var(--panel)',
+                  backdropFilter: 'blur(24px) saturate(190%)',
+                  WebkitBackdropFilter: 'blur(24px) saturate(190%)',
+                  boxShadow: '0 8px 24px -4px rgba(70, 55, 40, 0.04), inset 0 1px 1px rgba(255, 255, 255, 0.8)'
                 }}
               >
                 <table
@@ -516,7 +527,7 @@ export default function BulkUpload() {
                   <thead>
                     <tr
                       style={{
-                        background: 'rgba(255, 255, 255, 0.04)',
+                        background: 'rgba(255, 255, 255, 0.08)',
                         borderBottom: '1px solid var(--line)',
                         color: 'var(--muted)',
                         fontSize: '12px',
@@ -706,14 +717,18 @@ export default function BulkUpload() {
                   <div
                     key={ch.id}
                     style={{
-                      background: 'rgba(255, 255, 255, 0.03)',
+                      background: 'var(--panel)',
+                      backdropFilter: 'blur(16px)',
+                      WebkitBackdropFilter: 'blur(16px)',
                       border: '1px solid var(--line)',
-                      borderRadius: '8px',
+                      borderTop: '1px solid rgba(255, 255, 255, 0.9)',
+                      borderRadius: '10px',
                       padding: '10px 12px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      gap: '8px'
+                      gap: '8px',
+                      boxShadow: '0 2px 6px rgba(70, 55, 40, 0.02)'
                     }}
                   >
                     <div style={{ minWidth: 0, flex: 1 }}>

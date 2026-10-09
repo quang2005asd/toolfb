@@ -436,44 +436,58 @@ export default function AIGeneratePage() {
         </div>
       }
     >
-      {/* ── Progress Steps ── */}
+      {/* ── Progress Steps (Apple Frosted Crystal Glass) ── */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28, padding: '16px 22px',
-        background: 'linear-gradient(165deg, rgba(14, 22, 42, 0.85) 0%, rgba(8, 12, 24, 0.95) 100%)',
-        borderRadius: 20, border: '1px solid rgba(255, 255, 255, 0.1)',
-        borderTopColor: 'rgba(255, 255, 255, 0.25)',
-        boxShadow: '0 16px 36px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.12)'
+        display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28, padding: '14px 22px',
+        background: 'var(--apple-glass-bg)',
+        backdropFilter: 'var(--apple-glass-blur)',
+        WebkitBackdropFilter: 'var(--apple-glass-blur)',
+        borderRadius: 20,
+        border: 'var(--apple-glass-border)',
+        borderTop: 'var(--apple-glass-border-top)',
+        boxShadow: 'var(--apple-glass-shadow)'
       }}>
         {[
           { num: 1, label: 'Nhập yêu cầu', icon: Wand2 },
           { num: 2, label: 'Chỉnh sửa bài', icon: PenLine },
           { num: 3, label: 'Hoàn tất', icon: CheckCircle2 }
-        ].map((s, idx) => (
-          <div key={s.num} style={{ display: 'flex', alignItems: 'center', gap: 10, flex: idx < 2 ? 1 : 'none' }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px', borderRadius: 12,
-              background: step === s.num ? '#eff6ff' : step > s.num ? '#ecfdf5' : 'var(--panel)',
-              border: `1px solid ${step === s.num ? '#bfdbfe' : step > s.num ? '#a7f3d0' : 'var(--line)'}`,
-              boxShadow: step === s.num ? '0 2px 8px rgba(37, 99, 235, 0.08)' : 'none',
-              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
-            }}>
+        ].map((s, idx) => {
+          const isActive = step === s.num;
+          const isDone = step > s.num;
+          return (
+            <div key={s.num} style={{ display: 'flex', alignItems: 'center', gap: 10, flex: idx < 2 ? 1 : 'none' }}>
               <div style={{
-                width: 30, height: 30, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: step === s.num ? '#2563eb' : step > s.num ? '#059669' : 'var(--field-bg)',
-                fontSize: 13, fontWeight: 800, color: step >= s.num ? '#ffffff' : 'var(--muted)',
-                boxShadow: step === s.num ? '0 2px 8px rgba(37, 99, 235, 0.3)' : 'none'
+                display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px', borderRadius: 14,
+                background: isActive
+                  ? 'rgba(37, 99, 235, 0.12)'
+                  : isDone
+                    ? 'rgba(16, 185, 129, 0.12)'
+                    : 'var(--apple-glass-bg-subtle)',
+                border: `1px solid ${isActive ? 'rgba(37, 99, 235, 0.35)' : isDone ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255, 255, 255, 0.55)'}`,
+                borderTop: `1px solid ${isActive ? 'rgba(37, 99, 235, 0.6)' : isDone ? 'rgba(16, 185, 129, 0.6)' : 'rgba(255, 255, 255, 0.95)'}`,
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+                boxShadow: isActive ? '0 4px 14px rgba(37, 99, 235, 0.15)' : 'none',
+                transition: 'all 0.22s cubic-bezier(0.16, 1, 0.3, 1)'
               }}>
-                {step > s.num ? <Check size={15} color="#fff" strokeWidth={3} /> : s.num}
+                <div style={{
+                  width: 30, height: 30, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: isActive ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : isDone ? 'linear-gradient(135deg, #10b981, #059669)' : 'rgba(0, 0, 0, 0.06)',
+                  fontSize: 13, fontWeight: 800, color: step >= s.num ? '#ffffff' : 'var(--muted)',
+                  boxShadow: isActive ? '0 2px 8px rgba(37, 99, 235, 0.35)' : 'none'
+                }}>
+                  {isDone ? <Check size={15} color="#fff" strokeWidth={3} /> : s.num}
+                </div>
+                <span style={{ fontSize: 13.5, fontWeight: 700, color: step >= s.num ? 'var(--ink)' : 'var(--muted)', whiteSpace: 'nowrap' }}>
+                  {s.label}
+                </span>
               </div>
-              <span style={{ fontSize: 13.5, fontWeight: 700, color: step >= s.num ? 'var(--ink)' : 'var(--muted)', whiteSpace: 'nowrap' }}>
-                {s.label}
-              </span>
+              {idx < 2 && (
+                <div style={{ flex: 1, height: 2, background: isDone ? '#10b981' : 'rgba(100, 116, 139, 0.22)', borderRadius: 2, margin: '0 6px', transition: 'background 0.3s' }} />
+              )}
             </div>
-            {idx < 2 && (
-              <div style={{ flex: 1, height: 2, background: step > s.num ? '#10b981' : 'rgba(255, 255, 255, 0.08)', borderRadius: 2, margin: '0 6px', transition: 'background 0.3s' }} />
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* ═══ STEP 1: Input Prompt ═══ */}
@@ -481,17 +495,28 @@ export default function AIGeneratePage() {
         <div style={{ maxWidth: 840, margin: '0 auto' }}>
           {/* Hero */}
           <div style={{
-            textAlign: 'center', marginBottom: 32, padding: '36px 24px',
-            background: 'var(--panel)',
-            borderRadius: 24, border: '1px solid var(--line)',
-            boxShadow: '0 8px 30px rgba(70, 55, 40, 0.05)',
+            textAlign: 'center', marginBottom: 28, padding: '30px 24px',
+            background: 'var(--apple-glass-bg)',
+            backdropFilter: 'var(--apple-glass-blur)',
+            WebkitBackdropFilter: 'var(--apple-glass-blur)',
+            borderRadius: 24,
+            border: 'var(--apple-glass-border)',
+            borderTop: 'var(--apple-glass-border-top)',
+            boxShadow: 'var(--apple-glass-shadow)',
             position: 'relative', overflow: 'hidden'
           }}>
             <h2 style={{ margin: 0, fontSize: 24, fontWeight: 900, letterSpacing: '-0.3px', color: 'var(--ink)' }}>AI Tạo bài hàng loạt</h2>
-            <p style={{ margin: '10px 0 0', color: 'var(--muted)', fontSize: 14.5, lineHeight: 1.6 }}>
-              Mô tả ý tưởng của bạn, AI sẽ tạo <strong>nhiều bài đăng</strong> cùng một lúc.<br />
-              Ví dụ: &quot;Tạo 3 bài: bán giày, review cafe, tip sống khỏe&quot;
-            </p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
+              <span className="glass-pill-badge" style={{ color: 'var(--blue)' }}>
+                <Sparkles size={13} color="var(--blue)" /> Tạo cùng lúc 3-10 bài
+              </span>
+              <span className="glass-pill-badge" style={{ color: '#ec4899' }}>
+                <Wand2 size={13} color="#ec4899" /> Tự động vẽ ảnh AI
+              </span>
+              <span className="glass-pill-badge" style={{ color: '#10b981' }}>
+                <Clock size={13} color="#10b981" /> Hẹn giờ Meta Cloud
+              </span>
+            </div>
           </div>
 
           {/* Quick Templates */}
@@ -502,12 +527,15 @@ export default function AIGeneratePage() {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
               {quickTemplates.map((tmpl, idx) => (
                 <button key={idx} type="button" onClick={() => handleTemplateClick(tmpl)} style={{
-                  background: 'var(--panel)',
-                  border: '1px solid var(--line)',
+                  background: 'var(--apple-glass-bg)',
+                  backdropFilter: 'blur(16px)',
+                  WebkitBackdropFilter: 'blur(16px)',
+                  border: 'var(--apple-glass-border)',
+                  borderTop: 'var(--apple-glass-border-top)',
                   borderRadius: 12, padding: '9px 16px', cursor: 'pointer', color: 'var(--ink)',
                   fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8,
                   transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                  boxShadow: '0 2px 8px rgba(70, 55, 40, 0.04)'
+                  boxShadow: '0 2px 8px rgba(70, 55, 40, 0.03)'
                 }}
                   onMouseOver={e => {
                     e.currentTarget.style.borderColor = 'var(--blue)';
@@ -515,9 +543,9 @@ export default function AIGeneratePage() {
                     e.currentTarget.style.boxShadow = '0 6px 16px rgba(37, 99, 235, 0.12)';
                   }}
                   onMouseOut={e => {
-                    e.currentTarget.style.borderColor = 'var(--line)';
+                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.65)';
                     e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(70, 55, 40, 0.04)';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(70, 55, 40, 0.03)';
                   }}
                 >
                   <span style={{ fontSize: 16 }}>{tmpl.icon}</span> {tmpl.label}
@@ -528,10 +556,14 @@ export default function AIGeneratePage() {
 
           {/* Prompt Input Box */}
           <div style={{
-            background: 'var(--panel)',
-            borderRadius: 18, border: '1.5px solid var(--line)',
+            background: 'var(--apple-glass-bg)',
+            backdropFilter: 'var(--apple-glass-blur)',
+            WebkitBackdropFilter: 'var(--apple-glass-blur)',
+            borderRadius: 18,
+            border: 'var(--apple-glass-border)',
+            borderTop: 'var(--apple-glass-border-top)',
             padding: 22, marginBottom: 18,
-            boxShadow: '0 4px 20px rgba(70, 55, 40, 0.04)'
+            boxShadow: 'var(--apple-glass-shadow)'
           }}>
             <textarea
               ref={textareaRef}
@@ -553,37 +585,46 @@ export default function AIGeneratePage() {
             display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 20, alignItems: 'center'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <label style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 500 }}>Giọng văn:</label>
+              <label style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 600 }}>Giọng văn:</label>
               <select
                 value={tone}
                 onChange={e => setTone(e.target.value)}
                 style={{
-                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 8, padding: '6px 10px', color: 'var(--fg)', fontSize: 13, cursor: 'pointer', outline: 'none'
+                  background: 'var(--apple-glass-bg)',
+                  border: 'var(--apple-glass-border)',
+                  borderTop: 'var(--apple-glass-border-top)',
+                  backdropFilter: 'var(--apple-glass-blur)',
+                  WebkitBackdropFilter: 'var(--apple-glass-blur)',
+                  borderRadius: 10, padding: '8px 14px', color: 'var(--ink)', fontSize: 13, cursor: 'pointer', outline: 'none',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
                 }}
               >
-                {toneOptions.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                {toneOptions.map(t => <option key={t.value} value={t.value} style={{ background: 'var(--panel)', color: 'var(--ink)' }}>{t.label}</option>)}
               </select>
             </div>
 
             <button type="button" onClick={() => setIncludeEmoji(!includeEmoji)} style={{
-              background: includeEmoji ? 'rgba(0,242,254,0.1)' : 'rgba(255,255,255,0.04)',
-              border: `1px solid ${includeEmoji ? 'rgba(0,242,254,0.3)' : 'rgba(255,255,255,0.08)'}`,
-              borderRadius: 8, padding: '6px 12px', cursor: 'pointer',
-              color: includeEmoji ? '#00f2fe' : 'var(--muted)', fontSize: 13, fontWeight: 500,
-              display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.2s'
+              background: includeEmoji ? 'rgba(37, 99, 235, 0.12)' : 'var(--apple-glass-bg)',
+              border: includeEmoji ? '1px solid rgba(37, 99, 235, 0.4)' : 'var(--apple-glass-border)',
+              borderTop: includeEmoji ? '1px solid rgba(37, 99, 235, 0.6)' : 'var(--apple-glass-border-top)',
+              borderRadius: 10, padding: '8px 14px', cursor: 'pointer',
+              color: includeEmoji ? 'var(--blue)' : 'var(--muted)', fontSize: 13, fontWeight: 700,
+              display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.2s',
+              boxShadow: includeEmoji ? '0 2px 8px rgba(37, 99, 235, 0.15)' : '0 1px 3px rgba(0,0,0,0.02)'
             }}>
-              <Smile size={14} /> Emoji {includeEmoji ? 'ON' : 'OFF'}
+              <Smile size={15} color={includeEmoji ? 'var(--blue)' : 'currentColor'} /> Emoji {includeEmoji ? 'BẬT' : 'TẮT'}
             </button>
 
             <button type="button" onClick={() => setIncludeHashtags(!includeHashtags)} style={{
-              background: includeHashtags ? 'rgba(168,85,247,0.1)' : 'rgba(255,255,255,0.04)',
-              border: `1px solid ${includeHashtags ? 'rgba(168,85,247,0.3)' : 'rgba(255,255,255,0.08)'}`,
-              borderRadius: 8, padding: '6px 12px', cursor: 'pointer',
-              color: includeHashtags ? '#a855f7' : 'var(--muted)', fontSize: 13, fontWeight: 500,
-              display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.2s'
+              background: includeHashtags ? 'rgba(124, 58, 237, 0.12)' : 'var(--apple-glass-bg)',
+              border: includeHashtags ? '1px solid rgba(124, 58, 237, 0.4)' : 'var(--apple-glass-border)',
+              borderTop: includeHashtags ? '1px solid rgba(124, 58, 237, 0.6)' : 'var(--apple-glass-border-top)',
+              borderRadius: 10, padding: '8px 14px', cursor: 'pointer',
+              color: includeHashtags ? 'var(--purple)' : 'var(--muted)', fontSize: 13, fontWeight: 700,
+              display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.2s',
+              boxShadow: includeHashtags ? '0 2px 8px rgba(124, 58, 237, 0.15)' : '0 1px 3px rgba(0,0,0,0.02)'
             }}>
-              <Hash size={14} /> Hashtag {includeHashtags ? 'ON' : 'OFF'}
+              <Hash size={15} color={includeHashtags ? 'var(--purple)' : 'currentColor'} /> Hashtag {includeHashtags ? 'BẬT' : 'TẮT'}
             </button>
           </div>
 
@@ -591,7 +632,7 @@ export default function AIGeneratePage() {
           {error && (
             <div style={{
               padding: '12px 16px', borderRadius: 12, marginBottom: 16,
-              background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', fontSize: 13
+              background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', fontSize: 13, fontWeight: 600
             }}>
               {error}
             </div>
@@ -602,16 +643,7 @@ export default function AIGeneratePage() {
             type="button"
             onClick={handleGenerate}
             disabled={!prompt.trim() || generating}
-            style={{
-              width: '100%', padding: '14px 24px', borderRadius: 14, border: 'none', cursor: 'pointer',
-              background: prompt.trim() && !generating
-                ? 'linear-gradient(135deg, #00f2fe, #4facfe)'
-                : 'rgba(255,255,255,0.06)',
-              color: prompt.trim() && !generating ? '#fff' : 'var(--muted)',
-              fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              transition: 'all 0.3s ease',
-              opacity: generating ? 0.7 : 1
-            }}
+            className={`ai-generate-main-btn ${prompt.trim() && !generating ? 'is-ready' : 'is-disabled'}`}
           >
             {generating ? (
               <><Loader2 size={18} className="animate-spin" /> AI đang tạo bài...</>
@@ -631,12 +663,18 @@ export default function AIGeneratePage() {
           {/* Batch info bar */}
           <div style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            marginBottom: 20, padding: '12px 16px', background: 'rgba(0,242,254,0.05)',
-            borderRadius: 12, border: '1px solid rgba(0,242,254,0.1)'
+            marginBottom: 20, padding: '14px 20px',
+            background: 'var(--apple-glass-bg)',
+            backdropFilter: 'var(--apple-glass-blur)',
+            WebkitBackdropFilter: 'var(--apple-glass-blur)',
+            borderRadius: 16,
+            border: 'var(--apple-glass-border)',
+            borderTop: 'var(--apple-glass-border-top)',
+            boxShadow: 'var(--apple-glass-shadow)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14 }}>
-              <FileText size={16} style={{ color: '#00f2fe' }} />
-              <span style={{ fontWeight: 600 }}>AI đã tạo {drafts.length} bài</span>
+              <FileText size={16} style={{ color: '#2563eb' }} />
+              <span style={{ fontWeight: 700, color: 'var(--ink)' }}>AI đã tạo {drafts.length} bài</span>
               <span style={{ color: 'var(--muted)' }}>· Chỉnh sửa & chọn Fanpage trước khi đăng</span>
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -657,7 +695,7 @@ export default function AIGeneratePage() {
                     type="button"
                     className="button button-quiet"
                     onClick={() => handleApplyPagesToAll(channels.map(c => c.id))}
-                    style={{ fontSize: 12, color: '#00f2fe' }}
+                    style={{ fontSize: 12, color: 'var(--blue)' }}
                   >
                     Chọn tất cả {channels.length} Fanpage cho mọi bài
                   </button>
@@ -692,12 +730,22 @@ export default function AIGeneratePage() {
           {/* Draft Cards */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {drafts.map((draft, index) => (
-              <div key={draft.id} className="hologram-card-3d" style={{ overflow: 'hidden' }}>
+              <div key={draft.id} className="hologram-card-3d" style={{
+                overflow: 'hidden',
+                background: 'var(--apple-glass-bg)',
+                backdropFilter: 'var(--apple-glass-blur)',
+                WebkitBackdropFilter: 'var(--apple-glass-blur)',
+                borderRadius: 20,
+                border: 'var(--apple-glass-border)',
+                borderTop: 'var(--apple-glass-border-top)',
+                boxShadow: 'var(--apple-glass-shadow)'
+              }}>
                 {/* Card Header */}
                 <div style={{
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)',
-                  background: 'rgba(255,255,255,0.02)'
+                  padding: '14px 20px',
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.45)',
+                  background: 'var(--apple-glass-bg-subtle)'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{
@@ -710,21 +758,21 @@ export default function AIGeneratePage() {
                     </div>
                     <span style={{
                       padding: '4px 12px', borderRadius: 8, fontSize: 11.5, fontWeight: 700,
-                      background: 'rgba(168,85,247,0.15)', color: '#c084fc', letterSpacing: '0.02em',
-                      border: '1px solid rgba(168,85,247,0.25)', boxShadow: '0 2px 8px rgba(168,85,247,0.15)'
+                      background: 'rgba(168,85,247,0.12)', color: '#7c3aed', letterSpacing: '0.02em',
+                      border: '1px solid rgba(168,85,247,0.25)', boxShadow: '0 2px 8px rgba(168,85,247,0.1)'
                     }}>
                       {draft.topic || 'Bài viết'}
                     </span>
                     {draft.suggested_time && (
                       <span style={{ fontSize: 12, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <Clock size={13} color="#38bdf8" /> Gợi ý: {draft.suggested_time}
+                        <Clock size={13} color="var(--blue)" /> Gợi ý: {draft.suggested_time}
                       </span>
                     )}
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button type="button" onClick={() => handleCopyContent(draft.content, draft.id)} style={{
-                      background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)',
-                      borderRadius: 8, padding: '5px 8px', cursor: 'pointer', color: 'var(--muted)',
+                      background: 'var(--apple-glass-bg-subtle)', border: '1px solid rgba(255,255,255,0.5)',
+                      borderRadius: 8, padding: '5px 8px', cursor: 'pointer', color: 'var(--ink)',
                       display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, transition: 'all 0.2s'
                     }} title="Copy nội dung">
                       {copiedId === draft.id ? <><Check size={13} color="#10b981" /> Đã copy</> : <><Copy size={13} /> Copy</>}
@@ -749,19 +797,22 @@ export default function AIGeneratePage() {
                 </div>
 
                 {/* Card Body */}
-                <div style={{ padding: 16 }}>
+                <div style={{ padding: 18 }}>
                   {/* Content editor */}
                   <textarea
                     value={draft.content}
                     onChange={e => handleUpdateDraftField(index, 'content', e.target.value)}
                     style={{
-                      width: '100%', minHeight: 120, background: 'rgba(255,255,255,0.03)',
-                      border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: 14,
-                      color: 'var(--fg)', fontSize: 14, lineHeight: 1.7, resize: 'vertical',
+                      width: '100%', minHeight: 120,
+                      background: 'var(--apple-glass-bg-subtle)',
+                      border: 'var(--apple-glass-border)',
+                      borderTop: 'var(--apple-glass-border-top)',
+                      borderRadius: 12, padding: 14,
+                      color: 'var(--ink)', fontSize: 14, lineHeight: 1.7, resize: 'vertical',
                       outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.2s'
                     }}
-                    onFocus={e => e.target.style.borderColor = 'rgba(0,242,254,0.3)'}
-                    onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
+                    onFocus={e => e.target.style.borderColor = 'var(--blue)'}
+                    onBlur={e => e.target.style.borderColor = 'rgba(255, 255, 255, 0.65)'}
                   />
 
                   {/* Hashtags */}
@@ -801,25 +852,26 @@ export default function AIGeneratePage() {
                         <span>✨ AI Tạo ảnh & Watermark</span>
                       </button>
 
-                      <label style={{ cursor: 'pointer', padding: '6px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: 8, fontSize: 12, border: '1px dashed rgba(255,255,255,0.2)' }}>
+                      <label style={{ cursor: 'pointer', padding: '6px 12px', background: 'var(--apple-glass-bg-subtle)', borderRadius: 8, fontSize: 12, border: '1px dashed rgba(255,255,255,0.45)', color: 'var(--ink)' }}>
                         <input type="file" multiple accept="image/*,video/*" hidden onChange={(e) => handleMediaChange(index, e, 'feed')} disabled={draft.uploadingMedia} />
                         Feed (Ảnh/Video)
                       </label>
-                      <label style={{ cursor: 'pointer', padding: '6px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: 8, fontSize: 12, border: '1px dashed rgba(255,255,255,0.2)' }}>
+                      <label style={{ cursor: 'pointer', padding: '6px 12px', background: 'var(--apple-glass-bg-subtle)', borderRadius: 8, fontSize: 12, border: '1px dashed rgba(255,255,255,0.45)', color: 'var(--ink)' }}>
                         <input type="file" accept="video/*" hidden onChange={(e) => handleMediaChange(index, e, 'reel')} disabled={draft.uploadingMedia} />
                         Reels
                       </label>
-                      <label style={{ cursor: 'pointer', padding: '6px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: 8, fontSize: 12, border: '1px dashed rgba(255,255,255,0.2)' }}>
+                      <label style={{ cursor: 'pointer', padding: '6px 12px', background: 'var(--apple-glass-bg-subtle)', borderRadius: 8, fontSize: 12, border: '1px dashed rgba(255,255,255,0.45)', color: 'var(--ink)' }}>
                         <input type="file" accept="image/*,video/*" hidden onChange={(e) => handleMediaChange(index, e, 'story')} disabled={draft.uploadingMedia} />
                         Story
                       </label>
-                      {draft.uploadingMedia && <span style={{ fontSize: 12, color: '#00f2fe', display: 'flex', alignItems: 'center' }}><Loader2 size={12} className="animate-spin" style={{marginRight: 4}}/> Đang tải...</span>}
+                      {draft.uploadingMedia && <span style={{ fontSize: 12, color: 'var(--blue)', display: 'flex', alignItems: 'center' }}><Loader2 size={12} className="animate-spin" style={{marginRight: 4}}/> Đang tải...</span>}
                     </div>
 
-                    {draft.mediaList?.length > 0 && (
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {/* Media Gallery / Empty visual slot */}
+                    {draft.mediaList?.length > 0 ? (
+                      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
                         {draft.mediaList.map((m, mi) => (
-                          <div key={mi} style={{ position: 'relative', width: 88, height: 88, borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.15)' }}>
+                          <div key={mi} className="media-thumbnail-card" style={{ width: 96, height: 96 }}>
                             {m.mediaType === 'video' || m.previewUrl?.match(/\.mp4|blob/i) ? (
                               <video src={resolveMediaUrl(m.previewUrl)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             ) : (
@@ -828,7 +880,7 @@ export default function AIGeneratePage() {
                             <button
                               type="button"
                               onClick={() => handleRemoveMedia(index, mi)}
-                              style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.65)', border: 'none', borderRadius: '50%', padding: 4, cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                              style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.65)', border: 'none', borderRadius: '50%', padding: 4, cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}
                             >
                               <X size={12} />
                             </button>
@@ -837,16 +889,39 @@ export default function AIGeneratePage() {
                                 type="button"
                                 title="Đóng dấu watermark cho ảnh này"
                                 onClick={() => handleOpenImageStudio(index)}
-                                style={{ position: 'absolute', top: 4, left: 4, background: 'rgba(0,0,0,0.7)', border: 'none', borderRadius: 4, padding: '2px 4px', cursor: 'pointer', color: '#00f2fe', display: 'flex', alignItems: 'center', gap: 2, fontSize: 9, fontWeight: 700 }}
+                                style={{ position: 'absolute', top: 4, left: 4, background: 'rgba(0,0,0,0.7)', border: 'none', borderRadius: 4, padding: '2px 4px', cursor: 'pointer', color: '#00f2fe', display: 'flex', alignItems: 'center', gap: 2, fontSize: 9, fontWeight: 700, zIndex: 2 }}
                               >
                                 <Stamp size={10} /> Dấu
                               </button>
                             )}
-                            <div style={{ position: 'absolute', bottom: 4, left: 4, fontSize: 10, background: 'rgba(0,0,0,0.7)', padding: '2px 4px', borderRadius: 4, color: '#fff', textTransform: 'uppercase', fontWeight: 600 }}>
+                            <div style={{ position: 'absolute', bottom: 4, left: 4, fontSize: 10, background: 'rgba(0,0,0,0.7)', padding: '2px 5px', borderRadius: 4, color: '#fff', textTransform: 'uppercase', fontWeight: 600, zIndex: 2 }}>
                               {m.watermarked ? '💧 DAU' : (m.aiGenerated ? '✨ AI' : (draft.postType || 'feed'))}
                             </div>
                           </div>
                         ))}
+                      </div>
+                    ) : (
+                      <div style={{
+                        marginTop: 8, padding: '12px 16px', borderRadius: 12,
+                        background: 'var(--apple-glass-bg-subtle)',
+                        border: '1px dashed rgba(37, 99, 235, 0.35)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--muted)', fontSize: 12 }}>
+                          <ImageIcon size={15} color="var(--blue)" />
+                          <span>Chưa có ảnh/video — Bấm các nút trên để đính kèm hoặc tạo ảnh AI</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenImageStudio(index)}
+                          style={{
+                            padding: '4px 10px', borderRadius: 8, fontSize: 11.5, fontWeight: 700,
+                            background: 'rgba(37, 99, 235, 0.1)', border: '1px solid rgba(37, 99, 235, 0.3)',
+                            color: 'var(--blue)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4
+                          }}
+                        >
+                          <Sparkles size={11} /> Tạo ảnh
+                        </button>
                       </div>
                     )}
                   </div>
@@ -862,7 +937,7 @@ export default function AIGeneratePage() {
                           disabled={channelsLoading}
                           title="Tải lại danh sách Fanpage từ hệ thống"
                           style={{
-                            background: 'none', border: 'none', color: '#00f2fe', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 2
+                            background: 'none', border: 'none', color: 'var(--blue)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 2
                           }}
                         >
                           <RefreshCw size={12} className={channelsLoading ? 'animate-spin' : ''} />
@@ -870,7 +945,7 @@ export default function AIGeneratePage() {
                       </div>
                       {channels.length > 0 && (
                         <button type="button" onClick={() => handleToggleAllPagesForDraft(index)} style={{
-                          background: 'none', border: 'none', color: '#00f2fe', cursor: 'pointer', fontSize: 11, fontWeight: 600
+                          background: 'none', border: 'none', color: 'var(--blue)', cursor: 'pointer', fontSize: 11, fontWeight: 600
                         }}>
                           {draft.selected_page_ids?.length === channels.length ? 'Bỏ chọn hết' : 'Chọn tất cả'}
                         </button>
@@ -895,7 +970,7 @@ export default function AIGeneratePage() {
                           <Link
                             href="/channels"
                             className="button button-quiet"
-                            style={{ padding: '3px 10px', fontSize: 11, height: 'auto', textDecoration: 'none', color: '#00f2fe' }}
+                            style={{ padding: '3px 10px', fontSize: 11, height: 'auto', textDecoration: 'none', color: 'var(--blue)' }}
                           >
                             Đến trang Kênh
                           </Link>
@@ -907,10 +982,10 @@ export default function AIGeneratePage() {
                           const selected = draft.selected_page_ids?.includes(ch.id);
                           return (
                             <button key={ch.id} type="button" onClick={() => handleTogglePage(index, ch.id)} style={{
-                              padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer',
-                              background: selected ? 'rgba(0,242,254,0.1)' : 'rgba(255,255,255,0.04)',
-                              border: `1px solid ${selected ? 'rgba(0,242,254,0.3)' : 'rgba(255,255,255,0.08)'}`,
-                              color: selected ? '#00f2fe' : 'var(--muted)', transition: 'all 0.2s',
+                              padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                              background: selected ? 'rgba(37, 99, 235, 0.12)' : 'var(--apple-glass-bg-subtle)',
+                              border: `1px solid ${selected ? 'rgba(37, 99, 235, 0.4)' : 'rgba(255,255,255,0.45)'}`,
+                              color: selected ? 'var(--blue)' : 'var(--ink)', transition: 'all 0.2s',
                               display: 'flex', alignItems: 'center', gap: 6
                             }}>
                               {selected && <Check size={12} />}
@@ -937,14 +1012,14 @@ export default function AIGeneratePage() {
                         value={draft.scheduled_at ? new Date(new Date(draft.scheduled_at).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''}
                         onChange={e => handleUpdateDraftField(index, 'scheduled_at', e.target.value ? new Date(e.target.value).toISOString() : null)}
                         style={{
-                          background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-                          borderRadius: 8, padding: '5px 10px', color: 'var(--fg)', fontSize: 12, outline: 'none'
+                          background: 'var(--apple-glass-bg-subtle)', border: '1px solid rgba(255,255,255,0.5)',
+                          borderRadius: 8, padding: '5px 10px', color: 'var(--ink)', fontSize: 12, outline: 'none'
                         }}
                       />
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <button type="button" onClick={() => handleSetQuickSchedule(index, 15)} style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--fg)', cursor: 'pointer' }}>+15 phút (FB Cloud)</button>
-                        <button type="button" onClick={() => handleSetQuickSchedule(index, 60)} style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--fg)', cursor: 'pointer' }}>+1 giờ</button>
-                        <button type="button" onClick={() => handleSetQuickSchedule(index, 180)} style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--fg)', cursor: 'pointer' }}>+3 giờ</button>
+                        <button type="button" onClick={() => handleSetQuickSchedule(index, 15)} style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, background: 'var(--apple-glass-bg-subtle)', border: '1px solid rgba(255,255,255,0.45)', color: 'var(--ink)', cursor: 'pointer' }}>+15 phút (FB Cloud)</button>
+                        <button type="button" onClick={() => handleSetQuickSchedule(index, 60)} style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, background: 'var(--apple-glass-bg-subtle)', border: '1px solid rgba(255,255,255,0.45)', color: 'var(--ink)', cursor: 'pointer' }}>+1 giờ</button>
+                        <button type="button" onClick={() => handleSetQuickSchedule(index, 180)} style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, background: 'var(--apple-glass-bg-subtle)', border: '1px solid rgba(255,255,255,0.45)', color: 'var(--ink)', cursor: 'pointer' }}>+3 giờ</button>
                         {draft.scheduled_at && (
                           <button type="button" onClick={() => handleSetQuickSchedule(index, null)} style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', cursor: 'pointer' }}>Đăng ngay</button>
                         )}
@@ -955,29 +1030,29 @@ export default function AIGeneratePage() {
                     {(() => {
                       if (!draft.scheduled_at) {
                         return (
-                          <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                            ⚡ Sẽ đăng ngay lập tức khi bạn bấm nút &quot;Đăng bài&quot;.
+                          <div className="glass-pill-badge" style={{ color: 'var(--muted)', fontSize: 11.5, marginTop: 4 }}>
+                            ⚡ Đăng ngay lập tức
                           </div>
                         );
                       }
                       const diffMins = (new Date(draft.scheduled_at).getTime() - Date.now()) / 60000;
                       if (draft.postType === 'reel' || draft.postType === 'story') {
                         return (
-                          <div style={{ fontSize: 11, color: '#f59e0b', background: 'rgba(245,158,11,0.08)', padding: '5px 10px', borderRadius: 6, border: '1px solid rgba(245,158,11,0.2)' }}>
-                            ⚡ <strong>Hàng đợi máy (Local Queue):</strong> Reels & Story cần mở tool/worker khi đến giờ đăng để xuất bản (do Meta chưa hỗ trợ hẹn giờ Reels/Story trên Cloud).
+                          <div className="glass-pill-badge" style={{ color: '#f59e0b', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', fontSize: 11.5, marginTop: 4 }}>
+                            ⚡ Hàng đợi máy tính (Cần mở app khi đến giờ)
                           </div>
                         );
                       }
                       if (diffMins >= 11 && diffMins <= 29 * 24 * 60) {
                         return (
-                          <div style={{ fontSize: 11, color: '#10b981', background: 'rgba(16,185,129,0.08)', padding: '5px 10px', borderRadius: 6, border: '1px solid rgba(16,185,129,0.25)' }}>
-                            ☁️ <strong>Lên lịch Facebook Cloud (Meta Planner):</strong> Đủ điều kiện! Tự động đăng đúng giờ kể cả khi bạn <strong>tắt máy / tắt app</strong>.
+                          <div className="glass-pill-badge" style={{ color: '#10b981', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', fontSize: 11.5, marginTop: 4 }}>
+                            ☁️ Meta Cloud Planner (Tắt máy/app vẫn tự đăng)
                           </div>
                         );
                       }
                       return (
-                        <div style={{ fontSize: 11, color: '#f59e0b', background: 'rgba(245,158,11,0.08)', padding: '5px 10px', borderRadius: 6, border: '1px solid rgba(245,158,11,0.2)' }}>
-                          ⚠️ Hẹn giờ dưới 11 phút: Facebook Cloud yêu cầu tối thiểu 11 phút. Bài sẽ được xử lý qua hàng đợi trên máy tính thay vì Meta Cloud.
+                        <div className="glass-pill-badge" style={{ color: '#f59e0b', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', fontSize: 11.5, marginTop: 4 }}>
+                          ⚠️ Hàng đợi máy (&lt; 11 phút)
                         </div>
                       );
                     })()}
@@ -987,18 +1062,39 @@ export default function AIGeneratePage() {
             ))}
           </div>
 
-          {/* Bottom Actions */}
+          {/* Bottom Actions - Sticky Crystal Glass Dock */}
           {drafts.length > 0 && (
             <div style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              marginTop: 24, padding: '16px 20px', background: 'rgba(255,255,255,0.03)',
-              borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)'
+              marginTop: 24, padding: '16px 24px',
+              position: 'sticky', bottom: 18, zIndex: 40,
+              background: 'var(--apple-glass-bg)',
+              backdropFilter: 'var(--apple-glass-blur)',
+              WebkitBackdropFilter: 'var(--apple-glass-blur)',
+              borderRadius: 20,
+              border: 'var(--apple-glass-border)',
+              borderTop: 'var(--apple-glass-border-top)',
+              boxShadow: 'var(--apple-glass-shadow)'
             }}>
-              <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-                {drafts.length} bài · {drafts.filter(d => d.selected_page_ids?.length > 0).length} đã chọn page
+              <div style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 600 }}>
+                <span style={{ color: 'var(--blue)', fontWeight: 800 }}>{drafts.length}</span> bài viết · <span style={{ color: '#10b981', fontWeight: 800 }}>{drafts.filter(d => d.selected_page_ids?.length > 0).length}</span> đã chọn Fanpage
               </div>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button type="button" className="button button-quiet" onClick={() => setStep(1)}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  style={{
+                    padding: '10px 18px', borderRadius: 12, cursor: 'pointer',
+                    background: 'var(--apple-glass-bg-subtle)',
+                    backdropFilter: 'var(--apple-glass-blur)',
+                    WebkitBackdropFilter: 'var(--apple-glass-blur)',
+                    border: 'var(--apple-glass-border)',
+                    borderTop: 'var(--apple-glass-border-top)',
+                    color: 'var(--ink)', fontSize: 13, fontWeight: 600,
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    transition: 'all 0.2s'
+                  }}
+                >
                   <ChevronLeft size={15} /> Quay lại
                 </button>
                 <button
@@ -1006,17 +1102,27 @@ export default function AIGeneratePage() {
                   onClick={handlePublish}
                   disabled={!canPublish || publishing}
                   style={{
-                    padding: '10px 24px', borderRadius: 12, border: 'none', cursor: canPublish && !publishing ? 'pointer' : 'not-allowed',
-                    background: canPublish && !publishing ? 'linear-gradient(135deg, #10b981, #059669)' : 'rgba(255,255,255,0.06)',
+                    padding: '11px 26px', borderRadius: 12, cursor: canPublish && !publishing ? 'pointer' : 'not-allowed',
+                    background: canPublish && !publishing
+                      ? 'linear-gradient(135deg, #10b981, #059669)'
+                      : 'var(--apple-glass-bg-subtle)',
+                    border: canPublish && !publishing
+                      ? '1px solid rgba(16, 185, 129, 0.4)'
+                      : 'var(--apple-glass-border)',
+                    borderTop: canPublish && !publishing
+                      ? '1px solid rgba(255, 255, 255, 0.5)'
+                      : 'var(--apple-glass-border-top)',
                     color: canPublish && !publishing ? '#fff' : 'var(--muted)',
                     fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8,
+                    boxShadow: canPublish && !publishing ? '0 4px 18px rgba(16, 185, 129, 0.35)' : 'none',
+                    opacity: canPublish && !publishing ? 1 : 0.65,
                     transition: 'all 0.3s'
                   }}
                 >
                   {publishing ? (
                     <><Loader2 size={16} className="animate-spin" /> Đang lên lịch...</>
                   ) : (
-                    <><Send size={16} /> Đăng {drafts.length} bài</>
+                    <><Send size={16} /> Đăng {drafts.length} bài viết</>
                   )}
                 </button>
               </div>
@@ -1026,8 +1132,13 @@ export default function AIGeneratePage() {
           {/* Publish error */}
           {publishResult && !publishResult.success && (
             <div style={{
-              marginTop: 12, padding: '12px 16px', borderRadius: 12,
-              background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', fontSize: 13
+              marginTop: 14, padding: '14px 18px', borderRadius: 14,
+              background: 'rgba(239,68,68,0.10)',
+              backdropFilter: 'var(--apple-glass-blur)',
+              WebkitBackdropFilter: 'var(--apple-glass-blur)',
+              border: '1px solid rgba(239,68,68,0.3)',
+              color: '#ef4444', fontSize: 13, fontWeight: 600,
+              boxShadow: '0 4px 14px rgba(239,68,68,0.1)'
             }}>
               ❌ {publishResult.message}
             </div>
@@ -1035,67 +1146,123 @@ export default function AIGeneratePage() {
         </div>
       )}
 
-      {/* ═══ STEP 3: Success ═══ */}
-      {step === 3 && publishResult?.success && (
-        <div style={{ maxWidth: 600, margin: '40px auto', textAlign: 'center' }}>
-          <div style={{
-            width: 80, height: 80, borderRadius: 24, margin: '0 auto 24px',
-            background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(5,150,105,0.1))',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            border: '2px solid rgba(16,185,129,0.3)'
-          }}>
-            <CheckCircle2 size={40} color="#10b981" />
-          </div>
-          <h2 style={{ margin: '0 0 8px', fontSize: 24, fontWeight: 700 }}>Thành công! 🎉</h2>
-          <p style={{ color: 'var(--muted)', fontSize: 15, lineHeight: 1.6, marginBottom: 24 }}>
-            {publishResult.message}
-          </p>
-
-          {/* Results summary */}
-          <div style={{
-            background: 'rgba(255,255,255,0.03)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)',
-            padding: 20, marginBottom: 24, textAlign: 'left'
-          }}>
-            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, color: 'var(--fg)' }}>Chi tiết:</div>
-            {publishResult.results?.map((r, i) => (
-              <div key={i} style={{
-                display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0',
-                borderBottom: i < publishResult.results.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none'
+      {/* ═══ STEP 3: Hoàn tất & Xuất bản thành công ═══ */}
+      {step === 3 && (
+        <div style={{
+          maxWidth: 720, margin: '30px auto', textAlign: 'center',
+          padding: '40px 36px',
+          background: 'var(--apple-glass-bg)',
+          backdropFilter: 'var(--apple-glass-blur)',
+          WebkitBackdropFilter: 'var(--apple-glass-blur)',
+          borderRadius: 24,
+          border: 'var(--apple-glass-border)',
+          borderTop: 'var(--apple-glass-border-top)',
+          boxShadow: 'var(--apple-glass-shadow)'
+        }}>
+          {publishResult?.success ? (
+            <>
+              <div style={{
+                width: 80, height: 80, borderRadius: 24, margin: '0 auto 20px',
+                background: 'linear-gradient(135deg, rgba(16,185,129,0.22), rgba(5,150,105,0.15))',
+                backdropFilter: 'var(--apple-glass-blur)',
+                WebkitBackdropFilter: 'var(--apple-glass-blur)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: '2px solid rgba(16,185,129,0.4)',
+                boxShadow: '0 8px 28px rgba(16, 185, 129, 0.25)'
               }}>
-                {r.success ? (
-                  <CheckCircle2 size={16} color="#10b981" />
-                ) : (
-                  <X size={16} color="#ef4444" />
-                )}
-                <div style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span>Bài #{i + 1}: {r.success ? `Đã tạo ${r.postIds?.length || 0} bài đăng` : `❌ ${r.message}`}</span>
-                  {r.isFbCloud && (
-                    <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: 'rgba(16,185,129,0.15)', color: '#10b981', fontWeight: 600 }}>
-                      ☁️ Đã đồng bộ lên lịch Facebook (Tắt app vẫn tự đăng)
-                    </span>
-                  )}
-                  {r.success && !r.isFbCloud && (
-                    <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: 'rgba(245,158,11,0.15)', color: '#f59e0b', fontWeight: 600 }}>
-                      ⚡ Đang chờ trong hàng đợi máy
-                    </span>
-                  )}
-                </div>
+                <CheckCircle2 size={44} color="#10b981" />
               </div>
-            ))}
-          </div>
+              <h2 style={{ margin: '0 0 8px', fontSize: 26, fontWeight: 800, color: 'var(--ink)' }}>Hoàn tất thành công! 🎉</h2>
+              <p style={{ color: 'var(--muted)', fontSize: 15, lineHeight: 1.6, marginBottom: 26 }}>
+                {publishResult.message || 'Các bài viết đã được xử lý và phân phối thành công theo kế hoạch.'}
+              </p>
 
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-            <button type="button" className="button button-quiet" onClick={handleStartOver} style={{ padding: '10px 20px' }}>
+              {/* Results summary */}
+              <div style={{
+                background: 'var(--apple-glass-bg-subtle)',
+                backdropFilter: 'var(--apple-glass-blur)',
+                WebkitBackdropFilter: 'var(--apple-glass-blur)',
+                borderRadius: 18,
+                border: 'var(--apple-glass-border)',
+                borderTop: 'var(--apple-glass-border-top)',
+                padding: 22, marginBottom: 28, textAlign: 'left',
+                boxShadow: 'var(--apple-glass-shadow)'
+              }}>
+                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14, color: 'var(--ink)' }}>Chi tiết kết quả xuất bản:</div>
+                {publishResult.results?.map((r, i) => (
+                  <div key={i} style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0',
+                    borderBottom: i < publishResult.results.length - 1 ? '1px solid var(--line)' : 'none'
+                  }}>
+                    {r.success ? (
+                      <CheckCircle2 size={16} color="#10b981" />
+                    ) : (
+                      <X size={16} color="#ef4444" />
+                    )}
+                    <div style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 600, color: 'var(--ink)' }}>Bài #{i + 1}: {r.success ? `Đã tạo ${r.postIds?.length || 0} bài đăng` : `❌ ${r.message}`}</span>
+                      {r.isFbCloud && (
+                        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: 'rgba(16,185,129,0.15)', color: '#10b981', fontWeight: 700, border: '1px solid rgba(16,185,129,0.3)' }}>
+                          ☁️ Đã đồng bộ lên lịch Facebook Cloud
+                        </span>
+                      )}
+                      {r.success && !r.isFbCloud && (
+                        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: 'rgba(245,158,11,0.15)', color: '#f59e0b', fontWeight: 700, border: '1px solid rgba(245,158,11,0.3)' }}>
+                          ⚡ Đang chờ trong hàng đợi máy
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{
+                width: 80, height: 80, borderRadius: 24, margin: '0 auto 20px',
+                background: 'linear-gradient(135deg, rgba(239,68,68,0.2), rgba(220,38,38,0.12))',
+                backdropFilter: 'var(--apple-glass-blur)',
+                WebkitBackdropFilter: 'var(--apple-glass-blur)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: '2px solid rgba(239,68,68,0.4)',
+                boxShadow: '0 8px 28px rgba(239, 68, 68, 0.25)'
+              }}>
+                <X size={44} color="#ef4444" />
+              </div>
+              <h2 style={{ margin: '0 0 8px', fontSize: 24, fontWeight: 800, color: 'var(--ink)' }}>Chưa hoàn tất</h2>
+              <p style={{ color: 'var(--muted)', fontSize: 15, lineHeight: 1.6, marginBottom: 26 }}>
+                {publishResult?.message || 'Có lỗi xảy ra hoặc các bài viết chưa được đăng.'}
+              </p>
+            </>
+          )}
+
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={handleStartOver}
+              style={{
+                padding: '11px 22px', borderRadius: 12, cursor: 'pointer',
+                background: 'var(--apple-glass-bg-subtle)',
+                backdropFilter: 'var(--apple-glass-blur)',
+                WebkitBackdropFilter: 'var(--apple-glass-blur)',
+                border: 'var(--apple-glass-border)',
+                borderTop: 'var(--apple-glass-border-top)',
+                color: 'var(--ink)', fontSize: 14, fontWeight: 700,
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                transition: 'all 0.2s'
+              }}
+            >
               <Plus size={15} /> Tạo batch mới
             </button>
-            <a href="/post-planner/list" style={{
-              padding: '10px 20px', borderRadius: 12, border: 'none', cursor: 'pointer',
-              background: 'linear-gradient(135deg, #00f2fe, #4facfe)', color: '#fff',
-              fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8,
-              textDecoration: 'none'
+            <Link href="/post-planner/list" style={{
+              padding: '11px 24px', borderRadius: 12, border: 'none', cursor: 'pointer',
+              background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', color: '#fff',
+              fontSize: 14, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 8,
+              textDecoration: 'none', boxShadow: '0 4px 16px rgba(37, 99, 235, 0.35)',
+              transition: 'all 0.2s'
             }}>
               Xem danh sách bài đăng <ArrowRight size={15} />
-            </a>
+            </Link>
           </div>
         </div>
       )}
