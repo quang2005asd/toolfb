@@ -34,7 +34,7 @@ Hệ thống quản lý, lập lịch bài đăng và tự động hoá Fanpage 
 
 ### 1. Khởi động toàn bộ hệ sinh thái
 
-Mở Terminal tại thư mục dự án và chạy:
+Mở Terminal tại thư mục `tool_face` và chạy:
 
 ```bash
 docker compose up -d --build
@@ -77,11 +77,11 @@ docker run -d --name redis-toolfb -p 6379:6379 redis:7-alpine
 
 ```bash
 # Terminal 1: Cài đặt Backend
-cd tool_face/server
+cd server
 npm install
 
 # Terminal 2: Cài đặt Frontend
-cd tool_face/client
+cd client
 npm install
 ```
 
@@ -115,15 +115,15 @@ Mở 3 cửa sổ Terminal riêng biệt:
 
 ```bash
 # Terminal 1: Chạy Server Backend (Port 5000)
-cd tool_face/server
+cd server
 npm run dev
 
 # Terminal 2: Chạy Worker Queue xử lý đăng bài
-cd tool_face/server
+cd server
 npm run worker
 
 # Terminal 3: Chạy Client Frontend (Port 3000)
-cd tool_face/client
+cd client
 npm run dev
 ```
 
@@ -134,38 +134,36 @@ Truy cập: **http://localhost:3000**
 ## 📁 Cấu Trúc Dự Án
 
 ```
-toolfb/
-├── docker-compose.yml              # File Docker Compose tại gốc dự án
-├── README.md                       # Tài liệu hướng dẫn sử dụng
-└── tool_face/
-    ├── docker-compose.yml          # Docker Compose nội bộ
-    ├── ecosystem.config.js         # Cấu hình PM2 cho môi trường VPS
-    │
-    ├── client/                     # FRONTEND (Next.js 16 + React 19)
-    │   ├── Dockerfile              # Multi-stage Dockerfile (Nginx)
-    │   ├── nginx.conf              # Cấu hình Web Server Nginx & Reverse Proxy
-    │   ├── src/
-    │   │   ├── pages/              # Các trang giao diện (Dashboard, Compose, Channels...)
-    │   │   ├── components/         # Layout & thành phần giao diện dùng chung
-    │   │   ├── context/            # AuthContext, ThemeContext (Đồng bộ Dark/Light)
-    │   │   ├── services/           # Axios API clients
-    │   │   └── styles/             # globals.css (Hệ thống thiết kế Apple Frosted Glass)
-    │   └── package.json
-    │
-    ├── server/                     # BACKEND (Node.js Express + BullMQ)
-    │   ├── Dockerfile              # Dockerfile backend & worker
-    │   ├── src/                    # API routes, controllers, middleware
-    │   ├── config/
-    │   │   ├── db.js               # Kết nối CSDL (SQLite / MSSQL) & Redis
-    │   │   └── sqliteAdapter.js    # Trình tương thích SQLite không cần cài SQL Server
-    │   ├── queues/                 # Hàng đợi BullMQ (post.worker.js, comment.worker.js)
-    │   ├── data/                   # Thư mục lưu database SQLite tự động
-    │   ├── uploads/                # Thư mục lưu ảnh / video đính kèm
-    │   └── package.json
-    │
-    └── desktop/                    # DESKTOP APP (Electron wrapper)
-        ├── main.js
-        └── package.json
+tool_face/
+├── docker-compose.yml          # Docker Compose toàn diện cho cả hệ thống
+├── README.md                   # Tài liệu hướng dẫn sử dụng
+├── ecosystem.config.js         # Cấu hình PM2 cho môi trường VPS
+│
+├── client/                     # FRONTEND (Next.js 16 + React 19)
+│   ├── Dockerfile              # Multi-stage Dockerfile (Nginx)
+│   ├── nginx.conf              # Cấu hình Web Server Nginx & Reverse Proxy
+│   ├── src/
+│   │   ├── pages/              # Các trang giao diện (Dashboard, Compose, Channels...)
+│   │   ├── components/         # Layout & thành phần giao diện dùng chung
+│   │   ├── context/            # AuthContext, ThemeContext (Đồng bộ Dark/Light)
+│   │   ├── services/           # Axios API clients
+│   │   └── styles/             # globals.css (Hệ thống thiết kế Apple Frosted Glass)
+│   └── package.json
+│
+├── server/                     # BACKEND (Node.js Express + BullMQ)
+│   ├── Dockerfile              # Dockerfile backend & worker
+│   ├── src/                    # API routes, controllers, middleware
+│   ├── config/
+│   │   ├── db.js               # Kết nối CSDL (SQLite / MSSQL) & Redis
+│   │   └── sqliteAdapter.js    # Trình tương thích SQLite không cần cài SQL Server
+│   ├── queues/                 # Hàng đợi BullMQ (post.worker.js, comment.worker.js, start.workers.js)
+│   ├── data/                   # Thư mục lưu database SQLite tự động
+│   ├── uploads/                # Thư mục lưu ảnh / video đính kèm
+│   └── package.json
+│
+└── desktop/                    # DESKTOP APP (Electron wrapper)
+    ├── main.js
+    └── package.json
 ```
 
 ---
