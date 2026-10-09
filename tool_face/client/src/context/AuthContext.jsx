@@ -1,8 +1,17 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import authApi from '../services/authApi';
+import postApi from '../services/postApi';
+import channelApi from '../services/channelApi';
+import { hasPermission } from '../utils/permissions';
 
 const AuthContext = createContext(null);
+
+// Cache dữ liệu theo tài khoản phải xóa khi đổi tài khoản để không lộ dữ liệu của người trước
+function resetAccountCaches() {
+  postApi.invalidateStatsCache();
+  channelApi.invalidateCache();
+}
 
 export function AuthProvider({ children }) {
   const router = useRouter();
@@ -51,10 +60,18 @@ export function AuthProvider({ children }) {
     try {
       await authApi.logout();
     } finally {
+      resetAccountCaches();
       setUser(null);
       await router.replace('/login?loggedOut=1');
     }
   }, [router]);
+
+  const signIn = useCallback((nextUser) => {
+    resetAccountCaches();
+    setUser(nextUser);
+  }, []);
+
+  const can = useCallback((permission) => hasPermission(user, permission), [user]);
 
   const refreshUser = useCallback(async () => {
     try {
@@ -71,8 +88,10 @@ export function AuthProvider({ children }) {
     loading,
     logout,
     refreshUser,
-    setUser
-  }), [user, loading, logout, refreshUser]);
+    setUser,
+    signIn,
+    can
+  }), [user, loading, logout, refreshUser, signIn, can]);
 
   return (
     <AuthContext.Provider value={value}>

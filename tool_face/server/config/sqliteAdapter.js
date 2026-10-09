@@ -131,9 +131,13 @@ CREATE TABLE IF NOT EXISTS ChannelGroups (
 CREATE TABLE IF NOT EXISTS AppUsers (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   username TEXT NOT NULL UNIQUE,
+  email TEXT,
   password_hash TEXT NOT NULL,
   display_name TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'user',
+  status TEXT NOT NULL DEFAULT 'active',
+  created_by INTEGER,
+  last_login_at TEXT,
   created_at TEXT DEFAULT (datetime('now', 'localtime')),
   updated_at TEXT DEFAULT (datetime('now', 'localtime'))
 );
@@ -176,9 +180,49 @@ CREATE INDEX IF NOT EXISTS IX_AiDrafts_user_batch ON AiGeneratedDrafts(user_id, 
 CREATE INDEX IF NOT EXISTS IX_AiDrafts_user_status ON AiGeneratedDrafts(user_id, status);
 `;
 
+// Bổ sung cột mới cho các CSDL đã được tạo từ phiên bản cũ (CREATE TABLE IF NOT EXISTS không tự thêm cột)
+const COLUMN_MIGRATIONS = {
+  AppUsers: {
+    email: 'TEXT',
+    status: "TEXT NOT NULL DEFAULT 'active'",
+    created_by: 'INTEGER',
+    last_login_at: 'TEXT'
+  }
+};
+
+const POST_MIGRATION_DDL = `
+CREATE UNIQUE INDEX IF NOT EXISTS UX_AppUsers_email ON AppUsers(email) WHERE email IS NOT NULL;
+`;
+
+function runSqlite(db, method, statement, params = []) {
+  return new Promise((resolve, reject) => {
+    db[method](statement, params, (err, result) => (err ? reject(err) : resolve(result)));
+  });
+}
+
+async function migrateColumns(db) {
+  for (const [table, columns] of Object.entries(COLUMN_MIGRATIONS)) {
+    const existing = new Set((await runSqlite(db, 'all', `PRAGMA table_info(${table})`)).map((column) => column.name));
+    for (const [column, definition] of Object.entries(columns)) {
+      if (!existing.has(column)) {
+        try {
+          await runSqlite(db, 'run', `ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+          console.log(`[SQLite Migration] Đã thêm cột ${table}.${column}`);
+        } catch (err) {
+          // Server và worker dùng chung file CSDL nên tiến trình kia có thể đã thêm cột trước
+          if (!/duplicate column name/i.test(err.message)) throw err;
+        }
+      }
+    }
+  }
+  await new Promise((resolve, reject) => db.exec(POST_MIGRATION_DDL, (err) => (err ? reject(err) : resolve())));
+}
+
 function getSqliteDb() {
   if (!dbInstance) {
     dbInstance = new sqlite3.Database(dbFilePath);
+    // Chờ thay vì báo lỗi SQLITE_BUSY khi server và worker cùng ghi vào file
+    dbInstance.configure('busyTimeout', 5000);
   }
   return dbInstance;
 }
@@ -194,6 +238,11 @@ function initSqliteDatabase() {
         }
         console.log(`[SQLite] Đã kết nối và khởi tạo CSDL thành công tại: ${dbFilePath}`);
 
+        migrateColumns(db).then(() => resolve(db), (migrationErr) => {
+          console.error('[SQLite] Lỗi migration cột:', migrationErr);
+          reject(migrationErr);
+        });
+
         // Tự động chuyển đổi các bản ghi cũ nếu có scheduled_at dạng epoch float sang chuẩn ISO 8601
         db.all("SELECT id, scheduled_at FROM Posts WHERE scheduled_at LIKE '%.0'", (migErr, rows) => {
           if (!migErr && rows && rows.length > 0) {
@@ -206,8 +255,6 @@ function initSqliteDatabase() {
             console.log(`[SQLite Migration] Đã chuẩn hóa ${rows.length} bài viết sang định dạng ngày giờ chuẩn ISO.`);
           }
         });
-
-        resolve(db);
       });
     });
   }

@@ -1,8 +1,11 @@
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 import useAuth from '../../hooks/useAuth';
 import { useTheme } from '../../context/ThemeContext';
+import RoleBadge from '../RoleBadge';
+import { PERMISSIONS, hasPermission } from '../../utils/permissions';
 import {
   BarChart3,
   Bell,
@@ -13,14 +16,19 @@ import {
   Home,
   LayoutDashboard,
   List,
+  LogOut,
   Moon,
   PenLine,
   Settings,
+  ShieldAlert,
   Sparkles,
   Sun,
+  UserCog,
+  UserRound,
   UsersRound
 } from 'lucide-react';
 
+// `permission`: chỉ hiển thị mục menu khi tài khoản có quyền tương ứng
 const navigation = [
   { label: 'Bảng tin', href: '/dashboard', icon: LayoutDashboard },
   { label: 'AI Studio', href: '/ai-studio', icon: Sparkles },
@@ -28,10 +36,81 @@ const navigation = [
   { label: 'Lịch đăng', href: '/post-planner/calendar', icon: CalendarDays },
   { label: 'Bài đăng', href: '/post-planner/list', icon: List },
   { label: 'Báo cáo', href: '/post-planner/dashboard', icon: BarChart3 },
-  { label: 'Kênh', href: '/channels', icon: UsersRound }
+  { label: 'Kênh', href: '/channels', icon: UsersRound },
+  { label: 'Thành viên', href: '/users', icon: UserCog, permission: PERMISSIONS.USERS_MANAGE }
 ];
 
-export default function MainLayout({ children, title = 'Không gian làm việc', actions }) {
+function AccountMenu({ user, onLogout }) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const handleClick = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) setOpen(false);
+    };
+    const handleKey = (event) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [open]);
+
+  return (
+    <div className="account-menu" ref={menuRef}>
+      <button
+        className="account-chip"
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        title={`${user.name} · ${user.roleLabel || ''}`}
+      >
+        {user.avatar ? (
+          <img
+            src={user.avatar}
+            alt={user.name}
+            className="account-dot"
+            referrerPolicy="no-referrer"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            style={{ objectFit: 'cover', display: 'block' }}
+          />
+        ) : (
+          <span className="account-dot">{user.name?.charAt(0)?.toUpperCase() || 'U'}</span>
+        )}
+        <span>{user.name}<small className="account-role">{user.roleLabel} · @{user.username}</small></span>
+        <ChevronDown size={15} style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
+      </button>
+
+      {open && (
+        <div className="account-dropdown" role="menu">
+          <div className="account-dropdown-head">
+            <strong>{user.name}</strong>
+            <span>@{user.username}{user.email ? ` · ${user.email}` : ''}</span>
+            <RoleBadge role={user.role} label={user.roleLabel} size="sm" />
+          </div>
+          <Link href="/settings" className="account-dropdown-item" role="menuitem" onClick={() => setOpen(false)}>
+            <UserRound size={15} /> Hồ sơ & bảo mật
+          </Link>
+          {hasPermission(user, PERMISSIONS.USERS_MANAGE) && (
+            <Link href="/users" className="account-dropdown-item" role="menuitem" onClick={() => setOpen(false)}>
+              <UserCog size={15} /> Quản lý thành viên
+            </Link>
+          )}
+          <button type="button" className="account-dropdown-item is-danger" role="menuitem" onClick={onLogout}>
+            <LogOut size={15} /> Đăng xuất
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function MainLayout({ children, title = 'Không gian làm việc', actions, requiredPermission }) {
   const router = useRouter();
   const { user, loading, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -44,7 +123,7 @@ export default function MainLayout({ children, title = 'Không gian làm việc'
             <Image src="/brand-logo.png" alt="Logo" width={43} height={43} priority />
           </Link>
           <nav className="sidebar-nav">
-            {navigation.map(({ label, icon: Icon }) => (
+            {navigation.filter((item) => !item.permission).map(({ label, icon: Icon }) => (
               <div className="nav-item" key={label} style={{ opacity: 0.65 }}>
                 <Icon size={20} strokeWidth={1.8} aria-hidden="true" />
                 <span>{label}</span>
@@ -75,6 +154,9 @@ export default function MainLayout({ children, title = 'Không gian làm việc'
   }
   if (!user) return null;
 
+  const visibleNavigation = navigation.filter((item) => !item.permission || hasPermission(user, item.permission));
+  const allowed = !requiredPermission || hasPermission(user, requiredPermission);
+
   return (
     <div className="workspace">
       <aside className="sidebar" aria-label="Điều hướng chính">
@@ -82,7 +164,7 @@ export default function MainLayout({ children, title = 'Không gian làm việc'
           <Image src="/brand-logo.png" alt="Logo" width={43} height={43} priority />
         </Link>
         <nav className="sidebar-nav">
-          {navigation.map(({ label, href, icon: Icon }) => {
+          {visibleNavigation.map(({ label, href, icon: Icon }) => {
             const active = href === '/'
               ? router.pathname === '/'
               : router.pathname === href || router.pathname.startsWith(`${href}/`);
@@ -114,7 +196,7 @@ export default function MainLayout({ children, title = 'Không gian làm việc'
           >
             <Settings size={19} strokeWidth={1.8} aria-hidden="true" /><span>Cài đặt</span>
           </Link>
-          <button className="profile-avatar" type="button" aria-label={`Tài khoản ${user.name}`} title={user.name}>
+          <Link href="/settings" className={`profile-avatar profile-role-${user.role}`} aria-label={`Tài khoản ${user.name}`} title={`${user.name} · ${user.roleLabel}`}>
             {user.avatar ? (
               <img
                 src={user.avatar}
@@ -126,7 +208,7 @@ export default function MainLayout({ children, title = 'Không gian làm việc'
             ) : (
               user.name?.charAt(0)?.toUpperCase() || 'U'
             )}
-          </button>
+          </Link>
         </div>
       </aside>
 
@@ -145,22 +227,7 @@ export default function MainLayout({ children, title = 'Không gian làm việc'
           </button>
           <button className="icon-button" type="button" aria-label="Trợ giúp"><CircleHelp size={19} /></button>
           <button className="icon-button" type="button" aria-label="Thông báo"><Bell size={19} /></button>
-          <button className="account-chip" type="button" onClick={logout} title={`Facebook ID: ${user.id} · Đăng xuất`}>
-            {user.avatar ? (
-              <img
-                src={user.avatar}
-                alt={user.name}
-                className="account-dot"
-                referrerPolicy="no-referrer"
-                onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                style={{ objectFit: 'cover', display: 'block' }}
-              />
-            ) : (
-              <span className="account-dot">{user.name?.charAt(0)?.toUpperCase() || 'F'}</span>
-            )}
-            <span>{user.name}<small className="account-role">{user.role === 'admin' ? 'Admin' : 'Thành viên'} · Đăng xuất</small></span>
-            <ChevronDown size={15} />
-          </button>
+          <AccountMenu user={user} onLogout={logout} />
         </header>
         <main className="page-area">
           <div className="page-topline">
@@ -168,10 +235,20 @@ export default function MainLayout({ children, title = 'Không gian làm việc'
               <span className="eyebrow">AUTO POST FANPAGE</span>
               <h1>{title}</h1>
             </div>
-            {actions && <div className="page-actions">{actions}</div>}
+            {allowed && actions && <div className="page-actions">{actions}</div>}
           </div>
           <div className="page-content-flow" key={router.asPath}>
-            {children}
+            {allowed ? children : (
+              <section className="panel access-denied">
+                <ShieldAlert size={36} aria-hidden="true" />
+                <h2>Bạn không có quyền truy cập trang này</h2>
+                <p className="muted">
+                  Tài khoản <strong>@{user.username}</strong> đang ở vai trò <RoleBadge role={user.role} label={user.roleLabel} size="sm" />.
+                  Liên hệ Quản lý hoặc Quản trị viên nếu bạn cần thêm quyền.
+                </p>
+                <Link href="/dashboard" className="button button-primary">Về Bảng tin</Link>
+              </section>
+            )}
           </div>
         </main>
       </div>

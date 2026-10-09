@@ -23,12 +23,25 @@ import {
   Flame,
   Radio,
   Zap,
-  BarChart3
+  BarChart3,
+  Settings as SettingsIcon,
+  UserCog,
+  UsersRound
 } from 'lucide-react';
 import MainLayout from '../components/layout/MainLayout';
 import postApi from '../services/postApi';
 import channelApi from '../services/channelApi';
 import useAuth from '../hooks/useAuth';
+import userApi from '../services/userApi';
+import RoleBadge from '../components/RoleBadge';
+import { PERMISSIONS, formatDateTime } from '../utils/permissions';
+
+// Mô tả phạm vi dữ liệu Bảng tin theo vai trò
+const SCOPE_TEXT = {
+  admin: 'Bạn đang xem số liệu toàn hệ thống (bài của bạn, Quản lý và Thành viên).',
+  manager: 'Bạn đang xem số liệu của bạn và các Thành viên trong đội.',
+  user: 'Bạn đang xem số liệu bài đăng của riêng bạn.'
+};
 import { resolveMediaUrl } from '../components/AiImageStudioModal';
 
 function parseDateSafe(val) {
@@ -55,7 +68,9 @@ function formatDateSafe(val, fallback = 'Đăng trực tiếp') {
 }
 
 export default function DashboardHomePage() {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
+  const canManageUsers = can(PERMISSIONS.USERS_MANAGE);
+  const [team, setTeam] = useState(null);
   const [stats, setStats] = useState({ total: 0, pending: 0, published: 0, failed: 0 });
   const [posts, setPosts] = useState([]);
   const [channels, setChannels] = useState([]);
@@ -108,11 +123,16 @@ export default function DashboardHomePage() {
     setError('');
 
     try {
-      const [statsRes, postsRes, channelsRes] = await Promise.allSettled([
+      const [statsRes, postsRes, channelsRes, teamRes] = await Promise.allSettled([
         postApi.getStats(isSilent),
         postApi.getPostsList({ limit: 8 }),
-        channelApi.list(isSilent)
+        channelApi.list(isSilent),
+        canManageUsers ? userApi.list() : Promise.resolve(null)
       ]);
+
+      if (teamRes.status === 'fulfilled' && teamRes.value?.users) {
+        setTeam(teamRes.value.users);
+      }
 
       if (statsRes.status === 'fulfilled' && statsRes.value?.stats) {
         setStats(statsRes.value.stats);
@@ -132,7 +152,7 @@ export default function DashboardHomePage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [canManageUsers]);
 
   useEffect(() => {
     loadDashboardData();
@@ -219,7 +239,7 @@ export default function DashboardHomePage() {
 
   const [avatarError, setAvatarError] = useState(false);
   const avatarUrl = !avatarError
-    ? user?.avatar || (user?.id ? `https://graph.facebook.com/${user.id}/picture?type=large` : null) || channels[0]?.picture?.data?.url || null
+    ? user?.avatar || channels[0]?.picture?.data?.url || null
     : null;
 
   const displayName = user?.name || user?.email?.split('@')[0] || 'Chủ tịch';
@@ -253,6 +273,7 @@ export default function DashboardHomePage() {
             </div>
             <div>
               <div className="dashboard-live-badges">
+                {user && <RoleBadge role={user.role} label={user.roleLabel} size="sm" />}
                 <span className="dashboard-badge-chip green">
                   <span className="float-dot green" /> BullMQ Engine: Đang chạy
                 </span>
@@ -268,7 +289,7 @@ export default function DashboardHomePage() {
               </h1>
               <p className="dashboard-subtitle">
                 Hôm nay là <strong style={{ color: 'var(--ink)', textTransform: 'capitalize' }}>{formattedToday}</strong>.
-                Trung tâm điều phối & tự động hóa nội dung đa kênh Facebook của bạn đang vận hành ổn định.
+                {' '}{SCOPE_TEXT[user?.role] || SCOPE_TEXT.user}
               </p>
             </div>
           </div>
@@ -305,6 +326,57 @@ export default function DashboardHomePage() {
         <div className="notice" style={{ marginBottom: 18 }}>
           {error}
         </div>
+      )}
+
+      {/* ═══ TỔNG QUAN ĐỘI NHÓM (CHỈ QUẢN LÝ / QUẢN TRỊ VIÊN) ═══ */}
+      {canManageUsers && (
+        <section className="panel team-overview">
+          <div className="panel-heading">
+            <h2><UsersRound size={16} style={{ verticalAlign: 'middle', marginRight: 8, color: 'var(--blue)' }} />Tổng quan đội nhóm</h2>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {can(PERMISSIONS.SETTINGS_SYSTEM) && (
+                <Link className="button button-secondary team-overview-btn" href="/settings">
+                  <SettingsIcon size={14} /> Cấu hình hệ thống
+                </Link>
+              )}
+              <Link className="button button-primary team-overview-btn" href="/users">
+                <UserCog size={14} /> Quản lý thành viên
+              </Link>
+            </div>
+          </div>
+          <div className="panel-body team-overview-body">
+            <div className="team-overview-stats">
+              {(user?.role === 'admin' ? ['admin', 'manager', 'user'] : ['manager', 'user']).map((role) => (
+                <div key={role} className="team-overview-stat">
+                  <RoleBadge role={role} size="sm" />
+                  <strong>{team ? team.filter((member) => member.role === role).length : '—'}</strong>
+                </div>
+              ))}
+              <div className="team-overview-stat">
+                <span className="status-pill failed">Đã khóa</span>
+                <strong>{team ? team.filter((member) => member.status === 'locked').length : '—'}</strong>
+              </div>
+            </div>
+            <div className="team-overview-recent">
+              <span className="muted">Tài khoản mới nhất bạn quản lý</span>
+              {team && team.filter((member) => member.manageable).length === 0 && (
+                <p className="muted" style={{ margin: '8px 0 0', fontSize: 12.5 }}>Chưa có tài khoản cấp dưới. Bấm “Quản lý thành viên” để tạo tài khoản.</p>
+              )}
+              <ul>
+                {(team || []).filter((member) => member.manageable).slice(-4).reverse().map((member) => (
+                  <li key={member.id}>
+                    <span className={`um-avatar um-avatar-${member.role}`}>{member.name?.charAt(0)?.toUpperCase() || 'U'}</span>
+                    <div>
+                      <strong>{member.name}</strong>
+                      <small>@{member.username} · {formatDateTime(member.lastLoginAt, 'Chưa đăng nhập')}</small>
+                    </div>
+                    <RoleBadge role={member.role} label={member.roleLabel} size="sm" />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
       )}
 
       {/* ═══ 2. SPOTLIGHT: NEXT UPCOMING POST ═══ */}

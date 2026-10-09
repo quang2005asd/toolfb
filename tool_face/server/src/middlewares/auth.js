@@ -1,4 +1,6 @@
 const crypto = require('crypto');
+const { getActiveSessionUser } = require('../utils/AppUserService');
+const { hasPermission } = require('../utils/Roles');
 
 const SESSION_COOKIE = 'tool_face_session';
 const OAUTH_STATE_COOKIE = 'tool_face_oauth_state';
@@ -51,7 +53,7 @@ function authConfiguration() {
   if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_ID === process.env.FACEBOOK_PAGE_ID) {
     missing.push('FACEBOOK_APP_ID phải là Meta App ID, không phải FACEBOOK_PAGE_ID');
   }
-  return { configured: missing.length === 0, missing, adminConfigured: adminIds().size > 0 };
+  return { configured: missing.length === 0, missing };
 }
 
 function facebookRedirectUri() {
@@ -62,24 +64,14 @@ function clientOrigin() {
   return (process.env.CLIENT_ORIGIN || 'http://localhost:3000').replace(/\/$/, '');
 }
 
-function adminIds() {
-  return new Set((process.env.FACEBOOK_ADMIN_IDS || '')
-    .split(',')
-    .map((id) => id.trim())
-    .filter(Boolean));
-}
-
 function signSession(user) {
   const secret = getSessionSecret();
   if (!secret) throw new Error('SESSION_SECRET must contain at least 32 characters.');
 
   const now = Math.floor(Date.now() / 1000);
-  const avatar = user.picture?.data?.url || user.avatar || null;
   const payload = Buffer.from(JSON.stringify({
     sub: String(user.id),
-    name: String(user.name || 'Facebook user').slice(0, 120),
-    avatar: avatar ? String(avatar).slice(0, 1000) : null,
-    role: adminIds().has(String(user.id)) ? 'admin' : 'user',
+    name: String(user.name || user.username || 'User').slice(0, 120),
     iat: now,
     exp: now + SESSION_TTL_SECONDS
   })).toString('base64url');
@@ -101,14 +93,14 @@ function verifySession(token) {
   try {
     const session = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
     if (!session.sub || !session.exp || session.exp <= Math.floor(Date.now() / 1000)) return null;
-    session.role = adminIds().has(String(session.sub)) ? 'admin' : 'user';
     return session;
   } catch {
     return null;
   }
 }
 
-function loadSession(req, _res, next) {
+// Đối chiếu phiên với CSDL mỗi request: role mới / khóa / xóa tài khoản có hiệu lực ngay lập tức
+async function loadSession(req, _res, next) {
   const cookies = parseCookies(req.headers.cookie);
   let session = verifySession(cookies[SESSION_COOKIE]);
   if (!session && req.headers.authorization) {
@@ -117,7 +109,30 @@ function loadSession(req, _res, next) {
       session = verifySession(authHeader.slice(7).trim());
     }
   }
-  req.user = session;
+
+  req.user = null;
+  if (session) {
+    try {
+      const account = await getActiveSessionUser(session.sub);
+      if (account) {
+        req.user = {
+          sub: account.id,
+          username: account.username,
+          email: account.email,
+          name: account.name,
+          role: account.role,
+          roleLabel: account.roleLabel,
+          level: account.level,
+          permissions: account.permissions,
+          account,
+          iat: session.iat,
+          exp: session.exp
+        };
+      }
+    } catch (error) {
+      console.error('[Session Lookup Error]', error.message);
+    }
+  }
   next();
 }
 
@@ -135,7 +150,7 @@ function originIsAllowed(req) {
 
 function requireAuth(req, res, next) {
   if (!req.user) {
-    return res.status(401).json({ success: false, message: 'Vui lòng đăng nhập bằng Facebook.' });
+    return res.status(401).json({ success: false, message: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.' });
   }
   if (!originIsAllowed(req)) {
     return res.status(403).json({ success: false, message: 'Origin không được phép.' });
@@ -143,24 +158,19 @@ function requireAuth(req, res, next) {
   next();
 }
 
-function requireAdmin(req, res, next) {
-  if (!req.user) {
-    return res.status(401).json({ success: false, message: 'Vui lòng đăng nhập bằng Facebook.' });
-  }
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ success: false, message: 'Thao tác này chỉ dành cho admin.' });
-  }
-  if (!originIsAllowed(req)) {
-    return res.status(403).json({ success: false, message: 'Origin không được phép.' });
-  }
-  next();
+function requirePermission(permission) {
+  return (req, res, next) => requireAuth(req, res, () => {
+    if (!hasPermission(req.user.role, permission)) {
+      return res.status(403).json({ success: false, message: 'Tài khoản của bạn không có quyền thực hiện thao tác này.' });
+    }
+    next();
+  });
 }
 
 module.exports = {
   SESSION_COOKIE,
   OAUTH_STATE_COOKIE,
   SESSION_TTL_SECONDS,
-  adminIds,
   appendCookie,
   authConfiguration,
   clearCookie,
@@ -168,8 +178,8 @@ module.exports = {
   facebookRedirectUri,
   loadSession,
   parseCookies,
-  requireAdmin,
   requireAuth,
+  requirePermission,
   setCookie,
   signSession,
   verifySession

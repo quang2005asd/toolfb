@@ -15,16 +15,17 @@ export const authApi = {
     const response = await axios.post(`${API_BASE_URL}/auth/logout`, {}, { withCredentials: true });
     return response.data;
   },
-  login: async ({ username, password }) => {
-    const response = await axios.post(`${API_BASE_URL}/auth/login`, { username, password }, { withCredentials: true });
+  // identifier: tên đăng nhập hoặc Gmail
+  login: async ({ identifier, password }) => {
+    const response = await axios.post(`${API_BASE_URL}/auth/login`, { identifier, password }, { withCredentials: true });
     return response.data;
   },
-  register: async ({ username, password, displayName }) => {
-    const response = await axios.post(`${API_BASE_URL}/auth/register`, { username, password, displayName }, { withCredentials: true });
+  register: async ({ username, email, password, confirmPassword }) => {
+    const response = await axios.post(`${API_BASE_URL}/auth/register`, { username, email, password, confirmPassword }, { withCredentials: true });
     return response.data;
   },
-  loginWithToken: async (token) => {
-    const response = await axios.post(`${API_BASE_URL}/auth/token`, { token }, { withCredentials: true });
+  checkAccount: async (identifier) => {
+    const response = await axios.get(`${API_BASE_URL}/auth/check-account`, { params: { identifier }, withCredentials: true });
     return response.data;
   },
   facebookLoginUrl: `${API_BASE_URL}/auth/facebook`

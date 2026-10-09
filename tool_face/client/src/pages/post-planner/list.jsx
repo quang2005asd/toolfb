@@ -25,6 +25,8 @@ import {
   FileText
 } from 'lucide-react';
 import { resolveMediaUrl } from '../../components/AiImageStudioModal';
+import useAuth from '../../hooks/useAuth';
+import { PERMISSIONS } from '../../utils/permissions';
 
 function parseDateSafe(val) {
   if (!val) return null;
@@ -352,6 +354,10 @@ function PostDetailModal({ postId, onClose, onRefresh, channelName }) {
 }
 
 export default function PostListPage() {
+  const { can } = useAuth();
+  // Quản lý / Admin thấy cả bài của cấp dưới nên cần cột người tạo
+  const showAuthor = can(PERMISSIONS.POSTS_TEAM);
+  const columnCount = showAuthor ? 8 : 7;
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -515,6 +521,7 @@ export default function PostListPage() {
               <tr>
                 <th>ID</th>
                 <th>Nội dung bài đăng</th>
+                {showAuthor && <th>Người tạo</th>}
                 <th>Kênh</th>
                 <th>Media</th>
                 <th>Lịch đăng</th>
@@ -524,9 +531,9 @@ export default function PostListPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="7"><div className="empty-state">Đang tải lịch đăng…</div></td></tr>
+                <tr><td colSpan={columnCount}><div className="empty-state">Đang tải lịch đăng…</div></td></tr>
               ) : posts.length === 0 ? (
-                <tr><td colSpan="7"><div className="empty-state">Chưa có bài đăng phù hợp.</div></td></tr>
+                <tr><td colSpan={columnCount}><div className="empty-state">Chưa có bài đăng phù hợp.</div></td></tr>
               ) : posts.map((post) => (
                 <tr key={post.id}>
                   <td>
@@ -548,6 +555,20 @@ export default function PostListPage() {
                       {post.content || 'Chưa có nội dung'}
                     </div>
                   </td>
+                  {showAuthor && (
+                    <td>
+                      {post.is_own ? (
+                        <span className="um-self-tag" style={{ marginLeft: 0 }}>Bạn</span>
+                      ) : (
+                        <span style={{ display: 'block', lineHeight: 1.3 }}>
+                          <strong style={{ fontSize: 12.5 }}>{post.author_name || 'Không rõ'}</strong>
+                          <small className="muted" style={{ display: 'block', fontSize: 11 }}>
+                            {post.author_username ? `@${post.author_username} · ${post.author_role_label}` : 'Tài khoản đã xóa'}
+                          </small>
+                        </span>
+                      )}
+                    </td>
+                  )}
                   <td>
                     <span style={{ fontWeight: 600, color: 'var(--ink)' }}>
                       {channels.find((c) => c.id === String(post.page_id))?.name || post.page_id || 'Fanpage'}

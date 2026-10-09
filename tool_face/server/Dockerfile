@@ -1,7 +1,8 @@
 # ========================================================
 # Dockerfile for Tool FB Backend Server & Worker
 # ========================================================
-FROM node:20-slim
+# trixie: sqlite3 prebuilt binary requires glibc >= 2.38 (bookworm ships 2.36)
+FROM node:20-trixie-slim
 
 WORKDIR /app
 
@@ -10,7 +11,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certifi
 
 # Copy package descriptors first for Docker cache optimization
 COPY package*.json ./
-RUN npm install --omit=dev
+# msnodesqlv8 is Windows-only (Linux uses mssql/tedious), so skip native install scripts
+# and rebuild only sqlite3, which is needed at runtime
+RUN npm install --omit=dev --ignore-scripts && npm rebuild sqlite3
 
 # Copy application source code
 COPY . .

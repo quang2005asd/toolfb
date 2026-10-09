@@ -7452,3 +7452,338 @@ body.dark-mode .theme-toggle-btn:hover {
   transform: translateY(-1px);
   background: var(--apple-glass-bg);
 }
+/* ═══ PHÂN QUYỀN: HUY HIỆU VAI TRÒ ═══ */
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 99px;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: -0.1px;
+  white-space: nowrap;
+  vertical-align: middle;
+  border: 1px solid transparent;
+}
+.role-badge-sm { padding: 2px 9px; font-size: 10.5px; gap: 5px; }
+.role-badge.role-admin { color: #b45309; background: #fef3c7; border-color: #fde68a; }
+.role-badge.role-manager { color: #6d28d9; background: #f5f3ff; border-color: #ddd6fe; }
+.role-badge.role-user { color: #0f766e; background: #f0fdfa; border-color: #99f6e4; }
+[data-theme="dark"] .role-badge.role-admin, body.dark-mode .role-badge.role-admin { color: #fbbf24; background: rgba(251, 191, 36, 0.12); border-color: rgba(251, 191, 36, 0.35); }
+[data-theme="dark"] .role-badge.role-manager, body.dark-mode .role-badge.role-manager { color: #c4b5fd; background: rgba(139, 92, 246, 0.14); border-color: rgba(139, 92, 246, 0.4); }
+[data-theme="dark"] .role-badge.role-user, body.dark-mode .role-badge.role-user { color: #5eead4; background: rgba(45, 212, 191, 0.1); border-color: rgba(45, 212, 191, 0.32); }
+
+a.profile-avatar { text-decoration: none; }
+.profile-avatar.profile-role-admin { border-color: #fbbf24; box-shadow: 0 2px 10px rgba(217, 119, 6, 0.35); }
+.profile-avatar.profile-role-manager { border-color: #a78bfa; box-shadow: 0 2px 10px rgba(124, 58, 237, 0.3); }
+
+/* ═══ MENU TÀI KHOẢN (TOPBAR) ═══ */
+.account-menu { position: relative; }
+.account-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 200;
+  width: 280px;
+  padding: 8px;
+  border-radius: 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-xl);
+  animation: accountDropdownIn 0.18s var(--ease-spring);
+}
+[data-theme="dark"] .account-dropdown, body.dark-mode .account-dropdown {
+  background: #0f172a;
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7);
+}
+@keyframes accountDropdownIn {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.account-dropdown-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 10px 12px 12px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.account-dropdown-head strong { color: var(--ink); font-size: 14px; }
+.account-dropdown-head span:not(.role-badge) { color: var(--muted); font-size: 11.5px; word-break: break-all; margin-bottom: 4px; }
+.account-dropdown-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--trans-fast);
+}
+.account-dropdown-item:hover { background: rgba(37, 99, 235, 0.08); }
+.account-dropdown-item.is-danger { color: var(--red); }
+.account-dropdown-item.is-danger:hover { background: rgba(220, 38, 38, 0.08); }
+
+/* ═══ TRANG KHÔNG ĐỦ QUYỀN ═══ */
+.access-denied {
+  max-width: 560px;
+  margin: 40px auto;
+  padding: 40px 32px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.access-denied svg { color: var(--amber); }
+.access-denied h2 { margin: 0; font-family: var(--font-heading); color: var(--ink); font-size: 20px; }
+.access-denied p { margin: 0 0 8px; line-height: 1.7; font-size: 13px; }
+
+/* ═══ FORM ĐĂNG NHẬP / ĐĂNG KÝ ═══ */
+.auth-input-wrap { position: relative; }
+.auth-input-wrap .auth-input { padding-right: 42px; }
+.auth-eye {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dim);
+  cursor: pointer;
+}
+.auth-eye:hover { color: var(--blue); background: rgba(37, 99, 235, 0.08); }
+.auth-input.is-invalid { border-color: rgba(220, 38, 38, 0.55); }
+.auth-hint { display: flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; }
+/* Chế độ sáng ép mọi <small> sang màu xám bằng !important nên cần selector mạnh hơn */
+:root small.auth-hint.ok { color: var(--green) !important; }
+:root small.auth-hint.error { color: var(--red) !important; }
+.auth-hint.checking { color: var(--dim); }
+:root[data-theme="dark"] small.auth-hint.ok { color: #34d399 !important; }
+:root[data-theme="dark"] small.auth-hint.error { color: #f87171 !important; }
+.auth-notice-error, .auth-notice-success { display: flex; align-items: flex-start; gap: 8px; line-height: 1.5; }
+.auth-notice-error svg, .auth-notice-success svg { flex-shrink: 0; margin-top: 2px; }
+.auth-inline-link {
+  border: 0;
+  padding: 0;
+  margin-left: 6px;
+  background: none;
+  color: var(--blue);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.auth-switch { margin: 2px 0 0; text-align: center; color: var(--muted); font-size: 12.5px; }
+
+/* ═══ QUẢN LÝ THÀNH VIÊN ═══ */
+.um-metrics { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.um-search { position: relative; flex: 1; max-width: 420px; }
+.um-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--dim); pointer-events: none; }
+.um-search .field { padding-left: 38px; }
+.um-filter { width: auto; min-width: 160px; }
+.um-user-cell { display: flex; align-items: center; gap: 12px; }
+.um-user-cell strong { display: flex; align-items: center; color: var(--ink); font-size: 13px; }
+.um-user-cell small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+.um-avatar {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 13px;
+  background: linear-gradient(135deg, #14b8a6, #0d9488);
+}
+.um-avatar-admin { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.um-avatar-manager { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+.um-self-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--blue);
+  background: rgba(37, 99, 235, 0.1);
+  border: 1px solid rgba(37, 99, 235, 0.25);
+}
+.um-actions { display: flex; justify-content: flex-end; gap: 6px; }
+.um-icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all var(--trans-fast);
+}
+.um-icon-btn:hover:not(:disabled) { color: var(--blue); border-color: rgba(37, 99, 235, 0.4); background: rgba(37, 99, 235, 0.06); }
+.um-icon-btn.is-danger:hover:not(:disabled) { color: var(--red); border-color: rgba(220, 38, 38, 0.4); background: rgba(220, 38, 38, 0.06); }
+.um-icon-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+[data-theme="dark"] .um-icon-btn, body.dark-mode .um-icon-btn { background: rgba(30, 41, 59, 0.7); border-color: rgba(255, 255, 255, 0.12); color: #cbd5e1; }
+.um-readonly { display: block; text-align: right; color: var(--dim); font-size: 11.5px; font-style: italic; }
+.um-row-locked td { opacity: 0.62; }
+.um-notice { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+.um-notice > span { flex: 1; }
+.um-notice .um-icon-btn { width: 26px; height: 26px; background: transparent; border: 0; color: inherit; }
+
+.um-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(14px) saturate(180%);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+}
+.um-modal { width: 100%; max-width: 560px; max-height: 92vh; overflow-y: auto; border-radius: 22px; }
+.um-modal:hover { transform: none; }
+.um-modal .panel-heading { padding: 14px 22px; }
+.um-modal .panel-heading small { display: block; margin-top: 2px; font-size: 11.5px; }
+.um-form { display: grid; gap: 16px; }
+.um-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.um-form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+
+.um-role-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.um-role-card {
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--field-bg);
+}
+.um-role-card.is-current { border-color: rgba(37, 99, 235, 0.45); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08); }
+.um-role-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.um-role-card-head .um-self-tag { margin-left: 0; }
+.um-role-card p { margin: 0 0 10px; font-size: 12.5px; line-height: 1.6; }
+.um-role-card ul { margin: 0 0 10px; padding-left: 18px; color: var(--ink); font-size: 12px; line-height: 1.7; }
+
+/* ═══ CÀI ĐẶT: HỒ SƠ & BẢO MẬT ═══ */
+.settings-account-grid { display: grid; grid-template-columns: minmax(300px, 360px) minmax(0, 1fr); gap: 20px; }
+.settings-avatar {
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  font-size: 32px;
+  font-weight: 900;
+  border: 3px solid #bfdbfe;
+  background: linear-gradient(135deg, #14b8a6, #0d9488);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.2);
+}
+.settings-avatar-admin { border-color: #fde68a; background: linear-gradient(135deg, #f59e0b, #d97706); }
+.settings-avatar-manager { border-color: #ddd6fe; background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+.settings-info-list {
+  text-align: left;
+  margin-bottom: 20px;
+  padding: 6px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--field-bg);
+  font-size: 12.5px;
+}
+.settings-info-list > div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.settings-info-list > div:last-child { border-bottom: 0; }
+.settings-info-list strong { color: var(--ink); text-align: right; word-break: break-all; }
+.settings-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.settings-form-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.settings-permission-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; font-size: 13px; color: var(--ink); }
+.settings-permission-list li { display: flex; align-items: center; gap: 10px; }
+.settings-permission-list li svg { flex-shrink: 0; color: var(--green); }
+.settings-permission-list li.is-off { color: var(--dim); }
+.settings-permission-list li.is-off svg { color: var(--dim); }
+.settings-inline-notice { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+
+/* ═══ BẢNG TIN: TỔNG QUAN ĐỘI NHÓM ═══ */
+.team-overview { margin-bottom: 22px; }
+.team-overview .panel-heading { flex-wrap: wrap; gap: 10px; padding-top: 10px; padding-bottom: 10px; }
+.team-overview-btn { min-height: 34px; padding: 0 14px; font-size: 12px; }
+.team-overview-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 24px; align-items: start; }
+.team-overview-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.team-overview-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--field-bg);
+}
+.team-overview-stat strong { font-family: var(--font-heading); font-size: 26px; color: var(--ink); line-height: 1; }
+.team-overview-recent > span { font-size: 12px; font-weight: 700; }
+.team-overview-recent ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.team-overview-recent li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+[data-theme="dark"] .team-overview-recent li, body.dark-mode .team-overview-recent li { background: rgba(15, 23, 42, 0.5); }
+.team-overview-recent li > div { flex: 1; min-width: 0; }
+.team-overview-recent li strong { display: block; color: var(--ink); font-size: 13px; }
+.team-overview-recent li small { display: block; color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+@media (max-width: 960px) {
+  .settings-account-grid, .team-overview-body { grid-template-columns: minmax(0, 1fr); }
+  .settings-form-grid-3 { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 600px) {
+  .um-grid-2, .settings-form-grid { grid-template-columns: minmax(0, 1fr); }
+  .um-search { max-width: none; width: 100%; }
+  .account-dropdown { width: min(280px, calc(100vw - 32px)); }
+}
+
+/* Màu thông báo lỗi / thành công — cần !important để thắng rule .notice của chế độ sáng */
+:root .notice.auth-notice-error, :root .notice.um-notice-error, :root .notice.settings-inline-notice.is-error {
+  color: #b91c1c !important;
+  background: #fef2f2 !important;
+  border: 1px solid #fecaca !important;
+}
+:root .notice.auth-notice-success, :root .notice.um-notice-success, :root .notice.settings-inline-notice.is-success {
+  color: #047857 !important;
+  background: #ecfdf5 !important;
+  border: 1px solid #a7f3d0 !important;
+}
+:root[data-theme="dark"] .notice.auth-notice-error, :root[data-theme="dark"] .notice.um-notice-error, :root[data-theme="dark"] .notice.settings-inline-notice.is-error {
+  color: #fca5a5 !important;
+  background: rgba(239, 68, 68, 0.1) !important;
+  border: 1px solid rgba(239, 68, 68, 0.35) !important;
+}
+:root[data-theme="dark"] .notice.auth-notice-success, :root[data-theme="dark"] .notice.um-notice-success, :root[data-theme="dark"] .notice.settings-inline-notice.is-success {
+  color: #6ee7b7 !important;
+  background: rgba(16, 185, 129, 0.1) !important;
+  border: 1px solid rgba(16, 185, 129, 0.35) !important;
+}
+.um-notice-error { display: flex; align-items: center; gap: 8px; }

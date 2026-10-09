@@ -36,7 +36,22 @@ const telegramAlertService = require('./utils/TelegramAlertService');
 const tokenHealthCheckService = require('./utils/TokenHealthCheckService');
 const aiConversationService = require('./utils/AiConversationService');
 const channelGroupService = require('./utils/ChannelGroupService');
-const { registerAppUser, loginAppUser } = require('./utils/AppUserService');
+const {
+  AppUserError,
+  accountExists,
+  changeOwnPassword,
+  createUserByActor,
+  deleteUserByActor,
+  ensureAppUserSchema,
+  getUserDisplayMap,
+  listUsersForActor,
+  loginAppUser,
+  registerAppUser,
+  resetUserPasswordByActor,
+  updateOwnProfile,
+  updateUserByActor
+} = require('./utils/AppUserService');
+const { PERMISSIONS, assignableRoles, hasPermission, isTopRole, publicRoles, rolesAtOrAbove, rolesBelow } = require('./utils/Roles');
 const aiContentGenerator = require('./utils/AiContentGenerator');
 const aiImageService = require('./utils/AiImageService');
 const webSearchService = require('./utils/WebSearchService');
@@ -44,7 +59,6 @@ const {
   OAUTH_STATE_COOKIE,
   SESSION_COOKIE,
   SESSION_TTL_SECONDS,
-  adminIds,
   authConfiguration,
   clearCookie,
   clientOrigin,
@@ -52,6 +66,7 @@ const {
   loadSession,
   parseCookies,
   requireAuth,
+  requirePermission,
   setCookie,
   signSession
 } = require('./middlewares/auth');
@@ -135,21 +150,54 @@ async function userOwnsPage(userId, pageId) {
   return pages.some((page) => String(page.id) === String(pageId));
 }
 
+function sendAppUserError(res, label, error) {
+  if (error instanceof AppUserError) {
+    return res.status(error.status).json({ success: false, code: error.code, message: error.message });
+  }
+  console.error(`[${label}]`, error.message);
+  return res.status(500).json({ success: false, message: 'Lỗi máy chủ khi xử lý tài khoản.' });
+}
+
+// Phạm vi bài đăng theo role: bài của chính mình + bài của tài khoản cấp thấp hơn.
+// Role cao nhất (Admin) xem được cả bài không gắn tài khoản, trừ bài của Admin khác.
+function applyPostScope(req, request, column = 'created_by_user_id') {
+  request.input('scopeUserId', sql.VarChar(64), String(req.user.sub));
+  if (!hasPermission(req.user.role, PERMISSIONS.POSTS_TEAM)) {
+    return `${column} = @scopeUserId`;
+  }
+  if (isTopRole(req.user.role)) {
+    const peerRoles = rolesAtOrAbove(req.user.role).map((role) => `'${role}'`).join(', ');
+    return `(${column} = @scopeUserId OR ${column} IS NULL OR ${column} NOT IN (SELECT CAST(id AS varchar(64)) FROM AppUsers WHERE role IN (${peerRoles})))`;
+  }
+  const lowerRoles = rolesBelow(req.user.role).map((role) => `'${role}'`).join(', ');
+  if (!lowerRoles) return `${column} = @scopeUserId`;
+  return `(${column} = @scopeUserId OR ${column} IN (SELECT CAST(id AS varchar(64)) FROM AppUsers WHERE role IN (${lowerRoles})))`;
+}
+
 app.get('/api/auth/status', (_req, res) => {
   const config = authConfiguration();
   return res.json({
     success: true,
     configured: config.configured,
-    missing: config.missing,
-    adminConfigured: config.adminConfigured,
-    adminCount: adminIds().size
+    missing: config.missing
   });
+});
+
+// Kiểm tra tài khoản (tên đăng nhập hoặc Gmail) đã tồn tại chưa — dùng cho form đăng nhập / đăng ký
+app.get('/api/auth/check-account', async (req, res) => {
+  const identifier = typeof req.query.identifier === 'string' ? req.query.identifier.trim() : '';
+  if (!identifier) return res.status(400).json({ success: false, message: 'Thiếu tên đăng nhập hoặc Gmail.' });
+  try {
+    return res.json({ success: true, exists: await accountExists(identifier) });
+  } catch (error) {
+    return sendAppUserError(res, 'Check Account Error', error);
+  }
 });
 
 app.get('/api/auth/me', async (req, res) => {
   if (!req.user) return res.status(401).json({ authenticated: false });
-  let avatar = req.user.avatar || null;
-  if (!avatar && req.user.sub) {
+  let avatar = null;
+  if (req.user.sub) {
     try {
       avatar = await getStoredUserAvatar(req.user.sub);
       if (!avatar) {
@@ -173,15 +221,18 @@ app.get('/api/auth/me', async (req, res) => {
   return res.json({
     authenticated: true,
     user: {
-      id: req.user.sub,
-      name: req.user.name,
-      role: req.user.role,
-      avatar: avatar || null
+      ...req.user.account,
+      avatar: avatar || null,
+      assignableRoles: assignableRoles(req.user.role)
     }
   });
 });
 
+// Facebook OAuth chỉ dùng để liên kết Facebook / Fanpage vào tài khoản đang đăng nhập
 app.get('/api/auth/facebook', (req, res) => {
+  if (!req.user) {
+    return res.redirect(302, `${clientOrigin()}/login?error=session_required`);
+  }
   const config = authConfiguration();
   if (!config.configured) {
     return res.status(503).json({ success: false, message: 'Facebook login chưa cấu hình đầy đủ.', missing: config.missing });
@@ -207,8 +258,11 @@ app.get('/api/auth/facebook/callback', async (req, res) => {
     && requestState.length === cookieState.length
     && crypto.timingSafeEqual(requestState, cookieState);
   clearCookie(req, res, OAUTH_STATE_COOKIE);
+  if (!req.user) {
+    return res.redirect(`${clientOrigin()}/login?error=session_required`);
+  }
   if (!stateMatches || typeof req.query.code !== 'string') {
-    return res.redirect(`${clientOrigin()}/login?error=oauth_state_invalid`);
+    return res.redirect(`${clientOrigin()}/channels?error=oauth_state_invalid`);
   }
 
   try {
@@ -243,66 +297,48 @@ app.get('/api/auth/facebook/callback', async (req, res) => {
       params: { fields: 'id,name,picture.width(150).height(150)', access_token: userAccessToken },
       timeout: 15000
     });
-    await saveFacebookUser(profileResponse.data, userAccessToken, tokenExpiresIn);
-    const connectedPages = await syncFacebookPages(profileResponse.data.id, userAccessToken);
-    console.log(`[Facebook OAuth] Connected ${connectedPages.length} Page(s) for user ${profileResponse.data.id}.`);
-    setCookie(req, res, SESSION_COOKIE, signSession(profileResponse.data), SESSION_TTL_SECONDS);
-    return res.redirect(`${clientOrigin()}/dashboard`);
+    const fbData = profileResponse.data;
+    await saveFacebookUser({ id: req.user.sub, name: fbData.name, picture: fbData.picture }, userAccessToken, tokenExpiresIn);
+    const connectedPages = await syncFacebookPages(req.user.sub, userAccessToken, {
+      id: fbData.id,
+      name: fbData.name,
+      avatar: fbData.picture?.data?.url || null
+    });
+    console.log(`[Facebook OAuth] Connected ${connectedPages.length} Page(s) for account ${req.user.username} (FB: ${fbData.id}).`);
+    return res.redirect(`${clientOrigin()}/channels?connected=${connectedPages.length}`);
   } catch (error) {
     console.error('[Facebook OAuth Error]', error.response?.status || error.message);
-    return res.redirect(`${clientOrigin()}/login?error=oauth_failed`);
+    return res.redirect(`${clientOrigin()}/channels?error=oauth_failed`);
   }
 });
 
+// Đăng ký: tài khoản mới luôn là Thành viên; đăng ký xong người dùng tự đăng nhập
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { username, password, displayName } = req.body || {};
-    const newUser = await registerAppUser({ username, password, displayName });
-    const token = signSession({
-      id: String(newUser.id),
-      name: newUser.display_name,
-      role: newUser.role
-    });
-    setCookie(req, res, SESSION_COOKIE, token, SESSION_TTL_SECONDS);
-
+    const { username, email, password, confirmPassword } = req.body || {};
+    const user = await registerAppUser({ username, email, password, confirmPassword });
     return res.status(201).json({
       success: true,
-      user: {
-        id: String(newUser.id),
-        name: newUser.display_name,
-        role: newUser.role
-      },
-      token,
-      message: 'Đăng ký tài khoản thành công!'
+      user: { username: user.username, email: user.email },
+      message: 'Đăng ký tài khoản thành công! Hãy đăng nhập để bắt đầu.'
     });
-  } catch (err) {
-    return res.status(400).json({ success: false, message: err.message });
+  } catch (error) {
+    return sendAppUserError(res, 'Register Error', error);
   }
 });
 
 app.post('/api/auth/login', async (req, res) => {
   try {
-    const { username, password } = req.body || {};
-    const user = await loginAppUser({ username, password });
-    const token = signSession({
-      id: String(user.id),
-      name: user.display_name,
-      role: user.role
-    });
-    setCookie(req, res, SESSION_COOKIE, token, SESSION_TTL_SECONDS);
-
+    const { identifier, username, password } = req.body || {};
+    const user = await loginAppUser({ identifier: identifier || username, password });
+    setCookie(req, res, SESSION_COOKIE, signSession(user), SESSION_TTL_SECONDS);
     return res.json({
       success: true,
-      user: {
-        id: String(user.id),
-        name: user.display_name,
-        role: user.role
-      },
-      token,
-      message: 'Đăng nhập thành công!'
+      user: { ...user, avatar: null, assignableRoles: assignableRoles(user.role) },
+      message: `Đăng nhập thành công! Xin chào ${user.name}.`
     });
-  } catch (err) {
-    return res.status(401).json({ success: false, message: err.message });
+  } catch (error) {
+    return sendAppUserError(res, 'Login Error', error);
   }
 });
 
@@ -312,69 +348,77 @@ app.post('/api/auth/logout', (_req, res) => {
   return res.json({ success: true });
 });
 
-app.post('/api/auth/token', async (req, res) => {
-  const token = typeof req.body.token === 'string' ? req.body.token.trim() : '';
-  if (!token) {
-    return res.status(400).json({ success: false, message: 'Vui lòng nhập Facebook Access Token.' });
-  }
-
+// ═══ HỒ SƠ CÁ NHÂN ═══
+app.patch('/api/profile', requireAuth, async (req, res) => {
   try {
-    const graphVersion = process.env.FB_GRAPH_VERSION || 'v19.0';
-    // 1. Kiểm tra Token và lấy thông tin người dùng Facebook
-    const profileResponse = await axios.get(`https://graph.facebook.com/${graphVersion}/me`, {
-      params: { fields: 'id,name,picture.width(150).height(150)', access_token: token },
-      timeout: 15000
-    });
-
-    const userData = profileResponse.data;
-    if (!userData || !userData.id) {
-      return res.status(401).json({ success: false, message: 'Access Token không hợp lệ hoặc đã hết hạn.' });
-    }
-
-    // 2. Lưu User vào database (hạn mặc định 60 ngày)
-    await saveFacebookUser(userData, token, 60 * 24 * 60 * 60);
-
-    // 3. Đồng bộ danh sách Fanpage của tài khoản này
-    let connectedPages = [];
-    try {
-      connectedPages = await syncFacebookPages(userData.id, token);
-      console.log(`[Token Auth] Đã kết nối ${connectedPages.length} Fanpage cho tài khoản ${userData.name} (${userData.id}).`);
-    } catch (pageErr) {
-      console.warn('[Token Auth Sync Pages Warning]', pageErr.message);
-    }
-
-    // Nếu me/accounts không trả về page nào (có thể là Page Access Token trực tiếp)
-    if (connectedPages.length === 0) {
-      try {
-        const pageCheck = await axios.get(`https://graph.facebook.com/${graphVersion}/${userData.id}`, {
-          params: { fields: 'id,name,category', access_token: token },
-          timeout: 10000
-        });
-        if (pageCheck.data?.category) {
-          const manualPage = await saveManualFacebookPage(userData.id, userData.id, token);
-          connectedPages.push(manualPage);
-          console.log(`[Token Auth] Đã tự động nhận diện Page Token cho: ${pageCheck.data.name} (${userData.id})`);
-        }
-      } catch {}
-    }
-
-    // 4. Thiết lập Session Cookie cho trình duyệt
-    setCookie(req, res, SESSION_COOKIE, signSession(userData), SESSION_TTL_SECONDS);
-
-    return res.json({
-      success: true,
-      user: {
-        id: userData.id,
-        name: userData.name,
-        avatar: userData.picture?.data?.url || null
-      },
-      pagesCount: connectedPages.length,
-      message: `Đăng nhập thành công! Đã kết nối ${connectedPages.length} Fanpage.`
-    });
+    const { displayName, email } = req.body || {};
+    const user = await updateOwnProfile(req.user.sub, { displayName, email });
+    return res.json({ success: true, user, message: 'Đã cập nhật thông tin cá nhân.' });
   } catch (error) {
-    const errorMsg = error.response?.data?.error?.message || error.message || 'Không thể xác thực Access Token.';
-    console.error('[Token Auth Error]', errorMsg);
-    return res.status(401).json({ success: false, message: `Access Token không hợp lệ: ${errorMsg}` });
+    return sendAppUserError(res, 'Update Profile Error', error);
+  }
+});
+
+app.post('/api/profile/password', requireAuth, async (req, res) => {
+  try {
+    const { currentPassword, newPassword, confirmPassword } = req.body || {};
+    await changeOwnPassword(req.user.sub, { currentPassword, newPassword, confirmPassword });
+    return res.json({ success: true, message: 'Đã đổi mật khẩu thành công.' });
+  } catch (error) {
+    return sendAppUserError(res, 'Change Password Error', error);
+  }
+});
+
+// ═══ PHÂN QUYỀN & QUẢN LÝ THÀNH VIÊN (Admin quản lý Quản lý + Thành viên, Quản lý quản lý Thành viên) ═══
+app.get('/api/roles', requireAuth, (req, res) => {
+  return res.json({ success: true, roles: publicRoles(), assignable: assignableRoles(req.user.role) });
+});
+
+app.get('/api/users', requirePermission(PERMISSIONS.USERS_MANAGE), async (req, res) => {
+  try {
+    const users = await listUsersForActor(req.user);
+    return res.json({ success: true, users, assignable: assignableRoles(req.user.role) });
+  } catch (error) {
+    return sendAppUserError(res, 'List Users Error', error);
+  }
+});
+
+app.post('/api/users', requirePermission(PERMISSIONS.USERS_MANAGE), async (req, res) => {
+  try {
+    const { username, email, displayName, password, confirmPassword, role } = req.body || {};
+    const user = await createUserByActor(req.user, { username, email, displayName, password, confirmPassword, role });
+    return res.status(201).json({ success: true, user, message: `Đã tạo tài khoản "${user.username}".` });
+  } catch (error) {
+    return sendAppUserError(res, 'Create User Error', error);
+  }
+});
+
+app.patch('/api/users/:id', requirePermission(PERMISSIONS.USERS_MANAGE), async (req, res) => {
+  try {
+    const { displayName, email, role, status } = req.body || {};
+    const user = await updateUserByActor(req.user, req.params.id, { displayName, email, role, status });
+    return res.json({ success: true, user, message: `Đã cập nhật tài khoản "${user.username}".` });
+  } catch (error) {
+    return sendAppUserError(res, 'Update User Error', error);
+  }
+});
+
+app.post('/api/users/:id/reset-password', requirePermission(PERMISSIONS.USERS_MANAGE), async (req, res) => {
+  try {
+    const { password, confirmPassword } = req.body || {};
+    await resetUserPasswordByActor(req.user, req.params.id, { password, confirmPassword });
+    return res.json({ success: true, message: 'Đã đặt lại mật khẩu.' });
+  } catch (error) {
+    return sendAppUserError(res, 'Reset Password Error', error);
+  }
+});
+
+app.delete('/api/users/:id', requirePermission(PERMISSIONS.USERS_MANAGE), async (req, res) => {
+  try {
+    const user = await deleteUserByActor(req.user, req.params.id);
+    return res.json({ success: true, message: `Đã xóa tài khoản "${user.username}".` });
+  } catch (error) {
+    return sendAppUserError(res, 'Delete User Error', error);
   }
 });
 
@@ -858,40 +902,48 @@ app.get('/api/settings', requireAuth, async (req, res) => {
     const maskedApiKey = effectiveApiKey && effectiveApiKey.length > 8
       ? `${effectiveApiKey.slice(0, 7)}••••••••${effectiveApiKey.slice(-4)}`
       : (effectiveApiKey ? '••••••••' : '');
+    const canManageSystem = hasPermission(req.user.role, PERMISSIONS.SETTINGS_SYSTEM);
+
+    const publicSettings = {
+      ai_provider: settings.ai_provider || 'openai',
+      ai_model: settings.ai_model || process.env.AI_MODEL || 'gpt-4o-mini',
+      ai_api_key_masked: maskedApiKey,
+      ai_has_key: Boolean(effectiveApiKey),
+      ai_base_url: settings.ai_base_url || process.env.AI_API_BASE_URL || 'https://api.openai.com/v1',
+      ai_system_prompt: settings.ai_system_prompt || 'Bạn là trợ lý sáng tạo nội dung chuyên nghiệp cho Fanpage Facebook. Giọng văn tự nhiên, lôi cuốn, chuẩn phong cách viral mạng xã hội.',
+      post_interval_minutes: Number(settings.post_interval_minutes) || 15,
+      default_hashtags: settings.default_hashtags || '#facebook #marketing #viral #contentcreator',
+      default_signature: settings.default_signature || '📌 Hãy bấm Theo dõi Fanpage để không bỏ lỡ những bài viết thú vị tiếp theo!',
+      auto_retry_count: Number(settings.auto_retry_count) || 2,
+      enable_rgb_effects: settings.enable_rgb_effects !== false,
+      telegram_bot_token_masked: (settings.telegram_bot_token || process.env.TELEGRAM_BOT_TOKEN || '') ? '••••••••' + (settings.telegram_bot_token || process.env.TELEGRAM_BOT_TOKEN || '').slice(-5) : '',
+      telegram_has_token: Boolean(settings.telegram_bot_token || process.env.TELEGRAM_BOT_TOKEN),
+      telegram_chat_id: settings.telegram_chat_id || process.env.TELEGRAM_CHAT_ID || '',
+      telegram_alert_enabled: settings.telegram_alert_enabled !== false && settings.telegram_alert_enabled !== 'false',
+      telegram_alert_on_expired: settings.telegram_alert_on_expired !== false && settings.telegram_alert_on_expired !== 'false',
+      telegram_alert_on_failed: settings.telegram_alert_on_failed !== false && settings.telegram_alert_on_failed !== 'false'
+    };
+    // Tài khoản không có quyền cấu hình hệ thống không được thấy thông tin bí mật (dù đã che bớt)
+    if (!canManageSystem) {
+      delete publicSettings.ai_api_key_masked;
+      delete publicSettings.telegram_bot_token_masked;
+      delete publicSettings.telegram_chat_id;
+    }
 
     return res.json({
       success: true,
-      settings: {
-        ai_provider: settings.ai_provider || 'openai',
-        ai_model: settings.ai_model || process.env.AI_MODEL || 'gpt-4o-mini',
-        ai_api_key_masked: maskedApiKey,
-        ai_has_key: Boolean(effectiveApiKey),
-        ai_base_url: settings.ai_base_url || process.env.AI_API_BASE_URL || 'https://api.openai.com/v1',
-        ai_system_prompt: settings.ai_system_prompt || 'Bạn là trợ lý sáng tạo nội dung chuyên nghiệp cho Fanpage Facebook. Giọng văn tự nhiên, lôi cuốn, chuẩn phong cách viral mạng xã hội.',
-        post_interval_minutes: Number(settings.post_interval_minutes) || 15,
-        default_hashtags: settings.default_hashtags || '#facebook #marketing #viral #contentcreator',
-        default_signature: settings.default_signature || '📌 Hãy bấm Theo dõi Fanpage để không bỏ lỡ những bài viết thú vị tiếp theo!',
-        auto_retry_count: Number(settings.auto_retry_count) || 2,
-        enable_rgb_effects: settings.enable_rgb_effects !== false,
-        telegram_bot_token_masked: (settings.telegram_bot_token || process.env.TELEGRAM_BOT_TOKEN || '') ? '••••••••' + (settings.telegram_bot_token || process.env.TELEGRAM_BOT_TOKEN || '').slice(-5) : '',
-        telegram_has_token: Boolean(settings.telegram_bot_token || process.env.TELEGRAM_BOT_TOKEN),
-        telegram_chat_id: settings.telegram_chat_id || process.env.TELEGRAM_CHAT_ID || '',
-        telegram_alert_enabled: settings.telegram_alert_enabled !== false && settings.telegram_alert_enabled !== 'false',
-        telegram_alert_on_expired: settings.telegram_alert_on_expired !== false && settings.telegram_alert_on_expired !== 'false',
-        telegram_alert_on_failed: settings.telegram_alert_on_failed !== false && settings.telegram_alert_on_failed !== 'false'
-      },
+      canManageSystem,
+      settings: publicSettings,
       account: {
-        id: req.user.sub,
-        name: req.user.name,
-        role: req.user.role,
-        avatar: req.user.avatar || null,
+        ...req.user.account,
         hasAccessToken: Boolean(userToken),
         connectedPagesCount: pages.length
       },
       system: {
-        metaAppId: process.env.FACEBOOK_APP_ID || '',
+        metaAppId: canManageSystem ? (process.env.FACEBOOK_APP_ID || '') : '',
         nodeVersion: process.version,
         serverTime: new Date().toISOString(),
+        database: process.env.USE_SQLITE === 'true' || process.env.DB_TYPE === 'sqlite' ? 'SQLite' : 'SQL Server',
         dbStatus: 'connected',
         queueStatus: 'running'
       }
@@ -901,7 +953,7 @@ app.get('/api/settings', requireAuth, async (req, res) => {
   }
 });
 
-app.post('/api/settings', requireAuth, async (req, res) => {
+app.post('/api/settings', requirePermission(PERMISSIONS.SETTINGS_SYSTEM), async (req, res) => {
   try {
     const payload = req.body || {};
     const updates = {};
@@ -934,7 +986,7 @@ app.post('/api/settings', requireAuth, async (req, res) => {
   }
 });
 
-app.post('/api/settings/telegram/test', requireAuth, async (req, res) => {
+app.post('/api/settings/telegram/test', requirePermission(PERMISSIONS.SETTINGS_SYSTEM), async (req, res) => {
   try {
     const { botToken, chatId } = req.body || {};
     const result = await telegramAlertService.testConnection(botToken, chatId);
@@ -947,7 +999,7 @@ app.post('/api/settings/telegram/test', requireAuth, async (req, res) => {
   }
 });
 
-app.all(['/api/channels/health-check', '/api/channels/check-tokens'], requireAuth, async (req, res) => {
+app.all('/api/channels/health-check', requirePermission(PERMISSIONS.SETTINGS_SYSTEM), async (req, res) => {
   try {
     const result = await tokenHealthCheckService.runHealthCheck('manual_api');
     return res.json({
@@ -961,7 +1013,7 @@ app.all(['/api/channels/health-check', '/api/channels/check-tokens'], requireAut
   }
 });
 
-app.post('/api/settings/test-ai', requireAuth, async (req, res) => {
+app.post('/api/settings/test-ai', requirePermission(PERMISSIONS.SETTINGS_SYSTEM), async (req, res) => {
   try {
     const settings = await getSettings().catch(() => ({}));
     const apiKey = req.body.apiKey?.trim() || settings.ai_api_key || process.env.AI_API_KEY;
@@ -1452,15 +1504,28 @@ app.get('/api/posts', requireAuth, async (req, res) => {
       countRequest.input('pageId', sql.VarChar, pageId);
       postsRequest.input('pageId', sql.VarChar, pageId);
     }
-    if (req.user.role !== 'admin') {
-      filters.push('created_by_user_id = @ownerId');
-      countRequest.input('ownerId', sql.VarChar(64), req.user.sub);
-      postsRequest.input('ownerId', sql.VarChar(64), req.user.sub);
-    }
-    const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
+    filters.push(applyPostScope(req, countRequest));
+    applyPostScope(req, postsRequest);
+    const whereClause = `WHERE ${filters.join(' AND ')}`;
     const count = await countRequest.query(`SELECT COUNT(*) AS total FROM Posts ${whereClause}`);
     const result = await postsRequest.input('offset', sql.Int, (page - 1) * limit).input('limit', sql.Int, limit).query(`SELECT * FROM Posts ${whereClause} ORDER BY id DESC OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY;`);
-    return res.json({ success: true, posts: result.recordset, total: count.recordset[0].total, page, limit });
+
+    // Quản lý / Admin xem bài của cả đội nên cần biết người tạo từng bài
+    let posts = result.recordset;
+    if (hasPermission(req.user.role, PERMISSIONS.POSTS_TEAM)) {
+      const authors = await getUserDisplayMap(posts.map((post) => post.created_by_user_id));
+      posts = posts.map((post) => {
+        const author = authors.get(String(post.created_by_user_id));
+        return {
+          ...post,
+          author_name: author?.name || null,
+          author_username: author?.username || null,
+          author_role_label: author?.roleLabel || null,
+          is_own: String(post.created_by_user_id) === String(req.user.sub)
+        };
+      });
+    }
+    return res.json({ success: true, posts, total: count.recordset[0].total, page, limit });
   } catch (error) {
     console.error('[Posts List Error]', error.message);
     return res.status(500).json({ success: false, message: 'Không thể tải danh sách bài đăng.' });
@@ -1475,8 +1540,7 @@ app.get('/api/posts/stats', requireAuth, async (req, res) => {
     await pool.request().query("UPDATE Posts SET status = 'published' WHERE status IN ('pending', 'scheduled') AND facebook_post_id IS NOT NULL AND scheduled_at <= SYSUTCDATETIME();").catch(() => {});
 
     const request = pool.request();
-    const where = req.user.role === 'admin' ? '' : 'WHERE created_by_user_id=@ownerId';
-    if (req.user.role !== 'admin') request.input('ownerId', sql.VarChar(64), req.user.sub);
+    const where = `WHERE ${applyPostScope(req, request)}`;
     const result = await request.query(`SELECT COUNT(*) AS total, SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending, SUM(CASE WHEN status='published' THEN 1 ELSE 0 END) AS published, SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) AS failed FROM Posts ${where};`);
     const stats = result.recordset[0];
     return res.json({ success: true, stats: { total: Number(stats.total || 0), pending: Number(stats.pending || 0), published: Number(stats.published || 0), failed: Number(stats.failed || 0) } });
@@ -1789,14 +1853,10 @@ app.get('/api/posts/:postId', requireAuth, async (req, res) => {
   try {
     await ensurePostOwnershipSchema();
     const pool = await getPool();
-    const postResult = await pool.request()
-      .input('id', sql.Int, postId)
-      .query('SELECT * FROM Posts WHERE id = @id');
+    const postRequest = pool.request().input('id', sql.Int, postId);
+    const postResult = await postRequest.query(`SELECT * FROM Posts WHERE id = @id AND ${applyPostScope(req, postRequest)}`);
     const post = postResult.recordset[0];
-    if (!post) return res.status(404).json({ success: false, message: 'Không tìm thấy bài đăng.' });
-    if (req.user.role !== 'admin' && String(post.created_by_user_id) !== String(req.user.sub)) {
-      return res.status(403).json({ success: false, message: 'Bạn không có quyền xem bài đăng này.' });
-    }
+    if (!post) return res.status(404).json({ success: false, message: 'Không tìm thấy bài đăng hoặc bạn không có quyền xem.' });
 
     const commentsResult = await pool.request()
       .input('postId', sql.Int, postId)
@@ -1823,10 +1883,7 @@ app.put('/api/posts/:postId/cancel', requireAuth, async (req, res) => {
     await ensurePostOwnershipSchema();
     const pool = await getPool();
     const request = pool.request().input('id', sql.Int, postId);
-    const ownerFilter = req.user.role === 'admin' ? '' : ' AND created_by_user_id = @ownerId';
-    if (req.user.role !== 'admin') request.input('ownerId', sql.VarChar(64), req.user.sub);
-
-    const check = await request.query(`SELECT id, page_id, status, facebook_post_id FROM Posts WHERE id = @id ${ownerFilter}`);
+    const check = await request.query(`SELECT id, page_id, status, facebook_post_id FROM Posts WHERE id = @id AND ${applyPostScope(req, request)}`);
     const post = check.recordset[0];
     if (!post) return res.status(404).json({ success: false, message: 'Không tìm thấy bài đăng hoặc không có quyền.' });
     if (post.status !== 'pending') {
@@ -1854,9 +1911,10 @@ app.get('/api/posts/:postId/analytics', requireAuth, async (req, res) => {
   try {
     await ensurePostOwnershipSchema();
     const pool = await getPool();
-    const result = await pool.request().input('id', sql.Int, postId).query('SELECT id, page_id, status, facebook_post_id FROM Posts WHERE id = @id');
+    const request = pool.request().input('id', sql.Int, postId);
+    const result = await request.query(`SELECT id, page_id, status, facebook_post_id FROM Posts WHERE id = @id AND ${applyPostScope(req, request)}`);
     const post = result.recordset[0];
-    if (!post) return res.status(404).json({ success: false, message: 'Không tìm thấy bài đăng.' });
+    if (!post) return res.status(404).json({ success: false, message: 'Không tìm thấy bài đăng hoặc bạn không có quyền xem.' });
     if (!post.facebook_post_id) {
       return res.status(400).json({ success: false, message: 'Bài viết này chưa được xuất bản lên Facebook nên chưa có số liệu tương tác.' });
     }
@@ -1895,16 +1953,17 @@ app.post('/api/posts/:postId/publish-now', requireAuth, async (req, res) => {
     await ensurePostOwnershipSchema();
     const pool = await getPool();
 
-    const check = await pool.request().input('id', sql.Int, postId).query('SELECT id, page_id, facebook_post_id FROM Posts WHERE id = @id');
+    // Kiểm tra quyền trước khi đụng tới lịch hẹn trên Facebook
+    const checkRequest = pool.request().input('id', sql.Int, postId);
+    const check = await checkRequest.query(`SELECT id, page_id, facebook_post_id FROM Posts WHERE id = @id AND ${applyPostScope(req, checkRequest)}`);
     const existingPost = check.recordset[0];
-    if (existingPost?.facebook_post_id) {
+    if (!existingPost) return res.status(404).json({ success: false, message: 'Không tìm thấy bài đăng hoặc bạn không có quyền.' });
+    if (existingPost.facebook_post_id) {
       await cancelFacebookScheduledPost({ pageId: existingPost.page_id, facebookPostId: existingPost.facebook_post_id });
     }
 
     const request = pool.request().input('id', sql.Int, postId).input('scheduledAt', sql.DateTime2, new Date());
-    const ownerFilter = req.user.role === 'admin' ? '' : ' AND created_by_user_id=@ownerId';
-    if (req.user.role !== 'admin') request.input('ownerId', sql.VarChar(64), req.user.sub);
-    const result = await request.query(`UPDATE Posts SET scheduled_at=@scheduledAt,status='pending',facebook_post_id=NULL OUTPUT INSERTED.id WHERE id=@id AND status IN ('pending','scheduled','failed','cancelled')${ownerFilter};`);
+    const result = await request.query(`UPDATE Posts SET scheduled_at=@scheduledAt,status='pending',facebook_post_id=NULL OUTPUT INSERTED.id WHERE id=@id AND status IN ('pending','scheduled','failed','cancelled');`);
     if (result.recordset.length === 0) {
       return res.status(400).json({ success: false, message: 'Bài viết không ở trạng thái có thể đăng ngay.' });
     }
@@ -1928,14 +1987,10 @@ app.post('/api/posts/:postId/comments/instant', requireAuth, async (req, res) =>
 
   try {
     const pool = await getPool();
-    const postRes = await pool.request()
-      .input('id', sql.Int, postId)
-      .query('SELECT facebook_post_id, page_id, created_by_user_id FROM Posts WHERE id = @id');
+    const postRequest = pool.request().input('id', sql.Int, postId);
+    const postRes = await postRequest.query(`SELECT facebook_post_id, page_id, created_by_user_id FROM Posts WHERE id = @id AND ${applyPostScope(req, postRequest)}`);
     const post = postRes.recordset[0];
-    if (!post) return res.status(404).json({ success: false, message: 'Không tìm thấy bài viết.' });
-    if (req.user.role !== 'admin' && post.created_by_user_id && String(post.created_by_user_id) !== String(req.user.sub)) {
-      return res.status(403).json({ success: false, message: 'Không có quyền comment trên bài viết này.' });
-    }
+    if (!post) return res.status(404).json({ success: false, message: 'Không tìm thấy bài viết hoặc bạn không có quyền comment.' });
     if (!post.facebook_post_id) {
       return res.status(400).json({ success: false, message: 'Bài viết chưa được xuất bản lên Facebook.' });
     }
@@ -1967,10 +2022,10 @@ app.delete('/api/posts/:postId', requireAuth, async (req, res) => {
   try {
     await ensurePostOwnershipSchema();
     const pool = await getPool();
-    const result = await pool.request().input('id', sql.Int, postId).query('SELECT id,page_id,status,facebook_post_id,media_links,created_by_user_id FROM Posts WHERE id=@id');
+    const request = pool.request().input('id', sql.Int, postId);
+    const result = await request.query(`SELECT id,page_id,status,facebook_post_id,media_links,created_by_user_id FROM Posts WHERE id=@id AND ${applyPostScope(req, request)}`);
     const post = result.recordset[0];
     if (!post) return res.status(404).json({ success: false, message: 'Không tìm thấy bài đăng.' });
-    if (req.user.role !== 'admin' && String(post.created_by_user_id) !== String(req.user.sub)) return res.status(404).json({ success: false, message: 'Không tìm thấy bài đăng.' });
     if (!['pending', 'failed'].includes(post.status)) return res.status(409).json({ success: false, message: 'Chỉ xóa được bài chờ hoặc thất bại.' });
     if (post.facebook_post_id && post.status === 'pending') {
       await cancelFacebookScheduledPost({ pageId: post.page_id, facebookPostId: post.facebook_post_id });
@@ -2164,6 +2219,8 @@ app.use((error, _req, res, _next) => {
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => {
   console.log(`Server listening on ${PORT}`);
+  // Khởi tạo bảng tài khoản và tạo sẵn tài khoản Admin mặc định
+  ensureAppUserSchema().catch((error) => console.error('[AppUsers Init Error]', error.message));
   // Khởi động tiến trình tự động giám sát sức khỏe Token định kỳ (Module 2)
   tokenHealthCheckService.startScheduler(6);
 

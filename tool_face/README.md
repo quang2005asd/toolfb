@@ -190,5 +190,17 @@ tool_face/
 ### 3. Giao diện bị mất màu ở Dark Mode?
 → Toàn bộ hệ thống giao diện đã được chuẩn hoá với Apple Frosted Glass tokens trong `client/src/styles/globals.css`. Hãy xóa cache trình duyệt (`Ctrl + F5`) để nhận CSS mới nhất.
 
-### 4. Đăng nhập Facebook báo lỗi App ID?
-→ Bạn có thể đăng nhập nhanh bằng tính năng **"Đăng nhập bằng Access Token"** tại trang Login mà không bắt buộc phải tạo Facebook App.
+### 4. Đăng nhập lần đầu bằng tài khoản nào?
+→ Hệ thống tự tạo sẵn tài khoản Quản trị viên **`admin` / `1`**. Hãy đổi mật khẩu tại **Cài đặt → Hồ sơ & bảo mật** sau lần đăng nhập đầu tiên. Người dùng mới có thể tự đăng ký (vai trò Thành viên) hoặc được Quản lý / Quản trị viên tạo tại trang **Thành viên**.
+
+### 5. Phân quyền hoạt động thế nào?
+| Vai trò | Quyền hạn |
+|---|---|
+| **Quản trị viên (Admin)** | Toàn quyền: cấu hình AI / Telegram / lịch đăng, quản lý Quản lý & Thành viên, xem toàn bộ bài đăng, cấp quyền Admin cho tài khoản khác |
+| **Quản lý (Manager)** | Tạo / sửa / khóa / xóa Thành viên, xem & điều phối bài đăng của Thành viên |
+| **Thành viên (User)** | Các chức năng cơ bản: viết bài, lên lịch, AI Studio, quản lý Fanpage của mình |
+
+Mỗi vai trò chỉ quản lý được vai trò **thấp hơn** — Admin không thể sửa hay xóa tài khoản của Admin khác. Định nghĩa vai trò nằm trong `server/src/utils/Roles.js`.
+
+### 6. Đăng nhập Facebook báo lỗi App ID?
+→ Facebook không còn dùng để đăng nhập hệ thống. Hãy đăng nhập bằng tài khoản, sau đó vào trang **Kênh** để kết nối Fanpage bằng Access Token (không bắt buộc tạo Facebook App).

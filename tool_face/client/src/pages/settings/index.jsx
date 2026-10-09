@@ -16,6 +16,7 @@ import {
   Globe2,
   HardDrive,
   KeyRound,
+  Lock,
   LogOut,
   Palette,
   RefreshCw,
@@ -27,20 +28,35 @@ import {
   ShieldCheck,
   Sparkles,
   User,
+  UserCog,
   Zap
 } from 'lucide-react';
 import MainLayout from '../../components/layout/MainLayout';
+import RoleBadge from '../../components/RoleBadge';
 import settingsApi from '../../services/settingsApi';
 import authApi from '../../services/authApi';
+import userApi from '../../services/userApi';
 import useAuth from '../../hooks/useAuth';
+import { PERMISSIONS, PERMISSION_LABELS, formatDateTime } from '../../utils/permissions';
 
+// `permission`: tab chỉ hiển thị với tài khoản có quyền tương ứng
 const tabs = [
-  { id: 'account', label: 'Tài khoản & Facebook', icon: User },
-  { id: 'ai', label: 'Cấu hình AI Studio', icon: Sparkles },
-  { id: 'telegram', label: 'Giám sát & Bot Telegram', icon: Bell },
-  { id: 'publishing', label: 'Đăng bài & Lịch trình', icon: Clock },
+  { id: 'account', label: 'Hồ sơ & bảo mật', icon: User },
+  { id: 'ai', label: 'Cấu hình AI Studio', icon: Sparkles, permission: PERMISSIONS.SETTINGS_SYSTEM },
+  { id: 'telegram', label: 'Giám sát & Bot Telegram', icon: Bell, permission: PERMISSIONS.SETTINGS_SYSTEM },
+  { id: 'publishing', label: 'Đăng bài & Lịch trình', icon: Clock, permission: PERMISSIONS.SETTINGS_SYSTEM },
   { id: 'system', label: 'Hệ thống & Giao diện', icon: Cpu }
 ];
+
+function InlineNotice({ notice }) {
+  const isError = notice.type === 'error';
+  return (
+    <div className={`notice settings-inline-notice ${isError ? 'is-error' : 'is-success'}`}>
+      {isError ? <AlertCircle size={15} /> : <CheckCircle2 size={15} />}
+      <span>{notice.text}</span>
+    </div>
+  );
+}
 
 const aiProviders = [
   { id: 'openai', name: 'OpenAI (ChatGPT)', baseUrl: 'https://api.openai.com/v1', defaultModel: 'gpt-4o-mini' },
@@ -70,11 +86,59 @@ const tonePresets = [
 ];
 
 export default function SettingsPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, can, refreshUser } = useAuth();
+  const canManageSystem = can(PERMISSIONS.SETTINGS_SYSTEM);
+  const visibleTabs = tabs.filter((tab) => !tab.permission || can(tab.permission));
   const [activeTab, setActiveTab] = useState('account');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState({ type: '', text: '' });
+
+  // Hồ sơ cá nhân & đổi mật khẩu
+  const [profileForm, setProfileForm] = useState({ displayName: '', email: '' });
+  const [profileNotice, setProfileNotice] = useState({ type: '', text: '' });
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [passwordNotice, setPasswordNotice] = useState({ type: '', text: '' });
+  const [savingPassword, setSavingPassword] = useState(false);
+
+  useEffect(() => {
+    if (user) setProfileForm({ displayName: user.name || '', email: user.email || '' });
+  }, [user]);
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    setSavingProfile(true);
+    setProfileNotice({ type: '', text: '' });
+    try {
+      const res = await userApi.updateProfile({ displayName: profileForm.displayName.trim(), email: profileForm.email.trim() });
+      await refreshUser();
+      setProfileNotice({ type: 'success', text: res.message || 'Đã cập nhật thông tin cá nhân.' });
+    } catch (err) {
+      setProfileNotice({ type: 'error', text: err.response?.data?.message || err.message });
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPasswordNotice({ type: '', text: '' });
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordNotice({ type: 'error', text: 'Mật khẩu xác nhận không khớp.' });
+      return;
+    }
+    setSavingPassword(true);
+    try {
+      const res = await userApi.changePassword(passwordForm);
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setPasswordNotice({ type: 'success', text: res.message || 'Đã đổi mật khẩu thành công.' });
+    } catch (err) {
+      setPasswordNotice({ type: 'error', text: err.response?.data?.message || err.message });
+    } finally {
+      setSavingPassword(false);
+    }
+  };
 
   // Form states
   const [data, setData] = useState({
@@ -273,14 +337,16 @@ export default function SettingsPage() {
           >
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} /> Làm mới
           </button>
-          <button
-            type="button"
-            className="button button-primary"
-            onClick={handleSave}
-            disabled={saving}
-          >
-            <Save size={15} /> {saving ? 'Đang lưu…' : 'Lưu cài đặt'}
-          </button>
+          {canManageSystem && activeTab !== 'account' && (
+            <button
+              type="button"
+              className="button button-primary"
+              onClick={handleSave}
+              disabled={saving}
+            >
+              <Save size={15} /> {saving ? 'Đang lưu…' : 'Lưu cài đặt'}
+            </button>
+          )}
         </div>
       }
     >
@@ -304,7 +370,7 @@ export default function SettingsPage() {
 
       {/* Tabs navigation */}
       <div className="step-strip" style={{ marginBottom: 22 }}>
-        {tabs.map(({ id, label, icon: Icon }) => (
+        {visibleTabs.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             type="button"
@@ -317,125 +383,167 @@ export default function SettingsPage() {
         ))}
       </div>
 
-      {/* ═══ TAB 1: TÀI KHOẢN & FACEBOOK ═══ */}
+      {/* ═══ TAB 1: HỒ SƠ & BẢO MẬT ═══ */}
       {activeTab === 'account' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 380px) 1fr', gap: 20 }}>
+        <div className="settings-account-grid">
           {/* Card hồ sơ */}
-          <section className="panel" style={{ padding: 24, textAlign: 'center' }}>
-            <div
-              style={{
-                width: 88,
-                height: 88,
-                borderRadius: '50%',
-                margin: '0 auto 16px',
-                overflow: 'hidden',
-                border: '2px solid #bfdbfe',
-                boxShadow: '0 4px 14px rgba(37, 99, 235, 0.2)',
-                background: 'linear-gradient(135deg, #2563eb, #1d4ed8)'
-              }}
-            >
+          <section className="panel" style={{ padding: 24, textAlign: 'center', alignSelf: 'start' }}>
+            <div className={`settings-avatar settings-avatar-${user?.role || 'user'}`}>
               {user?.avatar ? (
-                <img
-                  src={user.avatar}
-                  alt={user.name}
-                  referrerPolicy="no-referrer"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                />
+                <img src={user.avatar} alt={user.name} referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
               ) : (
-                <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', fontSize: 32, fontWeight: 900, color: '#ffffff' }}>
-                  {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                </div>
+                <span>{user?.name?.charAt(0)?.toUpperCase() || 'U'}</span>
               )}
             </div>
 
-            <h2 style={{ fontSize: 20, margin: '0 0 6px', color: 'var(--ink)', fontWeight: 900 }}>{user?.name || 'Tài khoản Facebook'}</h2>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', background: 'rgba(37, 99, 235, 0.08)', borderRadius: 99, border: '1px solid rgba(37, 99, 235, 0.25)', fontSize: 11, fontWeight: 700, color: 'var(--blue)', marginBottom: 16 }}>
-              <ShieldCheck size={13} /> {user?.role === 'admin' ? 'Quản trị viên (Admin)' : 'Thành viên'}
+            <h2 style={{ fontSize: 20, margin: '0 0 8px', color: 'var(--ink)', fontWeight: 900 }}>{user?.name || 'Tài khoản'}</h2>
+            <div style={{ marginBottom: 16 }}>
+              <RoleBadge role={user?.role} label={user?.roleLabel} />
             </div>
 
-            <div style={{ textAlign: 'left', background: 'var(--panel)', borderRadius: 12, padding: 14, border: '1px solid var(--line)', marginBottom: 20, fontSize: 12.5 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span className="muted">Facebook User ID:</span>
-                <strong style={{ color: 'var(--ink)' }}>{user?.id || '—'}</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span className="muted">Trạng thái Token:</span>
-                <span style={{ color: '#10b981', fontWeight: 700 }}>Đã kích hoạt dài hạn</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span className="muted">Fanpage quản lý:</span>
-                <strong style={{ color: 'var(--blue)' }}>{data.account.connectedPagesCount || 0} Fanpage</strong>
-              </div>
+            <div className="settings-info-list">
+              <div><span className="muted">Tên đăng nhập</span><strong>@{user?.username || '—'}</strong></div>
+              <div><span className="muted">Gmail</span><strong>{user?.email || 'Chưa cập nhật'}</strong></div>
+              <div><span className="muted">Ngày tạo</span><strong>{formatDateTime(user?.createdAt)}</strong></div>
+              <div><span className="muted">Đăng nhập gần nhất</span><strong>{formatDateTime(user?.lastLoginAt)}</strong></div>
+              <div><span className="muted">Fanpage quản lý</span><strong style={{ color: 'var(--blue)' }}>{data.account.connectedPagesCount || 0} Fanpage</strong></div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <a
-                href={authApi.facebookLoginUrl}
-                className="button button-primary"
-                style={{ width: '100%', textDecoration: 'none' }}
-              >
-                <Globe2 size={16} /> Gia hạn / Cấp lại quyền Facebook
-              </a>
-              <button
-                type="button"
-                className="button button-danger"
-                style={{ width: '100%' }}
-                onClick={logout}
-              >
+              <Link href="/channels" className="button button-primary" style={{ width: '100%' }}>
+                <Globe2 size={16} /> Kết nối Facebook & Fanpage
+              </Link>
+              {can(PERMISSIONS.USERS_MANAGE) && (
+                <Link href="/users" className="button button-secondary" style={{ width: '100%' }}>
+                  <UserCog size={16} /> Quản lý thành viên
+                </Link>
+              )}
+              <button type="button" className="button button-danger" style={{ width: '100%' }} onClick={logout}>
                 <LogOut size={16} /> Đăng xuất khỏi hệ thống
               </button>
             </div>
           </section>
 
-          {/* Chi tiết quyền hạn & Meta App */}
-          <section className="panel">
-            <div className="panel-heading">
-              <h2><KeyRound size={16} style={{ verticalAlign: 'middle', marginRight: 8, color: '#00f2fe' }} />Quyền hạn Meta Graph API</h2>
-              <span className="status-pill published">Sẵn sàng</span>
-            </div>
-            <div className="panel-body">
-              <p className="muted" style={{ lineHeight: 1.6, marginTop: 0 }}>
-                Hệ thống sử dụng Meta Business App và Page Access Token để đăng bài viết, lên lịch, tải ảnh/video và đọc số liệu Insights tự động.
-              </p>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 14, marginBottom: 20 }}>
-                <div style={{ padding: 14, borderRadius: 12, background: 'var(--field-bg)', border: '1px solid var(--line)' }}>
-                  <strong style={{ color: 'var(--ink)', display: 'block', marginBottom: 4 }}>Meta App ID</strong>
-                  <code style={{ color: 'var(--blue)', background: 'rgba(37, 99, 235, 0.08)', padding: '2px 6px', borderRadius: 4 }}>
-                    {data.system.metaAppId || '1397216959190868'}
-                  </code>
-                </div>
-                <div style={{ padding: 14, borderRadius: 12, background: 'var(--field-bg)', border: '1px solid var(--line)' }}>
-                  <strong style={{ color: 'var(--ink)', display: 'block', marginBottom: 4 }}>Phiên bản Graph API</strong>
-                  <code style={{ color: 'var(--blue)', background: 'rgba(37, 99, 235, 0.08)', padding: '2px 6px', borderRadius: 4 }}>v19.0</code>
-                </div>
+          <div style={{ display: 'grid', gap: 20, alignContent: 'start' }}>
+            {/* Thông tin cá nhân */}
+            <section className="panel">
+              <div className="panel-heading">
+                <h2><User size={16} style={{ verticalAlign: 'middle', marginRight: 8, color: 'var(--blue)' }} />Thông tin cá nhân</h2>
               </div>
-
-              <strong style={{ color: 'var(--ink)', display: 'block', marginBottom: 10 }}>Danh sách quyền (Scopes) đã kết nối:</strong>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
-                {[
-                  { name: 'pages_manage_posts', desc: 'Đăng tải nội dung, ảnh, video lên Fanpage' },
-                  { name: 'pages_read_engagement', desc: 'Đọc tương tác bài viết, reaction, bình luận' },
-                  { name: 'read_insights', desc: 'Lấy dữ liệu thống kê tăng trưởng Fanpage' },
-                  { name: 'pages_show_list', desc: 'Hiển thị danh sách Fanpage đang sở hữu' }
-                ].map((scope) => (
-                  <div key={scope.name} style={{ padding: 12, borderRadius: 10, background: 'rgba(16, 185, 129, 0.04)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                    <div style={{ color: '#10b981', fontWeight: 800, fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <Check size={14} /> {scope.name}
-                    </div>
-                    <small className="muted" style={{ fontSize: 11, display: 'block', marginTop: 3 }}>{scope.desc}</small>
+              <form className="panel-body" onSubmit={handleSaveProfile}>
+                {profileNotice.text && <InlineNotice notice={profileNotice} />}
+                <div className="settings-form-grid">
+                  <div>
+                    <label className="field-label" htmlFor="profile-name">Tên hiển thị</label>
+                    <input id="profile-name" className="field" value={profileForm.displayName} onChange={(e) => setProfileForm({ ...profileForm, displayName: e.target.value })} placeholder="Nguyễn Văn A" maxLength={120} />
                   </div>
-                ))}
-              </div>
+                  <div>
+                    <label className="field-label" htmlFor="profile-email">Gmail</label>
+                    <input id="profile-email" type="email" className="field" value={profileForm.email} onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })} placeholder="ten@gmail.com" />
+                  </div>
+                </div>
+                <small className="muted" style={{ display: 'block', margin: '10px 0 0', fontSize: 11.5 }}>
+                  Tên đăng nhập <strong>@{user?.username}</strong> và vai trò chỉ có thể được thay đổi bởi tài khoản cấp cao hơn.
+                </small>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+                  <button type="submit" className="button button-primary" disabled={savingProfile}>
+                    <Save size={15} /> {savingProfile ? 'Đang lưu…' : 'Lưu thông tin'}
+                  </button>
+                </div>
+              </form>
+            </section>
 
-              <div style={{ marginTop: 22, paddingTop: 16, borderTop: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span className="muted" style={{ fontSize: 12 }}>Muốn kết nối thêm Fanpage mới bằng Token thủ công?</span>
-                <Link href="/channels" className="button button-secondary" style={{ fontSize: 12, minHeight: 32 }}>
-                  Quản lý Kênh Fanpage <ExternalLink size={12} />
-                </Link>
+            {/* Đổi mật khẩu */}
+            <section className="panel">
+              <div className="panel-heading">
+                <h2><Lock size={16} style={{ verticalAlign: 'middle', marginRight: 8, color: 'var(--blue)' }} />Đổi mật khẩu</h2>
               </div>
-            </div>
-          </section>
+              <form className="panel-body" onSubmit={handleChangePassword}>
+                {passwordNotice.text && <InlineNotice notice={passwordNotice} />}
+                <div className="settings-form-grid settings-form-grid-3">
+                  <div>
+                    <label className="field-label" htmlFor="pw-current">Mật khẩu hiện tại</label>
+                    <input id="pw-current" type="password" className="field" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} autoComplete="current-password" required />
+                  </div>
+                  <div>
+                    <label className="field-label" htmlFor="pw-new">Mật khẩu mới</label>
+                    <input id="pw-new" type="password" className="field" value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} placeholder="Tối thiểu 6 ký tự" autoComplete="new-password" required />
+                  </div>
+                  <div>
+                    <label className="field-label" htmlFor="pw-confirm">Xác nhận mật khẩu mới</label>
+                    <input id="pw-confirm" type="password" className="field" value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} autoComplete="new-password" required />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+                  <button type="submit" className="button button-primary" disabled={savingPassword}>
+                    <KeyRound size={15} /> {savingPassword ? 'Đang đổi…' : 'Đổi mật khẩu'}
+                  </button>
+                </div>
+              </form>
+            </section>
+
+            {/* Quyền hạn theo vai trò */}
+            <section className="panel">
+              <div className="panel-heading">
+                <h2><ShieldCheck size={16} style={{ verticalAlign: 'middle', marginRight: 8, color: 'var(--blue)' }} />Quyền hạn của bạn</h2>
+                <RoleBadge role={user?.role} label={user?.roleLabel} size="sm" />
+              </div>
+              <div className="panel-body">
+                <ul className="settings-permission-list">
+                  <li><Check size={14} /> Viết bài, lên lịch, AI Studio, tải Excel và quản lý Fanpage của mình</li>
+                  {Object.entries(PERMISSION_LABELS).map(([permission, label]) => (
+                    <li key={permission} className={can(permission) ? '' : 'is-off'}>
+                      {can(permission) ? <Check size={14} /> : <Lock size={14} />} {label}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </section>
+
+            {/* Thông tin Meta App: chỉ hiển thị cho tài khoản cấu hình hệ thống */}
+            {canManageSystem && (
+              <section className="panel">
+                <div className="panel-heading">
+                  <h2><KeyRound size={16} style={{ verticalAlign: 'middle', marginRight: 8, color: '#00f2fe' }} />Quyền hạn Meta Graph API</h2>
+                  <span className="status-pill published">Sẵn sàng</span>
+                </div>
+                <div className="panel-body">
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 14, marginBottom: 16 }}>
+                    <div style={{ padding: 14, borderRadius: 12, background: 'var(--field-bg)', border: '1px solid var(--line)' }}>
+                      <strong style={{ color: 'var(--ink)', display: 'block', marginBottom: 4 }}>Meta App ID</strong>
+                      <code style={{ color: 'var(--blue)', background: 'rgba(37, 99, 235, 0.08)', padding: '2px 6px', borderRadius: 4 }}>
+                        {data.system.metaAppId || 'Chưa cấu hình'}
+                      </code>
+                    </div>
+                    <div style={{ padding: 14, borderRadius: 12, background: 'var(--field-bg)', border: '1px solid var(--line)' }}>
+                      <strong style={{ color: 'var(--ink)', display: 'block', marginBottom: 4 }}>Phiên bản Graph API</strong>
+                      <code style={{ color: 'var(--blue)', background: 'rgba(37, 99, 235, 0.08)', padding: '2px 6px', borderRadius: 4 }}>v19.0</code>
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
+                    {[
+                      { name: 'pages_manage_posts', desc: 'Đăng tải nội dung, ảnh, video lên Fanpage' },
+                      { name: 'pages_read_engagement', desc: 'Đọc tương tác bài viết, reaction, bình luận' },
+                      { name: 'read_insights', desc: 'Lấy dữ liệu thống kê tăng trưởng Fanpage' },
+                      { name: 'pages_show_list', desc: 'Hiển thị danh sách Fanpage đang sở hữu' }
+                    ].map((scope) => (
+                      <div key={scope.name} style={{ padding: 12, borderRadius: 10, background: 'rgba(16, 185, 129, 0.04)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                        <div style={{ color: '#10b981', fontWeight: 800, fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Check size={14} /> {scope.name}
+                        </div>
+                        <small className="muted" style={{ fontSize: 11, display: 'block', marginTop: 3 }}>{scope.desc}</small>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ marginTop: 18, display: 'flex', justifyContent: 'flex-end' }}>
+                    <a href={authApi.facebookLoginUrl} className="button button-secondary" style={{ fontSize: 12, minHeight: 32 }}>
+                      Kết nối Facebook qua OAuth <ExternalLink size={12} />
+                    </a>
+                  </div>
+                </div>
+              </section>
+            )}
+          </div>
         </div>
       )}
 
@@ -962,11 +1070,13 @@ export default function SettingsPage() {
                   <strong style={{ color: 'var(--ink)', display: 'block', marginBottom: 4 }}>Hiệu ứng đèn viền LED RGB chạy tròn (spinLED)</strong>
                   <span className="muted" style={{ fontSize: 12 }}>
                     Hiển thị dải viền LED RGB xoay tròn nhiều màu ở thẻ banner, nút AI Writer và các Fanpage đã chọn.
+                    {!canManageSystem && ' Áp dụng cho toàn hệ thống — chỉ Quản trị viên được thay đổi.'}
                   </span>
                 </div>
-                <label style={{ position: 'relative', display: 'inline-block', width: 44, height: 24, cursor: 'pointer' }}>
+                <label style={{ position: 'relative', display: 'inline-block', width: 44, height: 24, cursor: canManageSystem ? 'pointer' : 'not-allowed', opacity: canManageSystem ? 1 : 0.55 }}>
                   <input
                     type="checkbox"
+                    disabled={!canManageSystem}
                     checked={data.settings.enable_rgb_effects}
                     onChange={(e) => setData({ ...data, settings: { ...data.settings, enable_rgb_effects: e.target.checked } })}
                     style={{ opacity: 0, width: 0, height: 0 }}
@@ -1023,11 +1133,13 @@ export default function SettingsPage() {
                 </button>
               </div>
 
-              <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end' }}>
-                <button type="button" className="button button-primary" onClick={handleSave} disabled={saving}>
-                  <Save size={15} /> {saving ? 'Đang lưu…' : 'Lưu tùy chọn'}
-                </button>
-              </div>
+              {canManageSystem && (
+                <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end' }}>
+                  <button type="button" className="button button-primary" onClick={handleSave} disabled={saving}>
+                    <Save size={15} /> {saving ? 'Đang lưu…' : 'Lưu tùy chọn'}
+                  </button>
+                </div>
+              )}
             </div>
           </section>
 
@@ -1048,7 +1160,7 @@ export default function SettingsPage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                 <span className="muted" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Database size={14} /> Cơ sở dữ liệu:</span>
-                <span style={{ color: '#10b981', fontWeight: 700 }}>SQL Server (tool_face_db)</span>
+                <span style={{ color: '#10b981', fontWeight: 700 }}>{data.system.database || 'SQLite'}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                 <span className="muted" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><HardDrive size={14} /> Hàng đợi đăng bài:</span>
