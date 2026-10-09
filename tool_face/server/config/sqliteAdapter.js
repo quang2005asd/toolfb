@@ -58,7 +58,8 @@ CREATE TABLE IF NOT EXISTS Posts (
   facebook_post_id TEXT,
   created_by_user_id INTEGER,
   created_at TEXT DEFAULT (datetime('now', 'localtime')),
-  updated_at TEXT DEFAULT (datetime('now', 'localtime'))
+  updated_at TEXT DEFAULT (datetime('now', 'localtime')),
+  published_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS PostComments (
@@ -69,6 +70,9 @@ CREATE TABLE IF NOT EXISTS PostComments (
   delay_minutes INTEGER NOT NULL DEFAULT 0,
   media_url TEXT,
   status TEXT NOT NULL DEFAULT 'pending',
+  facebook_comment_id TEXT,
+  parent_comment_id INTEGER,
+  error_message TEXT,
   created_at TEXT DEFAULT (datetime('now', 'localtime')),
   FOREIGN KEY (post_id) REFERENCES Posts(id) ON DELETE CASCADE
 );
@@ -182,11 +186,19 @@ CREATE INDEX IF NOT EXISTS IX_AiDrafts_user_status ON AiGeneratedDrafts(user_id,
 
 // Bổ sung cột mới cho các CSDL đã được tạo từ phiên bản cũ (CREATE TABLE IF NOT EXISTS không tự thêm cột)
 const COLUMN_MIGRATIONS = {
+  Posts: {
+    published_at: 'TEXT'
+  },
   AppUsers: {
     email: 'TEXT',
     status: "TEXT NOT NULL DEFAULT 'active'",
     created_by: 'INTEGER',
     last_login_at: 'TEXT'
+  },
+  PostComments: {
+    facebook_comment_id: 'TEXT',
+    parent_comment_id: 'INTEGER',
+    error_message: 'TEXT'
   }
 };
 

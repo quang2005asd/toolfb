@@ -710,10 +710,22 @@ export default function DashboardHomePage() {
                   const FormatIcon = meta.icon;
                   const channel = channels.find((c) => String(c.id) === String(post.page_id));
 
+                  const rawMedia = post.media_link || post.media_thumb || post.media_links;
+                  let resolvedMedia = null;
+                  if (rawMedia) {
+                    if (typeof rawMedia === 'string' && rawMedia.startsWith('[')) {
+                      try { resolvedMedia = JSON.parse(rawMedia)[0]; } catch { resolvedMedia = rawMedia; }
+                    } else if (Array.isArray(rawMedia)) {
+                      resolvedMedia = rawMedia[0];
+                    } else if (typeof rawMedia === 'string') {
+                      resolvedMedia = rawMedia.split(',')[0].trim();
+                    }
+                  }
+
                   return (
                     <div className="post-row" key={post.id}>
                       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', overflow: 'hidden' }}>
-                        {post.media_link ? (
+                        {resolvedMedia ? (
                           <div
                             className="media-thumbnail-card"
                             style={{
@@ -727,13 +739,13 @@ export default function DashboardHomePage() {
                             onMouseEnter={(e) => handleShowPreview(post, e)}
                             onMouseLeave={handleHidePreview}
                           >
-                            {post.media_type === 'video' || post.media_link?.match(/\.mp4/i) ? (
+                            {post.media_type === 'video' || (typeof resolvedMedia === 'string' && (resolvedMedia.includes('drive.google.com') || resolvedMedia.match(/\.(mp4|mov|avi|webm)/i))) ? (
                               <div style={{ width: '100%', height: '100%', background: '#000', display: 'grid', placeItems: 'center', color: '#fff' }}>
                                 <VideoIcon size={18} />
                               </div>
                             ) : (
                               <img
-                                src={resolveMediaUrl(post.media_link)}
+                                src={resolveMediaUrl(resolvedMedia)}
                                 alt={`Post #${post.id}`}
                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                 onError={(e) => { e.currentTarget.style.display = 'none'; }}

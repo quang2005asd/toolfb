@@ -51,6 +51,40 @@ function formatDateTime(val, fallback = 'Đăng ngay') {
   return d ? d.toLocaleString('vi-VN') : fallback;
 }
 
+function parsePostMedia(post) {
+  const type = String(post?.media_type || 'text').toLowerCase();
+  let links = [];
+  const raw = post?.media_links || post?.media_link;
+  if (raw) {
+    if (Array.isArray(raw)) {
+      links = raw;
+    } else if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw);
+        links = Array.isArray(parsed) ? parsed : [parsed];
+      } catch {
+        links = raw.includes(',') ? raw.split(',').map((s) => s.trim()).filter(Boolean) : [raw.trim()];
+      }
+    }
+  }
+
+  const thumb = post?.media_thumb || '';
+  const firstLink = links[0] || thumb || '';
+  const isVideo = type === 'video' || type === 'reels' || Boolean(firstLink && (firstLink.includes('drive.google.com') || /\.(mp4|mov|avi|wmv|m4v|webm)/i.test(firstLink)));
+  const isImage = type === 'image' || (!isVideo && links.length > 0);
+
+  return {
+    type,
+    links,
+    count: links.length,
+    thumb,
+    firstLink,
+    isVideo,
+    isImage,
+    isText: !isVideo && !isImage && links.length === 0
+  };
+}
+
 function PostDetailModal({ postId, onClose, onRefresh, channelName }) {
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -60,6 +94,14 @@ function PostDetailModal({ postId, onClose, onRefresh, channelName }) {
   const [instantComment, setInstantComment] = useState('');
   const [sendingInstant, setSendingInstant] = useState(false);
   const [instantMessage, setInstantMessage] = useState({ text: '', type: '' });
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   useEffect(() => {
     if (!postId) return;
@@ -111,57 +153,104 @@ function PostDetailModal({ postId, onClose, onRefresh, channelName }) {
 
   if (!postId) return null;
 
-  let mediaLinks = [];
-  if (post?.media_links) {
-    try {
-      const parsed = JSON.parse(post.media_links);
-      mediaLinks = Array.isArray(parsed) ? parsed : [parsed];
-    } catch {
-      mediaLinks = [post.media_links];
-    }
-  }
+  const mediaInfo = parsePostMedia(post);
+  const mediaLinks = mediaInfo.links;
 
   return (
     <div
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.45)',
-        backdropFilter: 'blur(24px) saturate(190%)',
-        WebkitBackdropFilter: 'blur(24px) saturate(190%)',
+        backgroundColor: 'rgba(15, 23, 42, 0.72)',
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 1000,
-        padding: 20
+        padding: '20px 16px'
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
         className="panel"
         style={{
           width: '100%',
-          maxWidth: 680,
-          maxHeight: '90vh',
-          overflowY: 'auto',
+          maxWidth: 720,
+          maxHeight: '92vh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
           borderRadius: 24,
-          boxShadow: '0 32px 80px -10px rgba(15, 23, 42, 0.28), inset 0 1px 2px rgba(255, 255, 255, 1)',
-          border: '1px solid rgba(220, 214, 202, 0.65)',
-          borderTop: '1px solid rgba(255, 255, 255, 0.98)'
+          boxShadow: '0 32px 80px -10px rgba(0, 0, 0, 0.6), inset 0 1px 2px rgba(255, 255, 255, 0.15)',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          position: 'relative',
+          background: 'var(--panel)'
         }}
       >
-        <div className="panel-heading">
+        {/* HEADER CỐ ĐỊNH: NÚT THOÁT KHÔNG BAO GIỜ BỊ CUỘN HOẶC CHE KHUẤT */}
+        <div
+          className="panel-heading"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '16px 24px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+            background: 'var(--panel)',
+            flexShrink: 0,
+            zIndex: 30
+          }}
+        >
           <div>
-            <h2>Chi tiết bài đăng #{postId}</h2>
+            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>Chi tiết bài đăng #{postId}</h2>
             <span className="muted" style={{ fontSize: 12 }}>
               Kênh: <strong style={{ color: '#00f2fe' }}>{channelName}</strong>
             </span>
           </div>
-          <button className="button button-quiet" type="button" style={{ minHeight: 28, padding: '0 8px' }} onClick={onClose}>
-            <X size={16} />
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Đóng"
+            title="Đóng (Esc)"
+            style={{
+              width: 36,
+              height: 36,
+              minHeight: 36,
+              padding: 0,
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              color: '#ffffff',
+              cursor: 'pointer',
+              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
+              flexShrink: 0
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.25)';
+              e.currentTarget.style.borderColor = '#ef4444';
+              e.currentTarget.style.color = '#ef4444';
+              e.currentTarget.style.transform = 'scale(1.08)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+              e.currentTarget.style.color = '#ffffff';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+          >
+            <X size={18} strokeWidth={2.5} />
           </button>
         </div>
 
-        <div className="panel-body">
+        {/* NỘI DUNG CUỘN */}
+        <div className="panel-body" style={{ overflowY: 'auto', flex: 1, padding: 22 }}>
           {loading ? (
             <p className="muted" style={{ textAlign: 'center', padding: 30 }}>Đang tải chi tiết bài viết…</p>
           ) : !post ? (
@@ -176,7 +265,9 @@ function PostDetailModal({ postId, onClose, onRefresh, channelName }) {
                 </div>
                 <div>
                   <span className="muted" style={{ fontSize: 11 }}>Định dạng:</span>
-                  <div style={{ fontWeight: 700, marginTop: 2, textTransform: 'uppercase' }}>{post.media_type || 'TEXT'}</div>
+                  <div style={{ fontWeight: 700, marginTop: 2, textTransform: 'uppercase', color: mediaInfo.isVideo ? '#38bdf8' : mediaInfo.isImage ? '#10b981' : 'var(--ink)' }}>
+                    {post.media_type || (mediaInfo.isVideo ? 'VIDEO' : mediaInfo.isImage ? 'IMAGE' : 'TEXT')}
+                  </div>
                 </div>
                 <div>
                   <span className="muted" style={{ fontSize: 11 }}>Lịch đăng:</span>
@@ -204,12 +295,72 @@ function PostDetailModal({ postId, onClose, onRefresh, channelName }) {
               {mediaLinks.length > 0 && (
                 <div>
                   <label className="field-label">Tệp đính kèm ({mediaLinks.length} tệp):</label>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {mediaLinks.map((link, idx) => (
-                      <div key={idx} style={{ padding: '6px 10px', background: 'rgba(0, 242, 254, 0.08)', border: '1px solid rgba(0, 242, 254, 0.2)', borderRadius: 8, fontSize: 12, color: '#38bdf8' }}>
-                        Tệp #{idx + 1}: {link.replace(/^local:\/\//, '')}
-                      </div>
-                    ))}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12, marginBottom: 8 }}>
+                    {mediaLinks.map((link, idx) => {
+                      const cleanLink = link.replace(/^local:\/\//, '');
+                      const resolved = resolveMediaUrl(link);
+                      const isVid = post?.media_type === 'video' || post?.media_type === 'reels' || link.includes('drive.google.com') || /\.(mp4|mov|avi|webm)/i.test(link);
+                      return (
+                        <div
+                          key={idx}
+                          style={{
+                            borderRadius: 12,
+                            overflow: 'hidden',
+                            border: '1px solid rgba(255, 255, 255, 0.12)',
+                            background: 'rgba(0, 0, 0, 0.25)',
+                            display: 'flex',
+                            flexDirection: 'column'
+                          }}
+                        >
+                          <div style={{ width: '100%', height: 130, position: 'relative', background: '#090d16', display: 'grid', placeItems: 'center', overflow: 'hidden' }}>
+                            {isVid ? (
+                              link.includes('drive.google.com') ? (
+                                <a
+                                  href={link}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, color: '#38bdf8', padding: 12, textAlign: 'center', textDecoration: 'none' }}
+                                >
+                                  <Film size={32} />
+                                  <span style={{ fontSize: 11.5, fontWeight: 700 }}>Google Drive Video</span>
+                                  <span style={{ fontSize: 10, color: 'var(--muted)' }}>Bấm để mở video</span>
+                                </a>
+                              ) : (
+                                <video src={resolved} style={{ width: '100%', height: '100%', objectFit: 'cover' }} controls />
+                              )
+                            ) : (
+                              <a href={resolved} target="_blank" rel="noopener noreferrer" style={{ width: '100%', height: '100%', display: 'block' }}>
+                                <img
+                                  src={resolved}
+                                  alt={`media-${idx}`}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s' }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                  }}
+                                />
+                              </a>
+                            )}
+                          </div>
+                          <div style={{ padding: '8px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, background: 'rgba(255,255,255,0.03)' }}>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={cleanLink}>
+                              #{idx + 1}: {cleanLink.split('/').pop() || cleanLink}
+                            </span>
+                            <a
+                              href={resolved}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="button button-quiet"
+                              style={{ minHeight: 22, padding: '0 6px', fontSize: 11, color: '#38bdf8' }}
+                              title="Mở liên kết gốc"
+                            >
+                              <ExternalLink size={12} />
+                            </a>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -575,31 +726,79 @@ export default function PostListPage() {
                     </span>
                   </td>
                   <td>
-                    {post.media_link ? (
-                      <div
-                        className="media-thumbnail-card"
-                        style={{ width: 44, height: 44, cursor: 'pointer' }}
-                        onClick={() => setSelectedPostId(post.id)}
-                        title="Bấm để xem ảnh chi tiết"
-                      >
-                        {post.media_type === 'video' || post.media_link?.match(/\.mp4/i) ? (
-                          <div style={{ width: '100%', height: '100%', background: '#000', display: 'grid', placeItems: 'center', color: '#fff' }}>
-                            <Film size={18} />
+                    {(() => {
+                      const media = parsePostMedia(post);
+                      if (media.isVideo) {
+                        return (
+                          <div
+                            className="media-thumbnail-card"
+                            style={{
+                              width: 48,
+                              height: 48,
+                              cursor: 'pointer',
+                              position: 'relative',
+                              borderRadius: 12,
+                              overflow: 'hidden',
+                              border: '1px solid rgba(56, 189, 248, 0.4)',
+                              background: 'linear-gradient(135deg, rgba(14, 165, 233, 0.25), rgba(15, 23, 42, 0.9))'
+                            }}
+                            onClick={() => setSelectedPostId(post.id)}
+                            title="Bấm để xem video"
+                          >
+                            {media.thumb ? (
+                              <img
+                                src={resolveMediaUrl(media.thumb)}
+                                alt="video thumb"
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                              />
+                            ) : null}
+                            <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', background: 'rgba(0,0,0,0.35)', color: '#38bdf8' }}>
+                              <Film size={20} />
+                            </div>
+                            <span style={{ position: 'absolute', bottom: 2, right: 3, fontSize: 8, fontWeight: 800, color: '#fff', background: 'rgba(14, 165, 233, 0.9)', padding: '1px 3.5px', borderRadius: 3, textTransform: 'uppercase' }}>
+                              VIDEO
+                            </span>
                           </div>
-                        ) : (
-                          <img
-                            src={resolveMediaUrl(post.media_link)}
-                            alt="thumb"
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                          />
-                        )}
-                      </div>
-                    ) : (
-                      <span className="glass-pill-badge" style={{ fontSize: 11, color: 'var(--muted)' }}>
-                        <FileText size={12} /> Text
-                      </span>
-                    )}
+                        );
+                      }
+                      if (media.isImage) {
+                        return (
+                          <div
+                            className="media-thumbnail-card"
+                            style={{
+                              width: 48,
+                              height: 48,
+                              cursor: 'pointer',
+                              position: 'relative',
+                              borderRadius: 12,
+                              overflow: 'hidden',
+                              border: '1px solid rgba(255, 255, 255, 0.15)',
+                              background: 'rgba(0, 0, 0, 0.25)'
+                            }}
+                            onClick={() => setSelectedPostId(post.id)}
+                            title={media.count > 1 ? `Album ${media.count} ảnh` : 'Bấm để xem ảnh chi tiết'}
+                          >
+                            <img
+                              src={resolveMediaUrl(media.firstLink)}
+                              alt="thumb"
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                            {media.count > 1 && (
+                              <span style={{ position: 'absolute', bottom: 2, right: 2, fontSize: 8.5, fontWeight: 800, color: '#fff', background: 'rgba(0, 0, 0, 0.75)', padding: '1px 4px', borderRadius: 3 }}>
+                                +{media.count}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      }
+                      return (
+                        <span className="glass-pill-badge" style={{ fontSize: 11, color: 'var(--muted)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                          <FileText size={12} /> Text
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}>

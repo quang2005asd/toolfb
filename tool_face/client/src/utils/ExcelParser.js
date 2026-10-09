@@ -18,24 +18,24 @@ export const parseExcelPreview = (file) => {
 
         const formattedData = rawJson.map((row, index) => {
           // Xử lý đếm số lượng media links
-          const rawMedia = row['Media Link'] || '';
-          const mediaCount = rawMedia ? rawMedia.split(',').length : 0;
+          const rawMedia = row['Media Link'] || row['Link Media'] || row['Đường dẫn media'] || row['Media URL'] || '';
+          const mediaCount = rawMedia ? String(rawMedia).split(',').filter(Boolean).length : 0;
 
           // Xử lý lọc lấy Page ID từ Channel
-          let channelName = row['Channel'] || 'N/A';
-          const match = channelName.match(/^(.*?)\|/);
+          let channelName = row['Fanpage Channel (Tên | Page ID)'] || row['Fanpage Channel'] || row['Channel'] || row['Kênh'] || 'N/A';
+          const match = String(channelName).match(/^(.*?)\|/);
           if (match) channelName = match[1].trim();
 
           return {
             key: index,
             rowIndex: index + 2,
             channel: channelName,
-            content: row['Content'] || '(Không có nội dung)',
-            schedule: row['Schedule'] || 'Đăng ngay',
-            mediaType: row['Media Type'] || 'text',
+            content: row['Content'] || row['Nội dung'] || row['Nội dung bài đăng'] || '(Không có nội dung)',
+            schedule: row['Schedule'] || row['Thời gian đăng'] || row['Lịch đăng'] || 'Đăng ngay',
+            mediaType: row['Media Type'] || row['Loại Media'] || (mediaCount > 0 ? 'image' : 'text'),
             mediaCount: mediaCount,
-            comment1: row['Comment 1'] || '-',
-            comment2: row['Comment 2'] || '-'
+            comment1: row['Seeding Comment 1'] || row['Comment 1'] || row['Bình luận 1'] || '-',
+            comment2: row['Seeding Comment 2'] || row['Comment 2'] || row['Bình luận 2'] || '-'
           };
         });
 

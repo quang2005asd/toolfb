@@ -1483,7 +1483,7 @@ app.get('/api/posts', requireAuth, async (req, res) => {
     await ensurePostOwnershipSchema();
     const pool = await getPool();
     // Tự động đồng bộ trạng thái 'published' cho các bài đã lên lịch trực tiếp trên Facebook khi đã qua thời gian đăng
-    await pool.request().query("UPDATE Posts SET status = 'published' WHERE status IN ('pending', 'scheduled') AND facebook_post_id IS NOT NULL AND scheduled_at <= SYSUTCDATETIME();").catch(() => {});
+    await pool.request().query("UPDATE Posts SET status = 'published', published_at = COALESCE(published_at, scheduled_at, SYSUTCDATETIME()), updated_at = SYSUTCDATETIME() WHERE status IN ('pending', 'scheduled') AND facebook_post_id IS NOT NULL AND scheduled_at <= SYSUTCDATETIME();").catch(() => {});
 
     const pageValue = Number.parseInt(req.query.page, 10);
     const limitValue = Number.parseInt(req.query.limit, 10);
@@ -1511,20 +1511,31 @@ app.get('/api/posts', requireAuth, async (req, res) => {
     const result = await postsRequest.input('offset', sql.Int, (page - 1) * limit).input('limit', sql.Int, limit).query(`SELECT * FROM Posts ${whereClause} ORDER BY id DESC OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY;`);
 
     // Quản lý / Admin xem bài của cả đội nên cần biết người tạo từng bài
-    let posts = result.recordset;
+    let posts = result.recordset || [];
+    let authors = null;
     if (hasPermission(req.user.role, PERMISSIONS.POSTS_TEAM)) {
-      const authors = await getUserDisplayMap(posts.map((post) => post.created_by_user_id));
-      posts = posts.map((post) => {
-        const author = authors.get(String(post.created_by_user_id));
-        return {
-          ...post,
-          author_name: author?.name || null,
-          author_username: author?.username || null,
-          author_role_label: author?.roleLabel || null,
-          is_own: String(post.created_by_user_id) === String(req.user.sub)
-        };
-      });
+      authors = await getUserDisplayMap(posts.map((post) => post.created_by_user_id));
     }
+    posts = posts.map((post) => {
+      let primaryMediaLink = null;
+      if (post.media_links) {
+        try {
+          const parsed = JSON.parse(post.media_links);
+          primaryMediaLink = Array.isArray(parsed) ? parsed[0] : parsed;
+        } catch {
+          primaryMediaLink = typeof post.media_links === 'string' ? post.media_links.split(',')[0].trim() : null;
+        }
+      }
+      const author = authors ? authors.get(String(post.created_by_user_id)) : null;
+      return {
+        ...post,
+        media_link: post.media_link || post.media_thumb || primaryMediaLink || null,
+        author_name: author?.name || null,
+        author_username: author?.username || null,
+        author_role_label: author?.roleLabel || null,
+        is_own: String(post.created_by_user_id) === String(req.user.sub)
+      };
+    });
     return res.json({ success: true, posts, total: count.recordset[0].total, page, limit });
   } catch (error) {
     console.error('[Posts List Error]', error.message);
@@ -1537,7 +1548,7 @@ app.get('/api/posts/stats', requireAuth, async (req, res) => {
     await ensurePostOwnershipSchema();
     const pool = await getPool();
     // Tự động đồng bộ trạng thái 'published' cho các bài đã lên lịch trực tiếp trên Facebook
-    await pool.request().query("UPDATE Posts SET status = 'published' WHERE status IN ('pending', 'scheduled') AND facebook_post_id IS NOT NULL AND scheduled_at <= SYSUTCDATETIME();").catch(() => {});
+    await pool.request().query("UPDATE Posts SET status = 'published', published_at = COALESCE(published_at, scheduled_at, SYSUTCDATETIME()), updated_at = SYSUTCDATETIME() WHERE status IN ('pending', 'scheduled') AND facebook_post_id IS NOT NULL AND scheduled_at <= SYSUTCDATETIME();").catch(() => {});
 
     const request = pool.request();
     const where = `WHERE ${applyPostScope(req, request)}`;
@@ -1862,10 +1873,21 @@ app.get('/api/posts/:postId', requireAuth, async (req, res) => {
       .input('postId', sql.Int, postId)
       .query('SELECT * FROM PostComments WHERE post_id = @postId ORDER BY comment_index ASC');
 
+    let primaryMediaLink = null;
+    if (post.media_links) {
+      try {
+        const parsed = JSON.parse(post.media_links);
+        primaryMediaLink = Array.isArray(parsed) ? parsed[0] : parsed;
+      } catch {
+        primaryMediaLink = typeof post.media_links === 'string' ? post.media_links.split(',')[0].trim() : null;
+      }
+    }
+
     return res.json({
       success: true,
       post: {
         ...post,
+        media_link: post.media_link || post.media_thumb || primaryMediaLink || null,
         comments: commentsResult.recordset
       }
     });
@@ -1921,21 +1943,49 @@ app.get('/api/posts/:postId/analytics', requireAuth, async (req, res) => {
 
     const token = await getFacebookPageAccessToken(post.page_id);
     const graphVersion = process.env.FB_GRAPH_VERSION || 'v19.0';
-    const fbRes = await axios.get(`https://graph.facebook.com/${graphVersion}/${post.facebook_post_id}`, {
-      params: {
-        fields: 'shares,reactions.summary(total_count),comments.summary(total_count)',
-        access_token: token
-      },
-      timeout: 10000
-    });
-
-    const data = fbRes.data || {};
-    const analytics = {
-      likes: data.reactions?.summary?.total_count ?? 0,
-      comments: data.comments?.summary?.total_count ?? 0,
-      shares: data.shares?.count ?? 0,
+    let analytics = {
+      likes: 0,
+      comments: 0,
+      shares: 0,
+      views: 0,
       fbPostId: post.facebook_post_id
     };
+
+    try {
+      // 1. Thử lấy dạng Feed Post thông thường
+      const fbRes = await axios.get(`https://graph.facebook.com/${graphVersion}/${post.facebook_post_id}`, {
+        params: {
+          fields: 'shares,reactions.summary(total_count),comments.summary(total_count)',
+          access_token: token
+        },
+        timeout: 10000
+      });
+
+      const data = fbRes.data || {};
+      analytics.likes = data.reactions?.summary?.total_count ?? 0;
+      analytics.comments = data.comments?.summary?.total_count ?? 0;
+      analytics.shares = data.shares?.count ?? 0;
+    } catch (feedErr) {
+      // 2. Nếu là Video Object (Facebook trả về lỗi nonexisting field shares hoặc reactions)
+      try {
+        const videoRes = await axios.get(`https://graph.facebook.com/${graphVersion}/${post.facebook_post_id}`, {
+          params: {
+            fields: 'id,likes.summary(true),comments.summary(true),views',
+            access_token: token
+          },
+          timeout: 10000
+        });
+        const vData = videoRes.data || {};
+        analytics.likes = vData.likes?.summary?.total_count ?? 0;
+        analytics.comments = vData.comments?.summary?.total_count ?? 0;
+        analytics.views = vData.views ?? 0;
+        analytics.shares = 0;
+      } catch (videoErr) {
+        const errMsg = videoErr.response?.data?.error?.message || feedErr.response?.data?.error?.message || feedErr.message;
+        console.warn('[Post Analytics Warning]', errMsg);
+        return res.status(502).json({ success: false, message: errMsg });
+      }
+    }
 
     return res.json({ success: true, analytics });
   } catch (error) {

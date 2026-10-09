@@ -39,6 +39,67 @@ function canScheduleOnFacebook({ mediaType, scheduledAt }) {
   return diffMs >= minBufferMs && diffMs <= maxBufferMs;
 }
 
+const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
+const GOOGLE_DRIVE_HOSTS = new Set(['drive.google.com', 'drive.usercontent.google.com']);
+
+function normalizeGoogleDriveUrl(mediaLink) {
+  if (!mediaLink || typeof mediaLink !== 'string') return null;
+  let url;
+  try {
+    url = new URL(mediaLink);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'https:' || !GOOGLE_DRIVE_HOSTS.has(url.hostname)) return null;
+
+  const fileId = url.searchParams.get('id') || url.pathname.match(/\/file\/d\/([^/]+)/)?.[1];
+  if (!fileId) return null;
+
+  return `https://drive.google.com/uc?export=download&id=${encodeURIComponent(fileId)}`;
+}
+
+async function downloadGoogleDriveVideo(mediaLink) {
+  const directLink = normalizeGoogleDriveUrl(mediaLink);
+  if (!directLink) throw new Error('Không thể phân tích đường dẫn Google Drive.');
+  let currentUrl = new URL(directLink);
+
+  for (let redirectCount = 0; redirectCount <= 5; redirectCount++) {
+    if (currentUrl.protocol !== 'https:' || !GOOGLE_DRIVE_HOSTS.has(currentUrl.hostname)) {
+      throw new Error('Google Drive chuyển hướng đến máy chủ không hợp lệ.');
+    }
+
+    const response = await axios.get(currentUrl.toString(), {
+      responseType: 'arraybuffer',
+      maxContentLength: MAX_VIDEO_BYTES,
+      maxRedirects: 0,
+      timeout: 120000,
+      validateStatus: (status) => status >= 200 && status < 400
+    });
+
+    if (response.status >= 300) {
+      if (!response.headers.location || redirectCount === 5) {
+        throw new Error('Không thể tải video từ Google Drive. Vui lòng bật quyền xem "Bất kỳ ai có đường liên kết".');
+      }
+      currentUrl = new URL(response.headers.location, currentUrl);
+      continue;
+    }
+
+    const contentType = String(response.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
+    if (!contentType.startsWith('video/') && contentType !== 'application/octet-stream') {
+      throw new Error('Tệp tải về từ Google Drive không phải là video. Kiểm tra quyền chia sẻ công khai của file.');
+    }
+
+    const fileName = response.headers['content-disposition']?.match(/filename="?([^";]+)"?/i)?.[1];
+    return {
+      buffer: Buffer.from(response.data),
+      contentType: contentType === 'application/octet-stream' ? 'video/mp4' : contentType,
+      fileName: path.basename(fileName || 'drive-video.mp4')
+    };
+  }
+
+  throw new Error('Quá số lần chuyển hướng cho phép khi tải video từ Google Drive.');
+}
+
 /**
  * Tải ảnh dạng unpublished lên Facebook Page để lấy ID ảnh (media_fbid)
  */
@@ -139,6 +200,25 @@ async function schedulePostOnFacebook({ pageId, content, mediaType, mediaLinks =
       );
       return res.data.id;
     } else {
+      const isGoogleDrive = normalizeGoogleDriveUrl(mediaLink);
+      if (isGoogleDrive) {
+        console.log(`📥 [FB Schedule] Đang tải video từ Google Drive để lên lịch trên Fanpage ${pageId}...`);
+        const driveVideo = await downloadGoogleDriveVideo(mediaLink);
+        const formData = new FormData();
+        formData.append('source', new Blob([driveVideo.buffer], { type: driveVideo.contentType }), driveVideo.fileName);
+        formData.append('description', content || '');
+        formData.append('published', 'false');
+        formData.append('scheduled_publish_time', String(scheduledPublishTime));
+        formData.append('access_token', token);
+
+        const res = await axios.post(
+          `https://graph.facebook.com/${graphVersion}/${pageId}/videos`,
+          formData,
+          { timeout: 180000, maxBodyLength: MAX_VIDEO_BYTES }
+        );
+        return res.data.id;
+      }
+
       const res = await axios.post(
         `https://graph.facebook.com/${graphVersion}/${pageId}/videos`,
         {

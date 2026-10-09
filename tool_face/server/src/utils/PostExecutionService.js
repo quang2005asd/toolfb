@@ -59,9 +59,70 @@ async function uploadUnpublishedPhoto({ pageId, mediaLink, token, graphVersion }
   }
 }
 
+const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
+const GOOGLE_DRIVE_HOSTS = new Set(['drive.google.com', 'drive.usercontent.google.com']);
+
+function normalizeGoogleDriveUrl(mediaLink) {
+  if (!mediaLink || typeof mediaLink !== 'string') return null;
+  let url;
+  try {
+    url = new URL(mediaLink);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'https:' || !GOOGLE_DRIVE_HOSTS.has(url.hostname)) return null;
+
+  const fileId = url.searchParams.get('id') || url.pathname.match(/\/file\/d\/([^/]+)/)?.[1];
+  if (!fileId) return null;
+
+  return `https://drive.google.com/uc?export=download&id=${encodeURIComponent(fileId)}`;
+}
+
+async function downloadGoogleDriveVideo(mediaLink) {
+  const directLink = normalizeGoogleDriveUrl(mediaLink);
+  if (!directLink) throw new Error('Không thể phân tích đường dẫn Google Drive.');
+  let currentUrl = new URL(directLink);
+
+  for (let redirectCount = 0; redirectCount <= 5; redirectCount++) {
+    if (currentUrl.protocol !== 'https:' || !GOOGLE_DRIVE_HOSTS.has(currentUrl.hostname)) {
+      throw new Error('Google Drive chuyển hướng đến máy chủ không hợp lệ.');
+    }
+
+    const response = await axios.get(currentUrl.toString(), {
+      responseType: 'arraybuffer',
+      maxContentLength: MAX_VIDEO_BYTES,
+      maxRedirects: 0,
+      timeout: 120000,
+      validateStatus: (status) => status >= 200 && status < 400
+    });
+
+    if (response.status >= 300) {
+      if (!response.headers.location || redirectCount === 5) {
+        throw new Error('Không thể tải video từ Google Drive. Vui lòng bật quyền xem "Bất kỳ ai có đường liên kết".');
+      }
+      currentUrl = new URL(response.headers.location, currentUrl);
+      continue;
+    }
+
+    const contentType = String(response.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
+    if (!contentType.startsWith('video/') && contentType !== 'application/octet-stream') {
+      throw new Error('Tệp tải về từ Google Drive không phải là video. Kiểm tra quyền chia sẻ công khai của file.');
+    }
+
+    const fileName = response.headers['content-disposition']?.match(/filename="?([^";]+)"?/i)?.[1];
+    return {
+      buffer: Buffer.from(response.data),
+      contentType: contentType === 'application/octet-stream' ? 'video/mp4' : contentType,
+      fileName: path.basename(fileName || 'drive-video.mp4')
+    };
+  }
+
+  throw new Error('Quá số lần chuyển hướng cho phép khi tải video từ Google Drive.');
+}
+
 async function publishStory({ pageId, mediaLink, token, graphVersion }) {
   const isVideo = typeof mediaLink === 'string' && (
-    mediaLink.endsWith('.mp4') || mediaLink.endsWith('.mov') || mediaLink.includes('video')
+    mediaLink.endsWith('.mp4') || mediaLink.endsWith('.mov') || mediaLink.includes('video') || Boolean(normalizeGoogleDriveUrl(mediaLink))
   );
 
   if (isVideo) {
@@ -74,6 +135,10 @@ async function publishStory({ pageId, mediaLink, token, graphVersion }) {
       fileName = mediaLink.slice('local://'.length);
       const filePath = getUploadFilePath(fileName);
       fileBuffer = await fs.readFile(filePath);
+    } else if (normalizeGoogleDriveUrl(mediaLink)) {
+      const driveVideo = await downloadGoogleDriveVideo(mediaLink);
+      fileBuffer = driveVideo.buffer;
+      fileName = driveVideo.fileName;
     } else {
       const resp = await axios.get(mediaLink, { responseType: 'arraybuffer' });
       fileBuffer = Buffer.from(resp.data);
@@ -128,6 +193,9 @@ async function publishReel({ pageId, mediaLink, content, token, graphVersion }) 
     const fileName = mediaLink.slice('local://'.length);
     const filePath = getUploadFilePath(fileName);
     fileBuffer = await fs.readFile(filePath);
+  } else if (normalizeGoogleDriveUrl(mediaLink)) {
+    const driveVideo = await downloadGoogleDriveVideo(mediaLink);
+    fileBuffer = driveVideo.buffer;
   } else {
     const resp = await axios.get(mediaLink, { responseType: 'arraybuffer' });
     fileBuffer = Buffer.from(resp.data);
@@ -168,13 +236,29 @@ async function publishMedia({ pageId, mediaType, mediaLink, content, token, grap
     const fileBuffer = await fs.readFile(filePath);
     const formData = new FormData();
     formData.append('source', new Blob([fileBuffer]), fileName);
-    formData.append(captionKey, content);
+    formData.append(captionKey, content || '');
     formData.append('access_token', token);
     return axios.post(url, formData, { timeout: isVideo ? 180000 : 60000 });
   }
 
+  if (isVideo) {
+    const isGoogleDrive = normalizeGoogleDriveUrl(mediaLink);
+    if (isGoogleDrive) {
+      console.log(`📥 [Google Drive Video] Đang tải video từ Google Drive để upload lên Fanpage ${pageId}...`);
+      const driveVideo = await downloadGoogleDriveVideo(mediaLink);
+      const formData = new FormData();
+      formData.append('source', new Blob([driveVideo.buffer], { type: driveVideo.contentType }), driveVideo.fileName);
+      formData.append('description', content || '');
+      formData.append('access_token', token);
+      return axios.post(url, formData, {
+        timeout: 180000,
+        maxBodyLength: MAX_VIDEO_BYTES
+      });
+    }
+  }
+
   return axios.post(url, {
-    [captionKey]: content,
+    [captionKey]: content || '',
     [isVideo ? 'file_url' : 'url']: mediaLink,
     access_token: token
   }, { timeout: isVideo ? 180000 : 60000 });
@@ -293,10 +377,12 @@ async function executePublishPost(postId) {
 
     console.log(`✅ [FB SUCCESS] Đăng bài thành công lên Facebook! ID: ${fbPostId}`);
 
+    const nowIso = new Date().toISOString();
     await pool.request()
       .input('id', sql.Int, postId)
       .input('fbId', sql.NVarChar, fbPostId)
-      .query("UPDATE Posts SET status = 'published', facebook_post_id = @fbId WHERE id = @id");
+      .input('nowIso', sql.NVarChar, nowIso)
+      .query("UPDATE Posts SET status = 'published', facebook_post_id = @fbId, published_at = @nowIso, updated_at = @nowIso WHERE id = @id");
 
     const cleanPostId = fbPostId && fbPostId.includes('_') ? fbPostId.split('_')[1] : fbPostId;
     const directPostUrl = `https://www.facebook.com/${post.page_id}/posts/${cleanPostId}`;
@@ -309,15 +395,38 @@ async function executePublishPost(postId) {
 
 
     // Schedule pending comments:
-    // Có thể trigger qua standalone scheduler hoặc BullMQ
     const commentQuery = await pool.request()
       .input('postId', sql.Int, postId)
-      .query("SELECT id, delay_minutes FROM PostComments WHERE post_id = @postId AND status = 'pending'");
+      .query("SELECT id, delay_minutes FROM PostComments WHERE post_id = @postId AND status = 'pending' ORDER BY delay_minutes ASC, id ASC");
 
-    for (const comment of commentQuery.recordset) {
+    let addCommentToQueueFn = null;
+    try {
+      const cq = require('../../../queues/comment.queue') || require('../../queues/comment.queue');
+      addCommentToQueueFn = cq.addCommentToQueue;
+    } catch (_) {
+      try {
+        const cq2 = require('../../queues/comment.queue');
+        addCommentToQueueFn = cq2.addCommentToQueue;
+      } catch (__) {}
+    }
+
+    const comments = commentQuery.recordset || [];
+    for (let i = 0; i < comments.length; i++) {
+      const comment = comments[i];
       if (comment.delay_minutes === 0) {
-        // Comment ngay lập tức
-        executePublishComment(comment.id).catch((e) => console.error(`Lỗi comment tức thì #${comment.id}:`, e.message));
+        // Comment ngay lập tức (giãn cách nhẹ 2.5s nếu có nhiều comment delay 0 để không bị rate limit)
+        const immediateDelayMs = i * 2500;
+        setTimeout(() => {
+          executePublishComment(comment.id).catch((e) => console.error(`Lỗi comment tức thì #${comment.id}:`, e.message));
+        }, immediateDelayMs);
+      } else {
+        if (addCommentToQueueFn) {
+          addCommentToQueueFn(comment.id, comment.delay_minutes).catch((e) => console.warn(`[Queue Comment Error #${comment.id}]:`, e.message));
+        }
+        const delayMs = Math.max(0, (comment.delay_minutes || 0) * 60 * 1000);
+        setTimeout(() => {
+          executePublishComment(comment.id).catch((e) => console.error(`Lỗi comment hẹn giờ #${comment.id}:`, e.message));
+        }, delayMs);
       }
     }
 
@@ -347,13 +456,7 @@ async function executePublishComment(commentId) {
   const pool = await getPool();
   const claimResult = await pool.request()
     .input('id', sql.Int, commentId)
-    .query(`
-      UPDATE commentRow
-      SET status = 'posting'
-      OUTPUT INSERTED.id
-      FROM PostComments AS commentRow
-      WHERE commentRow.id = @id AND commentRow.status = 'pending';
-    `);
+    .query("UPDATE PostComments SET status = 'posting' OUTPUT INSERTED.id WHERE id = @id AND status = 'pending';");
 
   if (claimResult.recordset.length === 0) return;
 
@@ -361,9 +464,12 @@ async function executePublishComment(commentId) {
     const result = await pool.request()
       .input('id', sql.Int, commentId)
       .query(`
-        SELECT commentRow.content, commentRow.media_url, postRow.facebook_post_id, postRow.page_id
+        SELECT commentRow.content, commentRow.media_url, commentRow.parent_comment_id,
+               postRow.facebook_post_id, postRow.page_id,
+               parentRow.facebook_comment_id AS parent_facebook_comment_id
         FROM PostComments AS commentRow
         INNER JOIN Posts AS postRow ON postRow.id = commentRow.post_id
+        LEFT JOIN PostComments AS parentRow ON parentRow.id = commentRow.parent_comment_id
         WHERE commentRow.id = @id;
       `);
     const comment = result.recordset[0];
@@ -373,26 +479,34 @@ async function executePublishComment(commentId) {
 
     const pageAccessToken = await getFacebookPageAccessToken(comment.page_id);
     const graphVersion = process.env.FB_GRAPH_VERSION || 'v19.0';
+    const targetId = comment.parent_facebook_comment_id || comment.facebook_post_id;
+
     const payload = {
       message: comment.content,
       access_token: pageAccessToken
     };
     if (comment.media_url) payload.attachment_url = comment.media_url;
 
-    await axios.post(
-      `https://graph.facebook.com/${graphVersion}/${comment.facebook_post_id}/comments`,
+    console.log(`💬 [Comment API] Đang đăng bình luận #${commentId} lên đối tượng FB ${targetId}...`);
+    const fbRes = await axios.post(
+      `https://graph.facebook.com/${graphVersion}/${targetId}/comments`,
       payload
     );
 
+    const fbCommentId = fbRes.data?.id || null;
+
     await pool.request()
       .input('id', sql.Int, commentId)
-      .query("UPDATE PostComments SET status = 'posted' WHERE id = @id");
-    console.log(`✅ [Comment SUCCESS] Đã đăng comment seeding #${commentId} lên Facebook.`);
+      .input('fbCommentId', sql.NVarChar(128), fbCommentId)
+      .query("UPDATE PostComments SET status = 'posted', facebook_comment_id = @fbCommentId, error_message = NULL WHERE id = @id");
+    console.log(`✅ [Comment SUCCESS] Đã đăng comment seeding #${commentId} lên Facebook! FB Comment ID: ${fbCommentId}`);
   } catch (error) {
+    const errorMsg = error.response?.data?.error?.message || error.message;
     await pool.request()
       .input('id', sql.Int, commentId)
-      .query("UPDATE PostComments SET status = 'failed' WHERE id = @id");
-    console.error(`❌ [Comment ERROR #${commentId}]`, error.response?.data?.error?.message || error.message);
+      .input('errMsg', sql.NVarChar(sql.MAX), errorMsg)
+      .query("UPDATE PostComments SET status = 'failed', error_message = @errMsg WHERE id = @id");
+    console.error(`❌ [Comment ERROR #${commentId}]`, errorMsg);
     throw error;
   }
 }

@@ -1,4 +1,4 @@
-const isStandalone = process.env.USE_SQLITE === 'true' || process.env.DISABLE_REDIS === 'true';
+const isStandalone = process.env.DISABLE_REDIS === 'true';
 
 let commentQueue = null;
 if (!isStandalone) {

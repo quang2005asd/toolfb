@@ -60,21 +60,39 @@ async function pollPendingComments() {
   try {
     const pool = await getPool();
     const result = await pool.request().query(`
-      SELECT c.id, c.delay_minutes, p.created_at, p.status AS post_status
+      SELECT c.id, c.delay_minutes, p.published_at, p.updated_at, p.created_at, p.status AS post_status
       FROM PostComments c
       INNER JOIN Posts p ON p.id = c.post_id
       WHERE c.status = 'pending'
         AND p.status = 'published'
-        AND DATEDIFF(second, p.created_at, SYSUTCDATETIME()) >= (c.delay_minutes * 60)
-      ORDER BY c.id ASC;
+      ORDER BY c.delay_minutes ASC, c.id ASC;
     `);
 
-    const dueComments = result.recordset || [];
+    const now = Date.now();
+    const dueComments = (result.recordset || []).filter((comment) => {
+      // QUAN TRỌNG: Độ trễ comment seeding tính từ lúc bài viết được xuất bản (published_at),
+      // tuyệt đối không tính từ lúc tạo bản nháp/upload Excel (created_at).
+      const pubTimeStr = comment.published_at || comment.updated_at;
+      if (!pubTimeStr) return false;
+
+      const pubTime = new Date(pubTimeStr).getTime();
+      if (!Number.isFinite(pubTime)) return false;
+
+      const delayMs = Math.max(0, (comment.delay_minutes || 0) * 60 * 1000);
+      return (now - pubTime) >= delayMs;
+    });
+
     for (const comment of dueComments) {
       console.log(`💬 [StandaloneScheduler] Phát hiện comment seeding #${comment.id} đến giờ đăng. Đang xuất bản...`);
-      executePublishComment(comment.id).catch((err) => {
+      try {
+        await executePublishComment(comment.id);
+        // Nếu có nhiều comment cùng đến hạn, giãn cách 2.5s để tránh Facebook chặn spam
+        if (dueComments.length > 1) {
+          await new Promise((resolve) => setTimeout(resolve, 2500));
+        }
+      } catch (err) {
         console.error(`[StandaloneScheduler] Lỗi xuất bản comment #${comment.id}:`, err.message);
-      });
+      }
     }
   } catch (err) {
     if (!err.message?.includes('Failed to connect')) {

@@ -20,3 +20,5 @@ Thumbs.db
 desktop/
 server/data/
 *.sqlite
+~$*
+**/~$*
