@@ -36,6 +36,12 @@ const telegramAlertService = require('./utils/TelegramAlertService');
 const tokenHealthCheckService = require('./utils/TokenHealthCheckService');
 const aiConversationService = require('./utils/AiConversationService');
 const channelGroupService = require('./utils/ChannelGroupService');
+const messengerService = require('./utils/MessengerService');
+const autoReplyService = require('./utils/MessengerAutoReplyService');
+const instagramService = require('./utils/InstagramService');
+
+// Sau mỗi lần đồng bộ tin của một hội thoại: kiểm tra và gửi trả lời tự động nếu đang bật
+messengerService.onConversationSynced(autoReplyService.processConversation);
 const {
   AppUserError,
   accountExists,
@@ -84,7 +90,13 @@ app.use(cors({
   },
   credentials: true
 }));
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({
+  limit: '2mb',
+  // Webhook Facebook cần body gốc để xác thực chữ ký X-Hub-Signature-256
+  verify: (req, _res, buffer) => {
+    if (req.originalUrl.startsWith('/api/webhooks/')) req.rawBody = buffer;
+  }
+}));
 app.use('/api', loadSession);
 
 const mediaDirectory = process.env.APP_DATA_DIR
@@ -1296,6 +1308,373 @@ app.delete('/api/channel-groups/:id', requireAuth, async (req, res) => {
   }
 });
 
+// ═══ HỘP THƯ MESSENGER + INSTAGRAM DIRECT (ĐỒNG BỘ 2 CHIỀU VỚI FACEBOOK) ═══
+const CONVERSATION_ID_PATTERN = /^[\w.:=-]{3,200}$/;
+const messengerImageUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, callback) => (file.mimetype.startsWith('image/')
+    ? callback(null, true)
+    : callback(new Error('Chỉ gửi được tệp hình ảnh.')))
+});
+
+function handleMessengerImage(req, res, next) {
+  messengerImageUpload.single('image')(req, res, (error) => {
+    if (!error) return next();
+    const status = error.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+    return res.status(status).json({
+      success: false,
+      message: error.code === 'LIMIT_FILE_SIZE' ? 'Ảnh vượt quá giới hạn 10 MB.' : error.message
+    });
+  });
+}
+
+function sendMessengerError(res, label, error) {
+  if (error instanceof messengerService.MessengerError) {
+    return res.status(error.status).json({ success: false, code: error.code, message: error.message });
+  }
+  console.error(`[${label}]`, error.message);
+  return res.status(500).json({ success: false, message: 'Lỗi máy chủ khi xử lý tin nhắn.' });
+}
+
+// Hộp thư chỉ gồm các Fanpage đã kết nối với tài khoản đang đăng nhập
+async function getMessengerPages(userId) {
+  const unique = new Map();
+  for (const page of await getConnectedPages(userId)) {
+    if (!unique.has(String(page.id))) unique.set(String(page.id), page);
+  }
+  return [...unique.values()];
+}
+
+async function describeMessengerPages(pages) {
+  const accounts = await instagramService.listInstagramAccounts(pages.map((page) => String(page.id))).catch(() => []);
+  const byPage = new Map(accounts.map((account) => [String(account.pageId), account]));
+  return pages.map((page) => {
+    const supportsMessaging = Array.isArray(page.tasks) && page.tasks.includes('MESSAGING');
+    let status = messengerService.getPageStatus(page.id, 'messenger');
+    // Page không có quyền MESSAGING thì vòng tự đồng bộ bỏ qua: báo rõ lý do thay vì "đang kiểm tra" mãi
+    if (status.state === 'unknown' && !supportsMessaging) {
+      status = { ...status, state: 'no_permission', message: 'Nick Facebook kết nối Fanpage này không có vai trò nhắn tin (MESSAGING) nên hộp thư không tự đồng bộ. Hãy kết nối lại bằng tài khoản có quyền nhắn tin trên Page.' };
+    }
+    const instagram = byPage.get(String(page.id));
+    const instagramStatus = instagram ? messengerService.getPageStatus(page.id, 'instagram') : null;
+    return {
+      id: String(page.id),
+      name: page.name,
+      link: page.link || null,
+      supportsMessaging,
+      status: status.state,
+      statusMessage: status.message,
+      syncedAt: status.syncedAt,
+      instagram: instagram ? {
+        id: instagram.id,
+        username: instagram.username,
+        profilePictureUrl: instagram.profilePictureUrl,
+        status: instagramStatus.state,
+        statusMessage: instagramStatus.message
+      } : null
+    };
+  });
+}
+
+function pageNameMap(pages) {
+  return new Map(pages.map((page) => [String(page.id), page.name]));
+}
+
+async function getOwnedConversation(req) {
+  const conversationId = String(req.params.conversationId || '');
+  if (!CONVERSATION_ID_PATTERN.test(conversationId)) return null;
+  const conversation = await messengerService.getConversationRow(conversationId);
+  if (!conversation || !(await userOwnsPage(req.user.sub, conversation.page_id))) return null;
+  return conversation;
+}
+
+async function conversationPayload(req, conversationId) {
+  const pages = await getMessengerPages(req.user.sub);
+  const row = await messengerService.getConversationRow(conversationId);
+  const messages = await messengerService.listMessages(conversationId);
+  // Tin trả lời từ tool hiện tên tài khoản đã gửi để cả đội biết ai đang chăm sóc khách
+  const senders = await getUserDisplayMap(messages.map((message) => message.sentByUserId).filter(Boolean));
+  return {
+    conversation: messengerService.toPublicConversation(row, pageNameMap(pages)),
+    messages: messages.map((message) => ({
+      ...message,
+      isAutoReply: message.sentByUserId === autoReplyService.AUTO_REPLY_SENDER,
+      sentByName: message.sentByUserId === autoReplyService.AUTO_REPLY_SENDER
+        ? 'Trả lời tự động'
+        : (message.sentByUserId ? (senders.get(String(message.sentByUserId))?.name || null) : null)
+    }))
+  };
+}
+
+// Pages được chọn trong request phải thuộc tài khoản đang đăng nhập
+function pickOwnedPages(pages, requested) {
+  if (!requested || requested === 'all') return pages;
+  const wanted = new Set([].concat(requested).map(String));
+  return pages.filter((page) => wanted.has(String(page.id)));
+}
+
+app.get('/api/messenger/pages', requireAuth, async (req, res) => {
+  try {
+    const pages = await getMessengerPages(req.user.sub);
+    return res.json({ success: true, pages: await describeMessengerPages(pages) });
+  } catch (error) {
+    return sendMessengerError(res, 'Messenger Pages Error', error);
+  }
+});
+
+app.get('/api/messenger/conversations', requireAuth, async (req, res) => {
+  try {
+    const pages = await getMessengerPages(req.user.sub);
+    const requested = String(req.query.pageId || 'all');
+    const targetPages = pickOwnedPages(pages, requested);
+    if (requested !== 'all' && targetPages.length === 0) {
+      return res.status(403).json({ success: false, message: 'Fanpage này chưa được kết nối với tài khoản của bạn.' });
+    }
+    // sync=1: đồng bộ nhẹ (có giới hạn tần suất) khi server không chạy vòng tự đồng bộ
+    if (req.query.sync === '1') {
+      const results = await Promise.allSettled(targetPages.map((page) => messengerService.syncPageConversations(page.id)));
+      for (const result of results) {
+        for (const conversationId of result.value?.changed || []) {
+          await messengerService.syncConversationAndNotify(conversationId, { force: true }).catch(() => {});
+        }
+      }
+    }
+    const conversations = await messengerService.listConversations({
+      pageIds: targetPages.map((page) => String(page.id)),
+      pageNames: pageNameMap(pages),
+      platform: String(req.query.platform || 'all'),
+      search: typeof req.query.search === 'string' ? req.query.search : '',
+      unreadOnly: req.query.filter === 'unread'
+    });
+    return res.json({
+      success: true,
+      conversations,
+      pages: await describeMessengerPages(pages),
+      autoSync: messengerService.getAutoSyncInfo()
+    });
+  } catch (error) {
+    return sendMessengerError(res, 'Messenger Conversations Error', error);
+  }
+});
+
+// Đồng bộ ngay (bỏ qua giới hạn tần suất, lấy tối đa 100 hội thoại gần nhất mỗi Page / nền tảng)
+app.post('/api/messenger/sync', requireAuth, async (req, res) => {
+  try {
+    const pages = await getMessengerPages(req.user.sub);
+    const targetPages = pickOwnedPages(pages, String(req.body?.pageId || 'all'));
+    await instagramService.syncInstagramAccounts(targetPages.map((page) => String(page.id)), messengerService.getPageToken).catch(() => {});
+    const results = await Promise.all(targetPages.map(async (page) => {
+      try {
+        const result = await messengerService.syncPageConversations(page.id, { force: true, maxPages: 4 });
+        for (const conversationId of result.changed || []) {
+          await messengerService.syncConversationAndNotify(conversationId, { force: true }).catch(() => {});
+        }
+        const warning = result.errors?.instagram?.message || result.errors?.messenger?.message || null;
+        return { pageId: String(page.id), pageName: page.name, success: true, count: result.count || 0, warning };
+      } catch (error) {
+        return { pageId: String(page.id), pageName: page.name, success: false, message: error.message };
+      }
+    }));
+    const synced = results.filter((item) => item.success);
+    return res.json({
+      success: synced.length > 0 || results.length === 0,
+      results,
+      pages: await describeMessengerPages(pages),
+      message: results.length === 0
+        ? 'Chưa có Fanpage nào được kết nối.'
+        : `Đã đồng bộ ${synced.reduce((sum, item) => sum + item.count, 0)} hội thoại từ ${synced.length}/${results.length} Fanpage.`
+    });
+  } catch (error) {
+    return sendMessengerError(res, 'Messenger Sync Error', error);
+  }
+});
+
+app.get('/api/messenger/conversations/:conversationId/messages', requireAuth, async (req, res) => {
+  try {
+    const conversation = await getOwnedConversation(req);
+    if (!conversation) return res.status(404).json({ success: false, message: 'Không tìm thấy hội thoại.' });
+    let syncError = null;
+    if (req.query.sync === '1') {
+      try {
+        await messengerService.syncConversationAndNotify(conversation.id, { force: req.query.force === '1' });
+      } catch (error) {
+        syncError = error.message;
+      }
+    }
+    if (req.query.markRead !== '0') {
+      const fresh = await messengerService.getConversationRow(conversation.id);
+      await messengerService.markConversationRead(fresh || conversation).catch(() => {});
+    }
+    return res.json({ success: true, ...(await conversationPayload(req, conversation.id)), syncError });
+  } catch (error) {
+    return sendMessengerError(res, 'Messenger Messages Error', error);
+  }
+});
+
+app.post('/api/messenger/conversations/:conversationId/messages', requireAuth, handleMessengerImage, async (req, res) => {
+  try {
+    const conversation = await getOwnedConversation(req);
+    if (!conversation) return res.status(404).json({ success: false, message: 'Không tìm thấy hội thoại.' });
+    await messengerService.sendMessage({
+      conversationId: conversation.id,
+      text: req.body?.text,
+      image: req.file || null,
+      userId: req.user.sub
+    });
+    return res.status(201).json({ success: true, ...(await conversationPayload(req, conversation.id)) });
+  } catch (error) {
+    return sendMessengerError(res, 'Messenger Send Error', error);
+  }
+});
+
+app.get('/api/messenger/unread', requireAuth, async (req, res) => {
+  try {
+    const pages = await getMessengerPages(req.user.sub);
+    const total = await messengerService.getUnreadTotal(pages.map((page) => String(page.id)));
+    return res.json({ success: true, total });
+  } catch (error) {
+    return sendMessengerError(res, 'Messenger Unread Error', error);
+  }
+});
+
+// ═══ TRẢ LỜI TỰ ĐỘNG ═══
+app.get('/api/messenger/auto-reply', requireAuth, async (req, res) => {
+  try {
+    const pages = await getMessengerPages(req.user.sub);
+    const pageIds = pages.map((page) => String(page.id));
+    const [settings, described, stats, aiConfig] = await Promise.all([
+      autoReplyService.getSettingsMap(pageIds),
+      describeMessengerPages(pages),
+      autoReplyService.getStats(pageIds),
+      aiContentGenerator.getAiConfig().catch(() => ({}))
+    ]);
+    return res.json({
+      success: true,
+      pages: described.map((page) => ({ ...page, autoReply: settings.get(page.id) })),
+      stats,
+      aiConfigured: Boolean(aiConfig.apiKey),
+      defaultTemplate: autoReplyService.DEFAULT_TEMPLATE
+    });
+  } catch (error) {
+    return sendMessengerError(res, 'Auto Reply Settings Error', error);
+  }
+});
+
+app.put('/api/messenger/auto-reply', requireAuth, async (req, res) => {
+  try {
+    const pages = await getMessengerPages(req.user.sub);
+    const requestedIds = Array.isArray(req.body?.pageIds) ? req.body.pageIds.map(String) : [];
+    const targetPages = pickOwnedPages(pages, requestedIds);
+    if (!requestedIds.length || targetPages.length !== new Set(requestedIds).size) {
+      return res.status(403).json({ success: false, message: 'Chỉ cài đặt được cho Fanpage đã kết nối với tài khoản của bạn.' });
+    }
+    const { enabled, platforms, mode, templateText, aiInstruction } = req.body || {};
+    await autoReplyService.saveSettings({
+      pageIds: targetPages.map((page) => String(page.id)),
+      enabled: Boolean(enabled),
+      platforms,
+      mode,
+      templateText,
+      aiInstruction,
+      userId: req.user.sub
+    });
+    return res.json({
+      success: true,
+      message: enabled
+        ? `Đã bật trả lời tự động cho ${targetPages.length} Fanpage. Mọi tin nhắn mới của khách sẽ được trả lời.`
+        : `Đã tắt trả lời tự động cho ${targetPages.length} Fanpage.`
+    });
+  } catch (error) {
+    return sendMessengerError(res, 'Auto Reply Save Error', error);
+  }
+});
+
+app.post('/api/messenger/auto-reply/preview', requireAuth, async (req, res) => {
+  try {
+    const pages = await getMessengerPages(req.user.sub);
+    const page = pages.find((item) => String(item.id) === String(req.body?.pageId)) || pages[0];
+    const { mode, templateText, aiInstruction, sampleText } = req.body || {};
+    const preview = await autoReplyService.previewReply({
+      settings: { mode: mode === 'ai' ? 'ai' : 'template', templateText, aiInstruction },
+      pageName: page?.name || 'Shop',
+      sampleText
+    });
+    return res.json({ success: true, ...preview });
+  } catch (error) {
+    return sendMessengerError(res, 'Auto Reply Preview Error', error);
+  }
+});
+
+// ═══ KÊNH INSTAGRAM (TÀI KHOẢN LIÊN KẾT VỚI FANPAGE) ═══
+async function instagramChannelsPayload(pages) {
+  const pageIds = pages.map((page) => String(page.id));
+  const accounts = await instagramService.listInstagramAccounts(pageIds);
+  const byPage = new Map(accounts.map((account) => [String(account.pageId), account]));
+  return {
+    accounts: accounts.map((account) => {
+      const status = messengerService.getPageStatus(account.pageId, 'instagram');
+      return {
+        ...account,
+        pageName: pages.find((page) => String(page.id) === String(account.pageId))?.name || null,
+        messagingStatus: status.state,
+        messagingMessage: status.message
+      };
+    }),
+    pagesWithoutInstagram: pages.filter((page) => !byPage.has(String(page.id))).map((page) => ({ id: String(page.id), name: page.name }))
+  };
+}
+
+app.get('/api/channels/instagram', requireAuth, async (req, res) => {
+  try {
+    const pages = await getMessengerPages(req.user.sub);
+    return res.json({ success: true, ...(await instagramChannelsPayload(pages)) });
+  } catch (error) {
+    return sendApiError(res, 'Instagram Channels Error', error, 'Không thể tải danh sách tài khoản Instagram.');
+  }
+});
+
+app.post('/api/channels/instagram/sync', requireAuth, async (req, res) => {
+  try {
+    const pages = await getMessengerPages(req.user.sub);
+    const results = await instagramService.syncInstagramAccounts(pages.map((page) => String(page.id)), messengerService.getPageToken);
+    // Kiểm tra luôn quyền đọc tin nhắn Instagram để hiện trạng thái liên kết
+    await Promise.allSettled(results.filter((item) => item.account).map((item) => messengerService.syncPageConversations(item.pageId, { force: true })));
+    const linked = results.filter((item) => item.account).length;
+    const failed = results.filter((item) => !item.success);
+    return res.json({
+      success: true,
+      ...(await instagramChannelsPayload(pages)),
+      message: `Đã đồng bộ ${linked} tài khoản Instagram từ ${pages.length} Fanpage.${failed.length ? ` ${failed.length} Fanpage lỗi: ${failed.map((item) => item.message).join('; ')}` : ''}`
+    });
+  } catch (error) {
+    return sendApiError(res, 'Instagram Sync Error', error, 'Không thể đồng bộ tài khoản Instagram.');
+  }
+});
+
+// Webhook Messenger / Instagram: cấu hình Callback URL https://<domain>/api/webhooks/messenger trong Meta App
+app.get('/api/webhooks/messenger', (req, res) => {
+  const verifyToken = process.env.MESSENGER_VERIFY_TOKEN;
+  if (verifyToken && req.query['hub.mode'] === 'subscribe' && req.query['hub.verify_token'] === verifyToken) {
+    return res.status(200).send(String(req.query['hub.challenge'] || ''));
+  }
+  return res.sendStatus(403);
+});
+
+app.post('/api/webhooks/messenger', async (req, res) => {
+  if (!messengerService.verifyWebhookSignature(req.rawBody, req.get('x-hub-signature-256'))) {
+    return res.sendStatus(403);
+  }
+  res.status(200).send('EVENT_RECEIVED');
+  try {
+    const pool = await getPool();
+    const result = await pool.request().query('SELECT page_id FROM dbo.FacebookPages');
+    messengerService.handleWebhookPayload(req.body, new Set(result.recordset.map((row) => String(row.page_id))));
+  } catch (error) {
+    console.warn('[Messenger Webhook]', error.message);
+  }
+});
+
 app.get('/api/posts/template', (_req, res) => {
   const headers = ['STT', 'Fanpage Channel (Tên | Page ID)', 'Content', 'Schedule', 'Loại Media', 'Media Link', 'Media Thumb'];
   for (let index = 1; index <= 5; index++) headers.push(`Seeding Comment ${index}`, `Schedule Comment ${index}`, `Media Comment ${index}`);
@@ -2271,6 +2650,14 @@ const server = app.listen(PORT, () => {
   console.log(`Server listening on ${PORT}`);
   // Khởi tạo bảng tài khoản và tạo sẵn tài khoản Admin mặc định
   ensureAppUserSchema().catch((error) => console.error('[AppUsers Init Error]', error.message));
+  // Hộp thư Messenger + Instagram: tạo bảng và tự động đồng bộ (mặc định 5 giây, đặt 0 để tắt)
+  Promise.all([
+    messengerService.ensureMessengerSchema(),
+    instagramService.ensureInstagramSchema(),
+    autoReplyService.ensureAutoReplySchema()
+  ])
+    .then(() => messengerService.startMessengerAutoSync(process.env.MESSENGER_SYNC_INTERVAL_SECONDS ?? 5))
+    .catch((error) => console.error('[Messenger Init Error]', error.message));
   // Khởi động tiến trình tự động giám sát sức khỏe Token định kỳ (Module 2)
   tokenHealthCheckService.startScheduler(6);
 

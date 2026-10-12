@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import MainLayout from '../../components/layout/MainLayout';
+import TrendLineChart from '../../components/charts/TrendLineChart';
 import postApi from '../../services/postApi';
 import {
   CalendarDays,
+  ChartLine,
   Eye,
   FileSpreadsheet,
   Send,
@@ -107,17 +109,9 @@ export default function DashboardPage() {
     fetchReport();
   }, [period, selectedPageId]);
 
-  // Chuẩn bị dữ liệu cho biểu đồ cột
+  // Chuẩn bị dữ liệu cho đồ thị đường
   const chartItems = reportData.chartData || [];
-  const chartValues = chartItems.map((item) => {
-    if (chartMode === 'views') return item.views || 0;
-    if (chartMode === 'reactions') return item.reactions || 0;
-    return item.engagements || 0;
-  });
-  const maxChartValue = Math.max(1, ...chartValues);
-  const chartLabels = chartItems.length > 0
-    ? [0, Math.floor((chartItems.length - 1) / 2), chartItems.length - 1].map((idx) => chartItems[idx]?.date || '')
-    : [];
+  const chartValueLabel = chartMode === 'views' ? 'lượt xem' : chartMode === 'reactions' ? 'cảm xúc' : 'lượt tương tác';
 
   const summary = reportData.summary;
 
@@ -249,7 +243,7 @@ export default function DashboardPage() {
         <div className="panel-heading" style={{ flexWrap: 'wrap', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <h2>
-              <BarChart3 size={17} style={{ verticalAlign: 'middle', marginRight: 6, color: '#38bdf8' }} />
+              <ChartLine size={17} style={{ verticalAlign: 'middle', marginRight: 6, color: '#38bdf8' }} />
               Tổng hợp Lượt xem & Tương tác bài viết
             </h2>
             {/* Chế độ xem biểu đồ */}
@@ -335,49 +329,12 @@ export default function DashboardPage() {
           </span>
         </div>
 
-        <div className="chart-area" style={{ padding: '20px 22px' }}>
-          <div className="chart-grid" style={{ minHeight: 180, display: 'flex', alignItems: 'flex-end', gap: 6, height: 180 }}>
-            {reportLoading ? (
-              <div className="chart-empty" style={{ margin: 'auto' }}>Đang tổng hợp dữ liệu bài viết…</div>
-            ) : chartItems.length === 0 ? (
-              <div className="chart-empty" style={{ margin: 'auto' }}>Chưa có bài viết nào trong khoảng thời gian này.</div>
-            ) : (
-              chartItems.map((item, index) => {
-                const val = chartMode === 'views' ? item.views : chartMode === 'reactions' ? item.reactions : item.engagements;
-                const barHeight = Math.max(6, Math.round((val / maxChartValue) * 100));
-                return (
-                  <div
-                    className="chart-column"
-                    key={`${item.fullDate}-${index}`}
-                    style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}
-                    title={`Ngày ${item.date} (${item.fullDate}):\n- ${val} ${chartMode === 'views' ? 'lượt xem' : chartMode === 'reactions' ? 'cảm xúc' : 'lượt tương tác'}\n- ${item.postsCount} bài viết\n- ${item.reactions} like · ${item.comments} cmt · ${item.shares} share`}
-                  >
-                    <div
-                      className="chart-bar"
-                      style={{
-                        height: `${barHeight}%`,
-                        width: '100%',
-                        maxWidth: 32,
-                        background: val > 0 ? 'linear-gradient(180deg, #38bdf8 0%, #1e40af 100%)' : 'rgba(255, 255, 255, 0.06)',
-                        borderRadius: '6px 6px 0 0',
-                        boxShadow: val > 0 ? '0 0 12px rgba(56, 189, 248, 0.4)' : 'none',
-                        transition: 'height .3s ease'
-                      }}
-                    />
-                    <span style={{ fontSize: 9.5, color: 'var(--muted)', marginTop: 6, whiteSpace: 'nowrap' }}>
-                      {item.date}
-                    </span>
-                  </div>
-                );
-              })
-            )}
-          </div>
-          <div className="chart-labels" style={{ marginTop: 10 }}>
-            {chartLabels.map((label, index) => (
-              <span key={`${label}-${index}`}>{label}</span>
-            ))}
-          </div>
-        </div>
+        <TrendLineChart
+          items={chartItems}
+          valueKey={chartMode}
+          valueLabel={chartValueLabel}
+          loading={reportLoading}
+        />
       </section>
 
       {/* ═══ TOP BÀI VIẾT TƯƠNG TÁC CAO NHẤT ═══ */}

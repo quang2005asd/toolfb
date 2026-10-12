@@ -56,6 +56,9 @@ services:
       - FACEBOOK_APP_ID=${FACEBOOK_APP_ID:-}
       - FACEBOOK_APP_SECRET=${FACEBOOK_APP_SECRET:-}
       - FACEBOOK_REDIRECT_URI=${FACEBOOK_REDIRECT_URI:-http://localhost:5000/api/auth/facebook/callback}
+      # Hộp thư Messenger + Instagram: chu kỳ tự đồng bộ (giây, 0 = tắt) và Verify Token cho webhook khi deploy có HTTPS
+      - MESSENGER_SYNC_INTERVAL_SECONDS=${MESSENGER_SYNC_INTERVAL_SECONDS:-5}
+      - MESSENGER_VERIFY_TOKEN=${MESSENGER_VERIFY_TOKEN:-}
     volumes:
       - server_data:/app/data
       - server_uploads:/app/uploads

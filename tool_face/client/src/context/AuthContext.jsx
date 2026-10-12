@@ -4,6 +4,7 @@ import authApi from '../services/authApi';
 import postApi from '../services/postApi';
 import channelApi from '../services/channelApi';
 import { hasPermission } from '../utils/permissions';
+import { resetMessengerUnread } from '../hooks/useMessengerUnread';
 
 const AuthContext = createContext(null);
 
@@ -11,6 +12,7 @@ const AuthContext = createContext(null);
 function resetAccountCaches() {
   postApi.invalidateStatsCache();
   channelApi.invalidateCache();
+  resetMessengerUnread();
 }
 
 export function AuthProvider({ children }) {

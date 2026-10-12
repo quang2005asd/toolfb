@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import useAuth from '../../hooks/useAuth';
 import { useTheme } from '../../context/ThemeContext';
 import RoleBadge from '../RoleBadge';
+import useMessengerUnread from '../../hooks/useMessengerUnread';
 import { PERMISSIONS, hasPermission } from '../../utils/permissions';
 import {
   BarChart3,
@@ -17,6 +18,7 @@ import {
   LayoutDashboard,
   List,
   LogOut,
+  MessageCircle,
   Moon,
   PenLine,
   Settings,
@@ -35,6 +37,7 @@ const navigation = [
   { label: 'Viết bài', href: '/post-planner/compose', icon: PenLine },
   { label: 'Lịch đăng', href: '/post-planner/calendar', icon: CalendarDays },
   { label: 'Bài đăng', href: '/post-planner/list', icon: List },
+  { label: 'Tin nhắn', href: '/inbox', icon: MessageCircle, badge: 'messenger' },
   { label: 'Báo cáo', href: '/post-planner/dashboard', icon: BarChart3 },
   { label: 'Kênh', href: '/channels', icon: UsersRound },
   { label: 'Thành viên', href: '/users', icon: UserCog, permission: PERMISSIONS.USERS_MANAGE }
@@ -114,6 +117,8 @@ export default function MainLayout({ children, title = 'Không gian làm việc'
   const router = useRouter();
   const { user, loading, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const messengerUnread = useMessengerUnread(Boolean(user));
+  const badges = { messenger: messengerUnread };
 
   if (loading) {
     return (
@@ -164,14 +169,22 @@ export default function MainLayout({ children, title = 'Không gian làm việc'
           <Image src="/brand-logo.png" alt="Logo" width={43} height={43} priority />
         </Link>
         <nav className="sidebar-nav">
-          {visibleNavigation.map(({ label, href, icon: Icon }) => {
+          {visibleNavigation.map(({ label, href, icon: Icon, badge }) => {
             const active = href === '/'
               ? router.pathname === '/'
               : router.pathname === href || router.pathname.startsWith(`${href}/`);
+            const count = badge ? badges[badge] : 0;
             return (
-              <Link className={`nav-item${active ? ' is-active' : ''}`} href={href} key={label} title={label} prefetch={true}>
+              <Link
+                className={`nav-item${active ? ' is-active' : ''}`}
+                href={href}
+                key={label}
+                title={count ? `${label} · ${count} tin chưa đọc` : label}
+                prefetch={true}
+              >
                 <Icon size={20} strokeWidth={1.8} aria-hidden="true" />
                 <span>{label}</span>
+                {count > 0 && <span className="nav-badge" aria-label={`${count} tin chưa đọc`}>{count > 99 ? '99+' : count}</span>}
               </Link>
             );
           })}

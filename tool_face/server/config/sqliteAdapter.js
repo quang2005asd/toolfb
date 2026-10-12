@@ -175,6 +175,81 @@ CREATE TABLE IF NOT EXISTS AiGeneratedDrafts (
   updated_at TEXT DEFAULT (datetime('now', 'localtime'))
 );
 
+CREATE TABLE IF NOT EXISTS MessengerConversations (
+  id TEXT PRIMARY KEY,
+  page_id TEXT NOT NULL,
+  platform TEXT NOT NULL DEFAULT 'messenger',
+  participant_id TEXT,
+  participant_name TEXT,
+  participant_username TEXT,
+  participant_avatar TEXT,
+  snippet TEXT,
+  unread_count INTEGER NOT NULL DEFAULT 0,
+  message_count INTEGER NOT NULL DEFAULT 0,
+  can_reply INTEGER NOT NULL DEFAULT 1,
+  link TEXT,
+  updated_time TEXT,
+  last_customer_message_at TEXT,
+  read_at TEXT,
+  last_synced_at TEXT,
+  created_at TEXT DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS MessengerMessages (
+  id TEXT PRIMARY KEY,
+  conversation_id TEXT NOT NULL,
+  page_id TEXT NOT NULL,
+  from_id TEXT,
+  from_name TEXT,
+  is_from_page INTEGER NOT NULL DEFAULT 0,
+  message_text TEXT,
+  attachments_json TEXT NOT NULL DEFAULT '[]',
+  created_time TEXT,
+  sent_by_user_id TEXT,
+  created_at TEXT DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS MessengerAutoReplySettings (
+  page_id TEXT PRIMARY KEY,
+  enabled INTEGER NOT NULL DEFAULT 0,
+  platforms_json TEXT NOT NULL DEFAULT '["messenger","instagram"]',
+  mode TEXT NOT NULL DEFAULT 'template',
+  template_text TEXT,
+  ai_instruction TEXT,
+  enabled_at TEXT,
+  updated_by TEXT,
+  updated_at TEXT DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS MessengerAutoReplyLog (
+  customer_message_id TEXT PRIMARY KEY,
+  conversation_id TEXT NOT NULL,
+  page_id TEXT NOT NULL,
+  reply_message_id TEXT,
+  mode_used TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
+  attempts INTEGER NOT NULL DEFAULT 1,
+  error TEXT,
+  created_at TEXT DEFAULT (datetime('now', 'localtime')),
+  updated_at TEXT DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS InstagramAccounts (
+  ig_id TEXT PRIMARY KEY,
+  page_id TEXT NOT NULL,
+  username TEXT,
+  name TEXT,
+  profile_picture_url TEXT,
+  followers_count INTEGER,
+  follows_count INTEGER,
+  media_count INTEGER,
+  updated_at TEXT DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE INDEX IF NOT EXISTS IX_MessengerAutoReplyLog_page_created ON MessengerAutoReplyLog(page_id, created_at);
+CREATE INDEX IF NOT EXISTS IX_InstagramAccounts_page ON InstagramAccounts(page_id);
+CREATE INDEX IF NOT EXISTS IX_MessengerConversations_page_updated ON MessengerConversations(page_id, updated_time DESC);
+CREATE INDEX IF NOT EXISTS IX_MessengerMessages_conversation_time ON MessengerMessages(conversation_id, created_time);
 CREATE INDEX IF NOT EXISTS IX_Posts_status_scheduled ON Posts(status, scheduled_at DESC);
 CREATE INDEX IF NOT EXISTS IX_PostComments_post_id ON PostComments(post_id);
 CREATE INDEX IF NOT EXISTS IX_FacebookPages_page_id ON FacebookPages(page_id, updated_at DESC);
@@ -199,6 +274,10 @@ const COLUMN_MIGRATIONS = {
     facebook_comment_id: 'TEXT',
     parent_comment_id: 'INTEGER',
     error_message: 'TEXT'
+  },
+  MessengerConversations: {
+    platform: "TEXT NOT NULL DEFAULT 'messenger'",
+    participant_username: 'TEXT'
   }
 };
 

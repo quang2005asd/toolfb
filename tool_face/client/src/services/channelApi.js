@@ -65,6 +65,16 @@ export const channelApi = {
     channelApi.invalidateCache();
     const response = await api.get('/channels/check-tokens');
     return response.data;
+  },
+
+  // Instagram Business / Creator liên kết với Fanpage
+  instagramAccounts: async () => {
+    const response = await api.get('/channels/instagram');
+    return response.data;
+  },
+  syncInstagram: async () => {
+    const response = await api.post('/channels/instagram/sync');
+    return response.data;
   }
 };
 

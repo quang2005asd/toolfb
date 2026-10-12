@@ -202,5 +202,19 @@ tool_face/
 
 Mỗi vai trò chỉ quản lý được vai trò **thấp hơn** — Admin không thể sửa hay xóa tài khoản của Admin khác. Định nghĩa vai trò nằm trong `server/src/utils/Roles.js`.
 
-### 6. Đăng nhập Facebook báo lỗi App ID?
+### 6. Hộp thư Messenger + Instagram (trang **Tin nhắn**) hoạt động thế nào?
+- Xem và trả lời tin nhắn khách gửi vào các Fanpage (Messenger) và tài khoản Instagram liên kết với Fanpage (Instagram Direct); tin trả lời từ tool hiện trên Facebook / Instagram và ngược lại.
+- Token Fanpage cần quyền **`pages_messaging`** (và **`instagram_manage_messages`** cho Instagram). Riêng Instagram còn phải bật **"Cho phép truy cập tin nhắn"** trong ứng dụng Instagram (Cài đặt → Tin nhắn và lượt phản hồi tin → Công cụ đã kết nối). Trạng thái liên kết từng Fanpage / Instagram hiện ở đầu trang Tin nhắn và tab **Kênh → Instagram**.
+- **Tự động đồng bộ mỗi `MESSENGER_SYNC_INTERVAL_SECONDS` giây** (mặc định 5, đặt 0 để tắt) ngay trên server, không cần mở trang hay bấm nút. Khi Facebook báo giới hạn tần suất hoặc lỗi tạm thời, hệ thống tự giãn nhịp (30 giây → 5 phút) rồi quay lại nhịp cũ.
+- Khi deploy có domain HTTPS: khai báo webhook trong Meta App với Callback URL `https://<domain>/api/webhooks/messenger` và Verify Token = `MESSENGER_VERIFY_TOKEN` (cần `FACEBOOK_APP_SECRET`) để nhận tin gần như tức thì.
+- Facebook chỉ cho Page trả lời trong **24 giờ** kể từ tin nhắn cuối của khách; quá hạn, tool sẽ cảnh báo và hiển thị lỗi rõ ràng.
+
+### 7. Trả lời tự động hoạt động thế nào?
+Bấm nút **Trả lời tự động** cạnh nút "Đồng bộ ngay" ở trang Tin nhắn để bật cho từng Fanpage (Messenger và/hoặc Instagram).
+- Trả lời **mọi** tin nhắn mới của khách — kể cả tin vô nghĩa như "shgagdwy"; khách nhắn liên tiếp nhiều tin thì nhận một câu trả lời cho cả cụm.
+- Chỉ trả lời tin gửi **sau** lúc bật (không trả lời tin cũ), mỗi tin một lần, và bỏ qua nếu nhân viên đã trả lời trước.
+- Hai cách trả lời: **mẫu cố định** (có biến `{ten_khach}`, `{ten_page}`) hoặc **AI tự soạn** theo hướng dẫn riêng (dùng AI API Key ở Cài đặt; AI lỗi thì tự dùng mẫu dự phòng nên luôn có câu trả lời).
+- Tin trả lời tự động hiện màu tím kèm nhãn "Trả lời tự động" trong hội thoại.
+
+### 8. Đăng nhập Facebook báo lỗi App ID?
 → Facebook không còn dùng để đăng nhập hệ thống. Hãy đăng nhập bằng tài khoản, sau đó vào trang **Kênh** để kết nối Fanpage bằng Access Token (không bắt buộc tạo Facebook App).

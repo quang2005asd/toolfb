@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import {
   Check,
   Globe2,
@@ -22,12 +23,32 @@ import {
   Radio
 } from 'lucide-react';
 import MainLayout from '../../components/layout/MainLayout';
+import PlatformIcon from '../../components/PlatformIcon';
+import InstagramChannels from '../../components/channels/InstagramChannels';
 import channelApi from '../../services/channelApi';
 import channelGroupApi from '../../services/channelGroupApi';
 
 const PRESET_COLORS = ['#00f2fe', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#3b82f6', '#f43f5e'];
 
+// Mỗi nền tảng là một tab riêng; thêm nền tảng mới bằng cách khai báo thêm vào đây
+const PLATFORMS = [
+  { id: 'facebook', label: 'Facebook', hint: 'Fanpage & nick Facebook' },
+  { id: 'instagram', label: 'Instagram', hint: 'Tài khoản liên kết Fanpage' }
+];
+const UPCOMING_PLATFORMS = ['TikTok', 'Zalo OA'];
+
 export default function ChannelsPage() {
+  const router = useRouter();
+  const platform = PLATFORMS.some((item) => item.id === router.query.platform) ? router.query.platform : 'facebook';
+  const [instagramCount, setInstagramCount] = useState(null);
+
+  useEffect(() => {
+    channelApi.instagramAccounts().then((res) => setInstagramCount((res.accounts || []).length)).catch(() => {});
+  }, []);
+
+  const switchPlatform = (id) => {
+    router.replace({ pathname: router.pathname, query: id === 'facebook' ? {} : { platform: id } }, undefined, { shallow: true });
+  };
   const [activeTab, setActiveTab] = useState('channels'); // 'channels' | 'groups' | 'accounts'
   const [channels, setChannels] = useState([]);
   const [groups, setGroups] = useState([]);
@@ -317,8 +338,8 @@ export default function ChannelsPage() {
 
   return (
     <MainLayout
-      title="Quản lý Kênh & Nhóm Fanpage"
-      actions={
+      title="Quản lý Kênh"
+      actions={platform !== 'facebook' ? null : (
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <button className="button button-primary" type="button" onClick={() => setShowFbAccountModal(!showFbAccountModal)}>
             <Plus size={15} /> Kết nối Facebook Token
@@ -336,8 +357,38 @@ export default function ChannelsPage() {
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} /> Đồng bộ từ Facebook
           </button>
         </div>
-      }
+      )}
     >
+      {/* Chọn nền tảng: Facebook / Instagram (các nền tảng khác sẽ được bổ sung) */}
+      <div className="platform-tabs" role="tablist" aria-label="Nền tảng">
+        {PLATFORMS.map((item) => {
+          const count = item.id === 'facebook' ? channels.length : instagramCount;
+          return (
+            <button
+              type="button"
+              role="tab"
+              key={item.id}
+              aria-selected={platform === item.id}
+              className={`platform-tab${platform === item.id ? ' is-active' : ''}`}
+              onClick={() => switchPlatform(item.id)}
+            >
+              <PlatformIcon platform={item.id} size={22} />
+              <span>
+                <strong>{item.label}{count !== null && count !== undefined ? ` (${count})` : ''}</strong>
+                <small>{item.hint}</small>
+              </span>
+            </button>
+          );
+        })}
+        <span className="platform-upcoming" title="Các nền tảng sẽ được hỗ trợ trong phiên bản sau">
+          Sắp có: {UPCOMING_PLATFORMS.join(' · ')}
+        </span>
+      </div>
+
+      {platform === 'instagram' ? (
+        <InstagramChannels onCountChange={setInstagramCount} />
+      ) : (
+      <>
       {notice && <div className="notice" style={{ marginBottom: 14, borderColor: 'rgba(16, 185, 129, 0.4)', color: '#10b981' }}>{notice}</div>}
       {error && <div className="notice" style={{ marginBottom: 14, borderColor: 'rgba(239, 68, 68, 0.4)', color: '#ef4444' }}>{error}</div>}
 
@@ -1032,6 +1083,8 @@ export default function ChannelsPage() {
           </div>
         </div>
       </section>
+      </>
+      )}
     </MainLayout>
   );
 }

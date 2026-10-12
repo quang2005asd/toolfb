@@ -463,6 +463,7 @@ PHẢI trả về JSON duy nhất theo ĐÚNG định dạng:
 }
 
 module.exports = {
+  getAiConfig,
   generatePosts,
   regenerateDraft,
   getDrafts,
