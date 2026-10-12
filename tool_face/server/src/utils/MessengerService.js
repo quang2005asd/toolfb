@@ -57,6 +57,7 @@ const lastMessageSync = new Map();
 const inflightSyncs = new Map();     // tránh đồng bộ trùng cùng lúc cho một Page / hội thoại
 const avatarAttempted = new Set();
 const syncHooks = [];                // chạy sau mỗi lần đồng bộ tin nhắn của một hội thoại (vd. trả lời tự động)
+const tokenExpiredHooks = [];        // chạy khi token Fanpage hết hạn (vd. tự lấy lại token)
 const autoSyncState = { enabled: false, intervalSeconds: 0, lastRunAt: null };
 
 let schemaPromise = null;
@@ -217,7 +218,10 @@ function describeGraphError(error, context = 'sync', platform = 'messenger') {
 
 function graphFailure(pageId, platform, error, context) {
   const info = describeGraphError(error, context, platform);
-  if (info.code === 'token_expired') tokenCache.delete(String(pageId));
+  if (info.code === 'token_expired') {
+    tokenCache.delete(String(pageId));
+    for (const hook of tokenExpiredHooks) Promise.resolve().then(() => hook(String(pageId))).catch(() => {});
+  }
   if (info.code === 'rate_limited' || info.code === 'fb_unavailable') {
     const wait = registerBackoff(pageId, info.code);
     info.message = `${info.message} (thử lại sau ${Math.round(wait / 1000)} giây)`;
@@ -553,6 +557,15 @@ async function syncConversationMessages(conversationId, { force = false } = {}) 
   });
 }
 
+function onTokenExpired(hook) {
+  tokenExpiredHooks.push(hook);
+}
+
+function clearTokenCache(pageId = null) {
+  if (pageId) tokenCache.delete(String(pageId));
+  else tokenCache.clear();
+}
+
 function onConversationSynced(hook) {
   syncHooks.push(hook);
 }
@@ -852,7 +865,9 @@ module.exports = {
   listConversations,
   listMessages,
   markConversationRead,
+  clearTokenCache,
   onConversationSynced,
+  onTokenExpired,
   runSyncCycle,
   sendMessage,
   startMessengerAutoSync,

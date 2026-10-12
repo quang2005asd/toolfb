@@ -278,6 +278,13 @@ const COLUMN_MIGRATIONS = {
   MessengerConversations: {
     platform: "TEXT NOT NULL DEFAULT 'messenger'",
     participant_username: 'TEXT'
+  },
+  ConnectedFbAccounts: {
+    token_type: 'TEXT',
+    token_expires_at: 'TEXT',
+    token_status: 'TEXT',
+    token_checked_at: 'TEXT',
+    token_error: 'TEXT'
   }
 };
 

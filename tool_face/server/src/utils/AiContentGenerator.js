@@ -8,6 +8,7 @@ const axios = require('axios');
 const { sql, getPool } = require('../../config/db');
 const { getSettings } = require('./SettingsService');
 const webSearchService = require('./WebSearchService');
+const { stripMarkdown } = require('./TextFormat');
 
 // ═══ SCHEMA ═══
 let draftSchemaReady = null;
@@ -106,6 +107,8 @@ QUY TẮC BẮT BUỘC:
 6. ${tone ? `Giọng văn: ${tone}.` : 'Giọng văn tự nhiên, thu hút.'}
 7. Nội dung bài phải ĐẦY ĐỦ, SẴN SÀNG ĐĂNG ĐƯỢC NGAY, không dùng placeholder [...].
 8. CHỐNG BỊA ĐẶT (ANTI-HALLUCINATION): Khi viết về nhân vật có thật, sự kiện thời sự hay tin tức, TUYỆT ĐỐI KHÔNG tự bịa đặt các chi tiết sai thực tế (như tỷ số, bàn thắng, sự việc chưa từng xảy ra). Bắt buộc bám sát các dữ kiện báo chí hoặc sự kiện người dùng cung cấp. Nếu không có dữ kiện chi tiết, hãy tập trung vào bình luận cảm xúc, tri ân và hành trình.
+9. MỖI BÀI LÀ MỘT PHẦN TỬ RIÊNG trong mảng "posts" — không gộp nhiều bài vào một "content", không đánh số "Bài viết 1" trong nội dung.
+10. Facebook KHÔNG hiển thị markdown: TUYỆT ĐỐI KHÔNG dùng **, *, #, ---, \`\`\` để định dạng; chỉ dùng chữ thường, xuống dòng và emoji. Hashtag đặt trong mảng hashtags, không lặp lại trong content.
 
 PHẢI trả về JSON duy nhất theo ĐÚNG format sau (KHÔNG có text nào khác ngoài JSON):
 {
@@ -167,8 +170,8 @@ PHẢI trả về JSON duy nhất theo ĐÚNG format sau (KHÔNG có text nào k
     const result = await pool.request()
       .input('user_id', sql.VarChar(64), String(userId))
       .input('batch_id', sql.VarChar(64), batchId)
-      .input('title', sql.NVarChar(255), String(post.title || '').slice(0, 255))
-      .input('content', sql.NVarChar(sql.MAX), String(post.content || ''))
+      .input('title', sql.NVarChar(255), stripMarkdown(post.title).slice(0, 255))
+      .input('content', sql.NVarChar(sql.MAX), stripMarkdown(post.content))
       .input('hashtags', sql.NVarChar(sql.MAX), JSON.stringify(Array.isArray(post.hashtags) ? post.hashtags : []))
       .input('suggested_time', sql.VarChar(10), String(post.suggestedTime || '').slice(0, 10))
       .input('topic', sql.NVarChar(255), String(post.topic || '').slice(0, 255))
@@ -216,7 +219,7 @@ Trả về JSON duy nhất:
   const response = await axios.post(`${baseUrl}/chat/completions`, {
     model,
     messages: [
-      { role: 'system', content: 'Bạn là chuyên gia viết content Facebook. Trả về JSON duy nhất, không có text nào khác.' },
+      { role: 'system', content: 'Bạn là chuyên gia viết content Facebook. Trả về JSON duy nhất, không có text nào khác. Không dùng markdown (**, *, #) trong nội dung vì Facebook không hiển thị được.' },
       { role: 'user', content: regenPrompt }
     ],
     temperature: 0.9,
@@ -240,8 +243,8 @@ Trả về JSON duy nhất:
   const updated = await pool.request()
     .input('id', sql.Int, draftId)
     .input('user_id', sql.VarChar(64), String(userId))
-    .input('title', sql.NVarChar(255), String(parsed.title || draft.topic).slice(0, 255))
-    .input('content', sql.NVarChar(sql.MAX), String(parsed.content || ''))
+    .input('title', sql.NVarChar(255), stripMarkdown(parsed.title || draft.topic).slice(0, 255))
+    .input('content', sql.NVarChar(sql.MAX), stripMarkdown(parsed.content))
     .input('hashtags', sql.NVarChar(sql.MAX), JSON.stringify(Array.isArray(parsed.hashtags) ? parsed.hashtags : []))
     .input('suggested_time', sql.VarChar(10), String(parsed.suggestedTime || '').slice(0, 10))
     .query(`

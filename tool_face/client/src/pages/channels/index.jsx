@@ -25,6 +25,9 @@ import {
 import MainLayout from '../../components/layout/MainLayout';
 import PlatformIcon from '../../components/PlatformIcon';
 import InstagramChannels from '../../components/channels/InstagramChannels';
+import TokenHealthBanner from '../../components/channels/TokenHealthBanner';
+import useAuth from '../../hooks/useAuth';
+import { PERMISSIONS } from '../../utils/permissions';
 import channelApi from '../../services/channelApi';
 import channelGroupApi from '../../services/channelGroupApi';
 
@@ -39,8 +42,11 @@ const UPCOMING_PLATFORMS = ['TikTok', 'Zalo OA'];
 
 export default function ChannelsPage() {
   const router = useRouter();
+  const { can } = useAuth();
   const platform = PLATFORMS.some((item) => item.id === router.query.platform) ? router.query.platform : 'facebook';
   const [instagramCount, setInstagramCount] = useState(null);
+  const [tokenInfo, setTokenInfo] = useState(null);
+  const [renewingTokens, setRenewingTokens] = useState(false);
 
   useEffect(() => {
     channelApi.instagramAccounts().then((res) => setInstagramCount((res.accounts || []).length)).catch(() => {});
@@ -113,6 +119,67 @@ export default function ChannelsPage() {
     loadData();
     handleCheckTokens();
   }, []);
+
+  // Kết quả trả về từ Facebook Login (đăng nhập lại để lấy token mới)
+  useEffect(() => {
+    if (!router.isReady) return;
+    const { connected, token, error: oauthError } = router.query;
+    if (connected === undefined && !oauthError) return;
+    if (connected !== undefined) {
+      const longLived = token === 'long' || token === 'never';
+      setNotice(`✅ Đã đăng nhập lại Facebook và lấy lại token cho ${connected} Fanpage.${longLived ? ' Token dài hạn — token Fanpage sẽ không hết hạn.' : ''}`);
+      loadData();
+      handleCheckTokens();
+    } else {
+      const messages = {
+        oauth_denied: 'Bạn đã hủy đăng nhập Facebook hoặc chưa cấp đủ quyền.',
+        oauth_failed: 'Facebook không hoàn tất đăng nhập. Kiểm tra App ID / App Secret và “Valid OAuth Redirect URIs” trong Meta App.',
+        oauth_state_invalid: 'Phiên đăng nhập Facebook đã hết hạn, hãy thử lại.',
+        app_not_configured: 'Chưa cấu hình App ID & App Secret nên chưa đăng nhập Facebook được. Quản trị viên vào Cài đặt → Hồ sơ & bảo mật để cấu hình.'
+      };
+      setError(messages[oauthError] || 'Không đăng nhập được Facebook.');
+    }
+    const rest = { ...router.query };
+    delete rest.connected;
+    delete rest.token;
+    delete rest.error;
+    router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
+  }, [router.isReady]);
+
+  const reconnectFacebook = () => {
+    window.location.href = channelApi.facebookLoginUrl;
+  };
+
+  const openPasteToken = () => {
+    setShowManualModal(false);
+    setShowFbAccountModal(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleRenewTokens = async () => {
+    setRenewingTokens(true);
+    setNotice('');
+    setError('');
+    try {
+      const res = await channelApi.renewTokens();
+      setTokenInfo({ appConfigured: res.appConfigured, oauthAvailable: res.oauthAvailable, accounts: res.accounts || [] });
+      if (res.success) setNotice(`🔑 ${res.message}`);
+      else setError(res.message);
+      await loadData();
+      await handleCheckTokens({ quiet: true });
+    } catch (err) {
+      setError(err.response?.data?.message || 'Không thể làm mới token.');
+    } finally {
+      setRenewingTokens(false);
+    }
+  };
+
+  // Nút "Cập nhật" trên thẻ Fanpage: ưu tiên đăng nhập lại 1 chạm, sau đó tới dán token tài khoản
+  const handleFixPageToken = (channel) => {
+    if (tokenInfo?.oauthAvailable) return reconnectFacebook();
+    if (channel.fbAccountId) return openPasteToken();
+    return openUpdateTokenModal(channel.id);
+  };
 
   // Danh sách các tài khoản Facebook (gom nhóm từ accounts hoặc từ các page)
   const accountList = useMemo(() => {
@@ -209,26 +276,24 @@ export default function ChannelsPage() {
     }
   };
 
-  const handleCheckTokens = async () => {
+  // Server tự lấy lại token trước khi kiểm tra; banner bên dưới hiển thị kết quả & việc cần làm
+  const handleCheckTokens = async ({ quiet = false } = {}) => {
     setCheckingTokens(true);
-    setNotice('');
-    setError('');
+    if (!quiet) {
+      setNotice('');
+      setError('');
+    }
     try {
       const res = await channelApi.checkTokens();
       if (res.success && Array.isArray(res.channels)) {
         const statusObj = {};
-        let activeCount = 0;
-        let expiredCount = 0;
-        for (const item of res.channels) {
-          statusObj[item.pageId] = item;
-          if (item.isValid) activeCount++;
-          else expiredCount++;
-        }
+        for (const item of res.channels) statusObj[item.pageId] = item;
         setTokenStatuses(statusObj);
-        if (expiredCount === 0) {
-          setNotice(`✅ Tất cả ${activeCount} Fanpage đều có Token hợp lệ và hoạt động tốt!`);
-        } else {
-          setError(`⚠️ Phát hiện ${expiredCount} Fanpage bị hết hạn hoặc mất quyền Token. Vui lòng cập nhật lại.`);
+        setTokenInfo({ appConfigured: res.appConfigured, oauthAvailable: res.oauthAvailable, accounts: res.accounts || [] });
+        const healed = (res.renewal || []).filter((item) => item.exchanged || item.pagesRefreshed).length;
+        if (healed && !quiet) {
+          setNotice(`🔑 Đã tự lấy lại token cho ${healed} nick Facebook.`);
+          loadData();
         }
       }
     } catch (err) {
@@ -389,6 +454,15 @@ export default function ChannelsPage() {
         <InstagramChannels onCountChange={setInstagramCount} />
       ) : (
       <>
+      <TokenHealthBanner
+        info={tokenInfo}
+        invalidPageCount={Object.values(tokenStatuses).filter((item) => !item.isValid).length}
+        canConfigureApp={can(PERMISSIONS.SETTINGS_SYSTEM)}
+        renewing={renewingTokens}
+        onRenew={handleRenewTokens}
+        onReconnect={reconnectFacebook}
+        onPasteToken={openPasteToken}
+      />
       {notice && <div className="notice" style={{ marginBottom: 14, borderColor: 'rgba(16, 185, 129, 0.4)', color: '#10b981' }}>{notice}</div>}
       {error && <div className="notice" style={{ marginBottom: 14, borderColor: 'rgba(239, 68, 68, 0.4)', color: '#ef4444' }}>{error}</div>}
 
@@ -450,7 +524,13 @@ export default function ChannelsPage() {
               </button>
             </div>
             <p className="muted" style={{ fontSize: 11.5, marginTop: 12, marginBottom: 0 }}>
-              💡 <em>Cách lấy Token nhanh:</em> Truy cập <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noreferrer" style={{ color: 'var(--blue)', textDecoration: 'underline' }}>Meta Graph API Explorer <ExternalLink size={11} style={{ display: 'inline' }} /></a> → Chọn <strong>User Token</strong> → Bấm <strong>Generate Access Token</strong> rồi copy dán vào đây.
+              💡 <em>Cách lấy Token nhanh:</em> Truy cập <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noreferrer" style={{ color: 'var(--blue)', textDecoration: 'underline' }}>Meta Graph API Explorer <ExternalLink size={11} style={{ display: 'inline' }} /></a> → chọn <strong>đúng Meta App của bạn</strong> → <strong>User Token</strong> → <strong>Generate Access Token</strong> rồi copy dán vào đây.
+              {tokenInfo?.appConfigured
+                ? ' Tool sẽ tự đổi sang token dài hạn để token Fanpage không hết hạn.'
+                : ' Token này chỉ sống 1–2 giờ nếu chưa cấu hình App ID & App Secret (Cài đặt) để tool tự đổi sang token dài hạn.'}
+              {tokenInfo?.oauthAvailable && (
+                <> Hoặc nhanh hơn: <button type="button" className="auth-inline-link" style={{ marginLeft: 0 }} onClick={reconnectFacebook}>đăng nhập Facebook</button>.</>
+              )}
             </p>
           </form>
         </section>
@@ -799,9 +879,10 @@ export default function ChannelsPage() {
                           type="button"
                           className="button button-primary"
                           style={{ minHeight: 24, padding: '0 10px', fontSize: 10.5, borderRadius: 6, whiteSpace: 'nowrap' }}
-                          onClick={() => openUpdateTokenModal(channel.id)}
+                          onClick={() => handleFixPageToken(channel)}
+                          title={tokenInfo?.oauthAvailable ? 'Đăng nhập lại Facebook để lấy token mới' : 'Dán token mới'}
                         >
-                          Cập nhật
+                          {tokenInfo?.oauthAvailable ? 'Đăng nhập lại' : 'Cập nhật'}
                         </button>
                       </div>
                     )}
@@ -989,6 +1070,20 @@ export default function ChannelsPage() {
                   <div className="muted" style={{ fontSize: 11.5, marginBottom: 10 }}>
                     {isManual ? 'Các Page kết nối bằng Token thủ công' : `Facebook ID: ${acc.id}`}
                   </div>
+                  {(() => {
+                    const token = tokenInfo?.accounts?.find((item) => String(item.id) === String(acc.id));
+                    if (!token) return null;
+                    const expired = token.status === 'expired' || token.status === 'invalid';
+                    const label = expired ? 'Token đã hết hạn'
+                      : token.type === 'never' ? 'Token không hết hạn'
+                        : token.type === 'long' ? `Token dài hạn · đến ${new Date(token.expiresAt).toLocaleDateString('vi-VN')}`
+                          : token.type === 'short' ? `Token ngắn hạn · hết hạn ${new Date(token.expiresAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`
+                            : 'Token còn sống';
+                    const tone = expired ? 'failed' : token.type === 'short' ? 'pending' : 'published';
+                    return (
+                      <span className={`status-pill ${tone}`} style={{ fontSize: 11 }} title={token.error || ''}>{label}</span>
+                    );
+                  })()}
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--line)', gap: 10 }}>
                     <button

@@ -23,6 +23,7 @@ import {
   XCircle,
   Film,
   Clock,
+  CalendarDays,
   Globe,
   Layers,
   ThumbsUp,
@@ -38,6 +39,26 @@ import MainLayout from '../../components/layout/MainLayout';
 import postApi from '../../services/postApi';
 import aiApi from '../../services/aiApi';
 import channelGroupApi from '../../services/channelGroupApi';
+import { MAX_AI_POSTS, detectPostCount, splitAiPosts, stripMarkdown } from '../../utils/aiPosts';
+
+// Khoảng cách giữa các bài khi lên lịch nhiều bài AI cùng lúc (phút)
+const AI_POST_GAPS = [
+  { value: 0, label: 'Cùng một thời điểm' },
+  { value: 30, label: 'Cách nhau 30 phút' },
+  { value: 60, label: 'Cách nhau 1 giờ' },
+  { value: 120, label: 'Cách nhau 2 giờ' },
+  { value: 240, label: 'Cách nhau 4 giờ' },
+  { value: 1440, label: 'Mỗi ngày 1 bài' }
+];
+
+function toLocalInputValue(date) {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+}
+
+function toDateKey(date) {
+  return toLocalInputValue(date).slice(0, 10);
+}
 
 // ── Toast popup (fixed top-right, auto-dismiss) ──────────────────────────
 function Toast({ toast, onClose }) {
@@ -408,6 +429,13 @@ export default function ComposePage() {
   const [aiError, setAiError] = useState('');
   const [aiWebSearch, setAiWebSearch] = useState(true);
   const [aiEventDetails, setAiEventDetails] = useState('');
+  // Nhiều bài cùng lúc: mỗi bài là một bài đăng riêng
+  const [aiPostCount, setAiPostCount] = useState(1);
+  const [aiCountTouched, setAiCountTouched] = useState(false);
+  const [aiPosts, setAiPosts] = useState([]); // [{ id?, title, content, hashtags }]
+  const [aiGap, setAiGap] = useState(60);
+  const [aiStartAt, setAiStartAt] = useState('');
+  const [aiScheduling, setAiScheduling] = useState(false);
 
   const contentRef = useRef(null);
 
@@ -557,19 +585,52 @@ export default function ComposePage() {
       setAiError('Vui lòng nhập chủ đề bài viết.');
       return;
     }
+    const count = Math.min(MAX_AI_POSTS, Math.max(1, Number(aiPostCount) || 1));
     setAiGenerating(true);
     setAiError('');
     setAiResult('');
+    setAiPosts([]);
     try {
-      const fullPrompt = `Hãy viết một bài đăng Facebook hấp dẫn theo phong cách "${aiTone}".\nChủ đề: ${aiPrompt.trim()}\nYêu cầu: Có tiêu đề ngắn gọn thu hút, nội dung chia đoạn dễ đọc, chèn emoji phù hợp và kèm 3-5 hashtag ở cuối.`;
+      if (count > 1) {
+        // Nhiều bài: dùng bộ tạo bài trả về JSON, mỗi bài là một phần tử riêng
+        const res = await aiApi.generatePosts({
+          prompt: `${aiPrompt.trim()}\n\nTạo đúng ${count} bài đăng Facebook riêng biệt, mỗi bài một nội dung khác nhau.`,
+          tone: aiTone,
+          includeHashtags: true,
+          includeEmoji: true,
+          enableWebSearch: aiWebSearch,
+          eventDetails: aiEventDetails.trim()
+        });
+        const drafts = (res.drafts || []).slice(0, count);
+        if (drafts.length === 0) {
+          setAiError('AI không tạo được bài viết nào. Hãy mô tả rõ hơn chủ đề.');
+          return;
+        }
+        setAiPosts(drafts.map((draft) => ({
+          id: draft.id,
+          title: draft.title || '',
+          content: draft.content || '',
+          hashtags: Array.isArray(draft.hashtags) ? draft.hashtags : []
+        })));
+        if (drafts.length < count) setAiError(`AI chỉ tạo được ${drafts.length}/${count} bài. Bạn có thể bấm tạo lại nếu cần đủ số bài.`);
+        return;
+      }
+
+      const fullPrompt = `Hãy viết một bài đăng Facebook hấp dẫn theo phong cách "${aiTone}".\nChủ đề: ${aiPrompt.trim()}\nYêu cầu: Có tiêu đề ngắn gọn thu hút, nội dung chia đoạn dễ đọc, chèn emoji phù hợp và kèm 3-5 hashtag ở cuối. Facebook không hiển thị markdown nên KHÔNG dùng **, *, #, --- để định dạng.`;
       const res = await aiApi.chat(fullPrompt, [], null, {
         enableWebSearch: aiWebSearch,
         eventDetails: aiEventDetails.trim()
       });
-      if (res.reply) {
-        setAiResult(res.reply);
-      } else {
+      if (!res.reply) {
         setAiError('Không nhận được nội dung từ AI.');
+        return;
+      }
+      // AI vẫn có thể trả về nhiều bài trong một câu trả lời → tách ra từng bài
+      const parts = splitAiPosts(res.reply);
+      if (parts.length >= 2) {
+        setAiPosts(parts.map((part) => ({ ...part, hashtags: [] })));
+      } else {
+        setAiResult(stripMarkdown(res.reply));
       }
     } catch (err) {
       setAiError(err.response?.data?.message || 'Lỗi khi gọi AI. Hãy kiểm tra cấu hình AI_API_KEY trong server/.env.');
@@ -578,13 +639,113 @@ export default function ComposePage() {
     }
   };
 
+  const resetAiModal = () => {
+    setShowAiModal(false);
+    setAiResult('');
+    setAiPosts([]);
+    setAiPrompt('');
+    setAiEventDetails('');
+    setAiError('');
+    setAiPostCount(1);
+    setAiCountTouched(false);
+    setAiStartAt('');
+  };
+
   const applyAiResult = () => {
     if (aiResult) {
       setContent(aiResult);
-      setShowAiModal(false);
-      setAiResult('');
-      setAiPrompt('');
-      setAiEventDetails('');
+      resetAiModal();
+    }
+  };
+
+  const handleAiPromptChange = (value) => {
+    setAiPrompt(value);
+    if (!aiCountTouched) setAiPostCount(detectPostCount(value) || 1);
+  };
+
+  const joinAiPost = (post) => [post.content.trim(), (post.hashtags || []).join(' ')].filter(Boolean).join('\n\n');
+
+  const pickAiPost = (index) => {
+    const post = aiPosts[index];
+    if (!post) return;
+    setContent(joinAiPost(post));
+    resetAiModal();
+    showToast('success', 'Đã dán bài AI vào trình soạn thảo.');
+  };
+
+  const updateAiPost = (index, value) => {
+    setAiPosts((prev) => prev.map((post, i) => (i === index ? { ...post, content: value } : post)));
+  };
+
+  const removeAiPost = (index) => {
+    setAiPosts((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Giờ đăng của từng bài AI: bài đầu tại giờ bắt đầu, các bài sau cách nhau aiGap phút
+  const getAiScheduleTimes = () => {
+    const now = new Date();
+    const parsed = aiStartAt ? new Date(aiStartAt) : now;
+    const start = Number.isNaN(parsed.getTime()) || parsed < now ? now : parsed;
+    return aiPosts.map((_, i) => new Date(start.getTime() + i * aiGap * 60000));
+  };
+
+  const openAiScheduleDefaults = () => {
+    const composeTime = scheduledAt ? new Date(scheduledAt) : null;
+    const fallback = new Date(Date.now() + 15 * 60000);
+    const start = !isPublishNow && composeTime && !Number.isNaN(composeTime.getTime()) && composeTime > new Date() ? composeTime : fallback;
+    setAiStartAt(toLocalInputValue(start));
+  };
+
+  useEffect(() => {
+    if (aiPosts.length > 0 && !aiStartAt) openAiScheduleDefaults();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aiPosts.length]);
+
+  const scheduleAllAiPosts = async () => {
+    const posts = aiPosts.filter((post) => post.content.trim());
+    if (posts.length === 0) {
+      setAiError('Không còn bài nào để lên lịch.');
+      return;
+    }
+    if (selectedPageIds.length === 0) {
+      setAiError('Hãy chọn ít nhất một Fanpage trước khi lên lịch.');
+      return;
+    }
+    const times = getAiScheduleTimes();
+    setAiScheduling(true);
+    setAiError('');
+    try {
+      const res = await aiApi.publishDrafts(aiPosts.map((post, i) => ({
+        draftId: post.id || undefined,
+        content: post.content.trim(),
+        hashtags: post.hashtags || [],
+        pageIds: selectedPageIds,
+        scheduledAt: times[i].toISOString(),
+        mediaType: 'text',
+        mediaLinks: []
+      })).filter((item) => item.content));
+      const results = Array.isArray(res.results) ? res.results : [];
+      const ok = results.filter((r) => r.success);
+      if (!res.success || ok.length === 0) {
+        throw new Error(results.find((r) => !r.success)?.message || res.message || 'Không lên lịch được bài nào.');
+      }
+      const createdCount = ok.reduce((sum, r) => sum + (r.postIds?.length || 0), 0);
+      const firstTime = times[0];
+      resetAiModal();
+      router.push({
+        pathname: '/post-planner/calendar',
+        query: {
+          created: createdCount,
+          posts: ok.length,
+          failed: results.length - ok.length,
+          date: toDateKey(firstTime),
+          mode: aiGap === 0 && firstTime.getTime() - Date.now() < 60000 ? 'now' : 'scheduled'
+        }
+      });
+    } catch (err) {
+      setAiError(err.response?.data?.message || err.message || 'Không lên lịch được các bài AI.');
+    } finally {
+      setAiScheduling(false);
     }
   };
 
@@ -665,6 +826,15 @@ export default function ComposePage() {
       showToast('error', 'Thời gian đăng bài không hợp lệ, vui lòng kiểm tra lại.');
       return;
     }
+    // Nội dung gồm nhiều bài (vd. dán từ AI, ngăn bởi "---") → gợi ý tách thành từng bài riêng
+    const splitParts = splitAiPosts(content);
+    if (splitParts.length >= 2 && !window.confirm(`Nội dung có vẻ gồm ${splitParts.length} bài viết khác nhau.\n\nOK: vẫn đăng gộp thành MỘT bài.\nHủy: tách thành ${splitParts.length} bài riêng để lên lịch.`)) {
+      setAiPosts(splitParts.map((part) => ({ ...part, hashtags: [] })));
+      setAiError('');
+      setAiResult('');
+      setShowAiModal(true);
+      return;
+    }
 
     setSaving(true);
     setNotice('');
@@ -699,9 +869,16 @@ export default function ComposePage() {
         : [result.postId].filter(Boolean);
 
       setCreatedPostIds(ids);
-      const msg = result.message || (isPublishNow ? `Đã gửi yêu cầu đăng ngay cho ${ids.length} Fanpage!` : `Đã lên lịch thành công cho ${ids.length} Fanpage!`);
-      setNotice(msg);
-      showToast('success', msg);
+      // Đăng xong thì rời trang soạn bài, mở Lịch đăng tại ngày của bài vừa tạo
+      router.push({
+        pathname: '/post-planner/calendar',
+        query: {
+          created: ids.length,
+          posts: 1,
+          date: toDateKey(isPublishNow ? new Date() : parsedDate),
+          mode: isPublishNow ? 'now' : 'scheduled'
+        }
+      });
     } catch (error) {
       const errMsg = error.response?.data?.message || error.message || 'Không thể tạo bài đăng. Vui lòng thử lại.';
       setNotice(errMsg);
@@ -2074,7 +2251,7 @@ export default function ComposePage() {
             className="panel"
             style={{
               width: '100%',
-              maxWidth: 580,
+              maxWidth: aiPosts.length > 0 ? 720 : 580,
               maxHeight: '90vh',
               overflowY: 'auto'
             }}
@@ -2096,10 +2273,30 @@ export default function ComposePage() {
                 className="field"
                 placeholder="Ví dụ: Giới thiệu sản phẩm mới giảm giá 30%, hoặc câu chuyện truyền cảm hứng khởi nghiệp..."
                 value={aiPrompt}
-                onChange={(e) => setAiPrompt(e.target.value)}
+                onChange={(e) => handleAiPromptChange(e.target.value)}
                 rows={3}
                 style={{ width: '100%', resize: 'vertical' }}
               />
+
+              <div className="ai-count-row">
+                <label className="field-label" htmlFor="ai-post-count" style={{ margin: 0 }}>Số bài cần tạo</label>
+                <input
+                  id="ai-post-count"
+                  className="field"
+                  type="number"
+                  min={1}
+                  max={MAX_AI_POSTS}
+                  value={aiPostCount}
+                  onChange={(e) => {
+                    setAiCountTouched(true);
+                    setAiPostCount(Math.min(MAX_AI_POSTS, Math.max(1, Number(e.target.value) || 1)));
+                  }}
+                  style={{ width: 72 }}
+                />
+                <span className="muted" style={{ fontSize: 11.5 }}>
+                  {aiPostCount > 1 ? `Mỗi bài sẽ là một bài đăng riêng (tối đa ${MAX_AI_POSTS}).` : 'Tự nhận khi bạn ghi “viết 4 bài…”.'}
+                </span>
+              </div>
 
               <label className="field-label" style={{ marginTop: 12 }}>Phong cách viết</label>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
@@ -2155,7 +2352,9 @@ export default function ComposePage() {
                 onClick={handleGenerateAi}
                 disabled={aiGenerating || !aiPrompt.trim()}
               >
-                <Sparkles size={15} /> {aiGenerating ? 'AI đang viết bài…' : 'Bắt đầu tạo nội dung'}
+                <Sparkles size={15} /> {aiGenerating
+                  ? (aiPostCount > 1 ? `AI đang viết ${aiPostCount} bài…` : 'AI đang viết bài…')
+                  : (aiPostCount > 1 ? `Tạo ${aiPostCount} bài riêng lẻ` : 'Bắt đầu tạo nội dung')}
               </button>
 
               {aiError && (
@@ -2192,6 +2391,104 @@ export default function ComposePage() {
                   </div>
                 </div>
               )}
+
+              {aiPosts.length > 0 && (() => {
+                const times = getAiScheduleTimes();
+                const selectedNames = channels.filter((c) => selectedPageIds.includes(c.id)).map((c) => c.name);
+                return (
+                  <div className="ai-posts">
+                    <div className="ai-posts-head">
+                      <strong>AI đã tạo {aiPosts.length} bài riêng lẻ</strong>
+                      <span className="muted">Có thể sửa trực tiếp từng bài trước khi lên lịch.</span>
+                    </div>
+
+                    {aiPosts.map((post, index) => (
+                      <div className="ai-post-card" key={post.id || index}>
+                        <div className="ai-post-card-head">
+                          <span className="ai-post-index">Bài {index + 1}</span>
+                          <span className="ai-post-title">{post.title}</span>
+                          <span className="ai-post-time">
+                            <Clock size={12} /> {times[index].toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}
+                          </span>
+                        </div>
+                        <textarea
+                          className="field"
+                          rows={6}
+                          value={post.content}
+                          onChange={(e) => updateAiPost(index, e.target.value)}
+                          aria-label={`Nội dung bài ${index + 1}`}
+                        />
+                        {post.hashtags?.length > 0 && <div className="ai-post-tags">{post.hashtags.join(' ')}</div>}
+                        <div className="ai-post-actions">
+                          <button className="button button-secondary" type="button" onClick={() => removeAiPost(index)}>
+                            <X size={13} /> Bỏ bài này
+                          </button>
+                          <button className="button button-secondary" type="button" onClick={() => pickAiPost(index)}>
+                            Chỉ dùng bài này
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    <div className="ai-schedule-box">
+                      <div className="ai-schedule-grid">
+                        <label>
+                          <span className="field-label">Bắt đầu đăng lúc</span>
+                          <input
+                            className="field"
+                            type="datetime-local"
+                            value={aiStartAt}
+                            onChange={(e) => setAiStartAt(e.target.value)}
+                          />
+                        </label>
+                        <label>
+                          <span className="field-label">Khoảng cách giữa các bài</span>
+                          <select className="field" value={aiGap} onChange={(e) => setAiGap(Number(e.target.value))}>
+                            {AI_POST_GAPS.map((gap) => (
+                              <option key={gap.value} value={gap.value}>{gap.label}</option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+                      <span className="field-label">Đăng lên Fanpage</span>
+                      {channels.length > 0 ? (
+                        <div className="ai-page-chips">
+                          {channels.map((channel) => {
+                            const active = selectedPageIds.includes(channel.id);
+                            return (
+                              <button
+                                key={channel.id}
+                                type="button"
+                                className={`ai-page-chip${active ? ' is-active' : ''}`}
+                                aria-pressed={active}
+                                onClick={() => togglePageSelection(channel.id)}
+                              >
+                                {active && <Check size={12} />} {channel.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="ai-schedule-pages is-empty">
+                          {channelLoading ? 'Đang tải danh sách Fanpage…' : 'Chưa có Fanpage nào được kết nối. Hãy kết nối ở mục Kênh trước.'}
+                        </div>
+                      )}
+                      {channels.length > 0 && selectedNames.length === 0 && (
+                        <div className="ai-schedule-pages is-empty">Chọn ít nhất một Fanpage để lên lịch.</div>
+                      )}
+                      <button
+                        className="button button-primary"
+                        type="button"
+                        style={{ width: '100%', minHeight: 40 }}
+                        onClick={scheduleAllAiPosts}
+                        disabled={aiScheduling || selectedNames.length === 0}
+                      >
+                        <Clock size={15} /> {aiScheduling ? 'Đang lên lịch…' : `Lên lịch ${aiPosts.length} bài riêng lẻ`}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>

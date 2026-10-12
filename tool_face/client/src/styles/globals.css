@@ -8370,3 +8370,82 @@ a.profile-avatar { text-decoration: none; }
   .platform-tab small { display: none; }
   .platform-upcoming { display: none; }
 }
+
+/* ═══ TRANG KÊNH: TÌNH TRẠNG TOKEN FACEBOOK ═══ */
+.token-banner {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 13px;
+}
+.token-banner.is-ok { border-color: rgba(5, 150, 105, 0.35); background: rgba(16, 185, 129, 0.06); }
+.token-banner.is-warn { border-color: rgba(217, 119, 6, 0.45); background: rgba(245, 158, 11, 0.08); }
+.token-banner.is-error { border-color: rgba(220, 38, 38, 0.45); background: rgba(239, 68, 68, 0.07); }
+.token-banner-head { display: flex; align-items: center; gap: 8px; }
+.token-banner-head strong { font-size: 14px; }
+.token-banner.is-ok .token-banner-head svg { color: #059669; }
+.token-banner.is-warn .token-banner-head svg { color: #d97706; }
+.token-banner.is-error .token-banner-head svg { color: #dc2626; }
+.token-banner-accounts { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.token-banner-accounts li { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; color: var(--muted); font-size: 12.5px; }
+.token-banner-accounts li strong { color: var(--ink); }
+.token-banner-accounts li.is-error span { color: #dc2626; font-weight: 700; }
+.token-banner-accounts li.is-warn span { color: #b45309; font-weight: 700; }
+[data-theme="dark"] .token-banner-accounts li.is-error span, body.dark-mode .token-banner-accounts li.is-error span { color: #fca5a5; }
+[data-theme="dark"] .token-banner-accounts li.is-warn span, body.dark-mode .token-banner-accounts li.is-warn span { color: #fcd34d; }
+.token-banner-note { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.6; }
+.token-banner-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.token-banner-actions .button { min-height: 36px; padding: 0 14px; font-size: 12.5px; }
+
+/* ═══ AI VIẾT NHIỀU BÀI RIÊNG LẺ (compose) + THÔNG BÁO LỊCH ĐĂNG ═══ */
+.ai-count-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 10px; }
+.ai-count-row .field { min-height: 32px; padding: 0 8px; }
+.ai-posts { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 16px; }
+.ai-posts-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.ai-posts-head strong { font-size: 14px; color: var(--ink); }
+.ai-posts-head .muted { font-size: 12px; }
+.ai-post-card { display: grid; gap: 8px; min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-elevated); }
+.ai-post-card-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ai-post-index { flex: none; padding: 2px 8px; border-radius: 999px; background: var(--blue-bg); border: 1px solid var(--blue-border); color: var(--blue-dark); font-size: 11.5px; font-weight: 700; }
+.ai-post-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; color: var(--ink); }
+.ai-post-time { flex: none; display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--muted); }
+.ai-post-card textarea.field { width: 100%; min-height: 120px; resize: vertical; font-size: 13px; line-height: 1.55; }
+.ai-post-tags { font-size: 12px; color: var(--blue); word-break: break-word; }
+.ai-post-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.ai-post-actions .button { min-height: 30px; padding: 0 10px; font-size: 12px; }
+.ai-schedule-box { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--blue-border); border-radius: 10px; background: var(--blue-bg); }
+.ai-schedule-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.ai-schedule-grid label { display: grid; gap: 4px; min-width: 0; }
+.ai-schedule-grid .field { width: 100%; min-width: 0; }
+.ai-schedule-box > .field-label { margin: 0; }
+.ai-page-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ai-page-chip { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; min-height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--panel); color: var(--ink); font-size: 12.5px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai-page-chip.is-active { border-color: var(--blue); background: var(--blue); color: #fff; }
+.ai-page-chip:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.ai-schedule-pages { font-size: 12.5px; color: var(--muted); }
+.ai-schedule-pages.is-empty { color: var(--amber); }
+@media (max-width: 560px) {
+  .ai-schedule-grid { grid-template-columns: minmax(0, 1fr); }
+  .ai-post-card-head { flex-wrap: wrap; }
+  .ai-post-title { flex-basis: 100%; order: 3; white-space: normal; }
+}
+[data-theme="dark"] .ai-post-card, body.dark-mode .ai-post-card { background: rgba(255, 255, 255, 0.03); border-color: rgba(255, 255, 255, 0.1); }
+[data-theme="dark"] .ai-post-index, body.dark-mode .ai-post-index { background: rgba(57, 135, 229, 0.15); border-color: rgba(57, 135, 229, 0.4); color: #93c5fd; }
+[data-theme="dark"] .ai-post-tags, body.dark-mode .ai-post-tags { color: #93c5fd; }
+[data-theme="dark"] .ai-schedule-box, body.dark-mode .ai-schedule-box { background: rgba(57, 135, 229, 0.08); border-color: rgba(57, 135, 229, 0.3); }
+[data-theme="dark"] .ai-page-chip, body.dark-mode .ai-page-chip { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.18); color: #e4e4e7; }
+[data-theme="dark"] .ai-page-chip.is-active, body.dark-mode .ai-page-chip.is-active { background: #3987e5; border-color: #3987e5; color: #fff; }
+[data-theme="dark"] .ai-schedule-pages.is-empty, body.dark-mode .ai-schedule-pages.is-empty { color: #fcd34d; }
+
+.calendar-created-notice { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.calendar-created-notice span { flex: 1; min-width: 0; }
+.calendar-created-notice .icon-button { flex: none; width: 28px; height: 28px; color: inherit; }
+.calendar-cell.is-just-created { outline: 2px solid var(--blue); outline-offset: -2px; animation: calendar-just-created 1.6s ease-out 2; }
+[data-theme="dark"] .calendar-cell.is-just-created, body.dark-mode .calendar-cell.is-just-created { outline-color: #3987e5; }
+@keyframes calendar-just-created { 0% { box-shadow: inset 0 0 0 0 rgba(37, 99, 235, 0.35); } 60% { box-shadow: inset 0 0 0 6px rgba(37, 99, 235, 0.12); } 100% { box-shadow: inset 0 0 0 0 rgba(37, 99, 235, 0); } }
+@media (prefers-reduced-motion: reduce) { .calendar-cell.is-just-created { animation: none; } }

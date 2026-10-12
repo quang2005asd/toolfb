@@ -29,6 +29,9 @@ class TokenHealthCheckService {
     };
 
     try {
+      // Trước khi quét: tự lấy lại token Fanpage từ token tài khoản còn sống (và đổi sang dài hạn nếu được)
+      await require('./FacebookTokenService').renewAll({ refreshPages: true }).catch(() => {});
+
       const pool = await getPool();
       await pool.request().query(`
         IF COL_LENGTH('dbo.FacebookPages', 'is_valid') IS NULL

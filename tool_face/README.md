@@ -216,5 +216,12 @@ Bấm nút **Trả lời tự động** cạnh nút "Đồng bộ ngay" ở tran
 - Hai cách trả lời: **mẫu cố định** (có biến `{ten_khach}`, `{ten_page}`) hoặc **AI tự soạn** theo hướng dẫn riêng (dùng AI API Key ở Cài đặt; AI lỗi thì tự dùng mẫu dự phòng nên luôn có câu trả lời).
 - Tin trả lời tự động hiện màu tím kèm nhãn "Trả lời tự động" trong hội thoại.
 
-### 8. Đăng nhập Facebook báo lỗi App ID?
-→ Facebook không còn dùng để đăng nhập hệ thống. Hãy đăng nhập bằng tài khoản, sau đó vào trang **Kênh** để kết nối Fanpage bằng Access Token (không bắt buộc tạo Facebook App).
+### 8. Fanpage báo "Mất quyền" / token hết hạn?
+Token lấy từ Graph API Explorer là **token ngắn hạn, chỉ sống 1–2 giờ**; token Fanpage lấy từ nó cũng hết hạn theo. Facebook **không cho làm mới một token đã hết hạn**, nên cách bền vững là:
+1. Quản trị viên nhập **App ID & App Secret** của Meta App tại **Cài đặt → Hồ sơ & bảo mật → Meta App** (lấy ở Meta for Developers → Cài đặt ứng dụng → Thông tin cơ bản).
+2. Kết nối lại một lần (nút **Đăng nhập lại Facebook** hoặc dán token tạo từ *đúng app đó* trong Graph API Explorer).
+
+Từ đó tool tự đổi sang **token dài hạn (~60 ngày)**; token Fanpage lấy từ token dài hạn **không hết hạn**. Tool tự kiểm tra mỗi 30 phút, tự lấy lại token Fanpage khi bị lỗi (cả khi đăng bài, nhắn tin hay bấm "Kiểm tra Token"), và hiển thị hạn dùng từng nick ở trang **Kênh**. Để dùng "Đăng nhập lại Facebook 1 chạm", thêm `http://localhost:5000/api/auth/facebook/callback` vào *Valid OAuth Redirect URIs* của Meta App.
+
+### 9. Đăng nhập Facebook báo lỗi App ID?
+→ Facebook không dùng để đăng nhập vào tool (tool dùng tài khoản riêng). Facebook Login chỉ dùng để kết nối / lấy lại token Fanpage và cần App ID & App Secret như mục 8.

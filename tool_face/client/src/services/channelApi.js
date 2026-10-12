@@ -67,6 +67,18 @@ export const channelApi = {
     return response.data;
   },
 
+  // Trạng thái token từng nick Facebook & làm mới ngay
+  tokenStatus: async () => {
+    const response = await api.get('/channels/token-status');
+    return response.data;
+  },
+  renewTokens: async () => {
+    channelApi.invalidateCache();
+    const response = await api.post('/channels/token-renew');
+    return response.data;
+  },
+  facebookLoginUrl: 'http://localhost:5000/api/auth/facebook',
+
   // Instagram Business / Creator liên kết với Fanpage
   instagramAccounts: async () => {
     const response = await api.get('/channels/instagram');

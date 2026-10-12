@@ -40,8 +40,13 @@ const messengerService = require('./utils/MessengerService');
 const autoReplyService = require('./utils/MessengerAutoReplyService');
 const instagramService = require('./utils/InstagramService');
 
+const tokenService = require('./utils/FacebookTokenService');
+
 // Sau mỗi lần đồng bộ tin của một hội thoại: kiểm tra và gửi trả lời tự động nếu đang bật
 messengerService.onConversationSynced(autoReplyService.processConversation);
+// Token Fanpage hỏng → tự lấy lại từ token tài khoản; lấy lại xong → bỏ token cũ trong bộ nhớ đệm
+messengerService.onTokenExpired((pageId) => tokenService.requestRenewForPage(pageId));
+tokenService.onTokensRenewed(() => messengerService.clearTokenCache());
 const {
   AppUserError,
   accountExists,
@@ -240,24 +245,25 @@ app.get('/api/auth/me', async (req, res) => {
   });
 });
 
-// Facebook OAuth chỉ dùng để liên kết Facebook / Fanpage vào tài khoản đang đăng nhập
-app.get('/api/auth/facebook', (req, res) => {
+// Facebook Login: liên kết / đăng nhập lại Facebook cho tài khoản đang đăng nhập (1 chạm lấy lại token)
+app.get('/api/auth/facebook', async (req, res) => {
   if (!req.user) {
     return res.redirect(302, `${clientOrigin()}/login?error=session_required`);
   }
-  const config = authConfiguration();
-  if (!config.configured) {
-    return res.status(503).json({ success: false, message: 'Facebook login chưa cấu hình đầy đủ.', missing: config.missing });
+  const creds = await tokenService.getMetaAppCredentials();
+  if (!creds.configured) {
+    return res.redirect(302, `${clientOrigin()}/channels?error=app_not_configured`);
   }
 
   const state = crypto.randomBytes(32).toString('base64url');
   setCookie(req, res, OAUTH_STATE_COOKIE, state, 10 * 60);
   const graphVersion = process.env.FB_GRAPH_VERSION || 'v19.0';
   const authorizationUrl = new URL(`https://www.facebook.com/${graphVersion}/dialog/oauth`);
-  authorizationUrl.searchParams.set('client_id', process.env.FACEBOOK_APP_ID);
+  authorizationUrl.searchParams.set('client_id', creds.appId);
   authorizationUrl.searchParams.set('redirect_uri', facebookRedirectUri());
   authorizationUrl.searchParams.set('response_type', 'code');
-  authorizationUrl.searchParams.set('scope', process.env.FACEBOOK_LOGIN_SCOPES || 'public_profile');
+  authorizationUrl.searchParams.set('scope', tokenService.loginScopes());
+  authorizationUrl.searchParams.set('auth_type', 'rerequest');
   authorizationUrl.searchParams.set('state', state);
   return res.redirect(302, authorizationUrl.toString());
 });
@@ -273,53 +279,31 @@ app.get('/api/auth/facebook/callback', async (req, res) => {
   if (!req.user) {
     return res.redirect(`${clientOrigin()}/login?error=session_required`);
   }
+  if (req.query.error) {
+    return res.redirect(`${clientOrigin()}/channels?error=oauth_denied`);
+  }
   if (!stateMatches || typeof req.query.code !== 'string') {
     return res.redirect(`${clientOrigin()}/channels?error=oauth_state_invalid`);
   }
 
   try {
+    const creds = await tokenService.getMetaAppCredentials();
     const graphVersion = process.env.FB_GRAPH_VERSION || 'v19.0';
-    const shortTokenResponse = await axios.get(`https://graph.facebook.com/${graphVersion}/oauth/access_token`, {
+    const codeResponse = await axios.get(`https://graph.facebook.com/${graphVersion}/oauth/access_token`, {
       params: {
-        client_id: process.env.FACEBOOK_APP_ID,
-        client_secret: process.env.FACEBOOK_APP_SECRET,
+        client_id: creds.appId,
+        client_secret: creds.appSecret,
         redirect_uri: facebookRedirectUri(),
         code: req.query.code
       },
       timeout: 15000
     });
-    let userAccessToken = shortTokenResponse.data.access_token;
-    let tokenExpiresIn = shortTokenResponse.data.expires_in;
-    try {
-      const longTokenResponse = await axios.get(`https://graph.facebook.com/${graphVersion}/oauth/access_token`, {
-        params: {
-          grant_type: 'fb_exchange_token',
-          client_id: process.env.FACEBOOK_APP_ID,
-          client_secret: process.env.FACEBOOK_APP_SECRET,
-          fb_exchange_token: userAccessToken
-        },
-        timeout: 15000
-      });
-      userAccessToken = longTokenResponse.data.access_token || userAccessToken;
-      tokenExpiresIn = longTokenResponse.data.expires_in || tokenExpiresIn;
-    } catch (exchangeError) {
-      console.warn('[Facebook OAuth] Could not exchange to a long-lived token; using the short-lived token for this session.');
-    }
-    const profileResponse = await axios.get(`https://graph.facebook.com/${graphVersion}/me`, {
-      params: { fields: 'id,name,picture.width(150).height(150)', access_token: userAccessToken },
-      timeout: 15000
-    });
-    const fbData = profileResponse.data;
-    await saveFacebookUser({ id: req.user.sub, name: fbData.name, picture: fbData.picture }, userAccessToken, tokenExpiresIn);
-    const connectedPages = await syncFacebookPages(req.user.sub, userAccessToken, {
-      id: fbData.id,
-      name: fbData.name,
-      avatar: fbData.picture?.data?.url || null
-    });
-    console.log(`[Facebook OAuth] Connected ${connectedPages.length} Page(s) for account ${req.user.username} (FB: ${fbData.id}).`);
-    return res.redirect(`${clientOrigin()}/channels?connected=${connectedPages.length}`);
+    // Đổi sang token dài hạn, lưu nick Facebook và lấy lại toàn bộ token Fanpage
+    const result = await tokenService.connectUserToken(req.user.sub, codeResponse.data.access_token);
+    console.log(`[Facebook OAuth] Kết nối lại ${result.pages.length} Fanpage cho ${req.user.username} (FB: ${result.fbAccount.id}, token ${result.tokenType}).`);
+    return res.redirect(`${clientOrigin()}/channels?connected=${result.pages.length}&token=${encodeURIComponent(result.tokenType)}`);
   } catch (error) {
-    console.error('[Facebook OAuth Error]', error.response?.status || error.message);
+    console.error('[Facebook OAuth Error]', error.response?.data?.error?.message || error.message);
     return res.redirect(`${clientOrigin()}/channels?error=oauth_failed`);
   }
 });
@@ -808,11 +792,14 @@ app.post('/api/ai/drafts/publish', requireAuth, async (req, res) => {
 
     const pool = await getPool();
     const results = [];
+    // Chỉ được đăng lên Fanpage đã kết nối với tài khoản đang đăng nhập
+    const ownedPageIds = new Set((await getConnectedPages(req.user.sub)).map((page) => String(page.id)));
 
     for (const item of draftItems) {
-      const { draftId, content, pageIds, scheduledAt, hashtags, mediaType, mediaLinks } = item;
-      if (!content?.trim() || !Array.isArray(pageIds) || pageIds.length === 0) {
-        results.push({ draftId, success: false, message: 'Thiếu nội dung hoặc Fanpage.' });
+      const { draftId, content, scheduledAt, hashtags, mediaType, mediaLinks } = item;
+      const pageIds = Array.isArray(item.pageIds) ? item.pageIds.filter((id) => ownedPageIds.has(String(id).trim())) : [];
+      if (!content?.trim() || pageIds.length === 0) {
+        results.push({ draftId, success: false, message: 'Thiếu nội dung hoặc Fanpage chưa được kết nối với tài khoản của bạn.' });
         continue;
       }
 
@@ -872,6 +859,11 @@ app.post('/api/ai/drafts/publish', requireAuth, async (req, res) => {
         }
       }
 
+      if (createdPostIds.length === 0) {
+        results.push({ draftId, success: false, message: 'Không lưu được bài đăng cho Fanpage đã chọn.' });
+        continue;
+      }
+
       // Mark draft as scheduled and save media
       if (draftId) {
         await aiContentGenerator.updateDraft(req.user.sub, draftId, {
@@ -886,18 +878,20 @@ app.post('/api/ai/drafts/publish', requireAuth, async (req, res) => {
         draftId,
         success: true,
         postIds: createdPostIds,
+        scheduledAt: schedule.toISOString(),
         isFbCloud: fbScheduledCount > 0,
         fbScheduledCount
       });
     }
 
+    const succeeded = results.filter(r => r.success).length;
     const totalCloud = results.filter(r => r.isFbCloud).length;
-    let summaryMsg = `Đã xử lý thành công ${results.filter(r => r.success).length} bài nháp.`;
+    let summaryMsg = `Đã xử lý thành công ${succeeded}/${results.length} bài.`;
     if (totalCloud > 0) {
       summaryMsg += ` Trong đó có ${totalCloud} bài đã đồng bộ trực tiếp lên lịch Facebook Meta (tắt app vẫn tự động đăng đúng giờ)!`;
     }
 
-    return res.json({ success: true, results, message: summaryMsg });
+    return res.json({ success: succeeded > 0, results, message: summaryMsg });
   } catch (error) {
     console.error('[AI Publish Drafts Error]', error.message);
     return res.status(500).json({ success: false, message: error.message });
@@ -915,6 +909,7 @@ app.get('/api/settings', requireAuth, async (req, res) => {
       ? `${effectiveApiKey.slice(0, 7)}••••••••${effectiveApiKey.slice(-4)}`
       : (effectiveApiKey ? '••••••••' : '');
     const canManageSystem = hasPermission(req.user.role, PERMISSIONS.SETTINGS_SYSTEM);
+    const metaApp = await tokenService.getMetaAppCredentials();
 
     const publicSettings = {
       ai_provider: settings.ai_provider || 'openai',
@@ -952,7 +947,10 @@ app.get('/api/settings', requireAuth, async (req, res) => {
         connectedPagesCount: pages.length
       },
       system: {
-        metaAppId: canManageSystem ? (process.env.FACEBOOK_APP_ID || '') : '',
+        metaAppId: canManageSystem ? metaApp.appId : '',
+        metaAppConfigured: metaApp.configured,
+        metaAppSecretMasked: canManageSystem && metaApp.appSecret ? `••••••••${metaApp.appSecret.slice(-4)}` : '',
+        facebookRedirectUri: canManageSystem ? facebookRedirectUri() : '',
         nodeVersion: process.version,
         serverTime: new Date().toISOString(),
         database: process.env.USE_SQLITE === 'true' || process.env.DB_TYPE === 'sqlite' ? 'SQLite' : 'SQL Server',
@@ -962,6 +960,25 @@ app.get('/api/settings', requireAuth, async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Lỗi tải thông tin cài đặt: ' + error.message });
+  }
+});
+
+// App ID / App Secret của Meta App: dùng để tự đổi sang token dài hạn và đăng nhập lại Facebook 1 chạm
+app.post('/api/settings/meta-app', requirePermission(PERMISSIONS.SETTINGS_SYSTEM), async (req, res) => {
+  try {
+    const { appId, appSecret } = req.body || {};
+    await tokenService.saveMetaAppCredentials({ appId, appSecret });
+    // Có App Secret rồi thì đổi ngay các token ngắn hạn còn sống sang token dài hạn
+    const results = await tokenService.renewAll({ force: true }).catch(() => []);
+    const exchanged = results.filter((item) => item.exchanged).length;
+    return res.json({
+      success: true,
+      message: `Đã lưu và xác thực Meta App.${exchanged ? ` Đã đổi ${exchanged} nick Facebook sang token dài hạn.` : ''}`,
+      results
+    });
+  } catch (error) {
+    const status = error instanceof tokenService.TokenError ? error.status : 500;
+    return res.status(status).json({ success: false, message: error.message });
   }
 });
 
@@ -1102,11 +1119,13 @@ app.delete('/api/channels/accounts/:fbAccountId', requireAuth, async (req, res) 
 
 app.get('/api/channels/check-tokens', requireAuth, async (req, res) => {
   try {
+    // Tự lấy lại token trước khi kiểm tra: token Fanpage hỏng được lấy lại từ token tài khoản còn sống
+    const renewal = await tokenService.renewAll({ appUserId: req.user.sub, refreshPages: true }).catch(() => []);
+    messengerService.clearTokenCache();
     const channels = await getConnectedPages(req.user.sub);
     const graphVersion = process.env.FB_GRAPH_VERSION || 'v19.0';
-    const appId = process.env.FACEBOOK_APP_ID;
-    const appSecret = process.env.FACEBOOK_APP_SECRET;
-    const appToken = appId && appSecret ? `${appId}|${appSecret}` : null;
+    const creds = await tokenService.getMetaAppCredentials();
+    const appToken = creds.configured ? `${creds.appId}|${creds.appSecret}` : null;
 
     const tokenStatusList = await Promise.all(
       channels.map(async (channel) => {
@@ -1160,7 +1179,12 @@ app.get('/api/channels/check-tokens', requireAuth, async (req, res) => {
       })
     );
 
-    return res.json({ success: true, channels: tokenStatusList });
+    return res.json({
+      success: true,
+      channels: tokenStatusList,
+      renewal,
+      ...(await tokenService.getTokenStatus(req.user.sub))
+    });
   } catch (error) {
     return sendApiError(res, 'Check Tokens Error', error, 'Không thể kiểm tra hạn token.');
   }
@@ -1192,63 +1216,72 @@ app.post('/api/channels/connect-facebook', requireAuth, async (req, res) => {
 
   try {
     const graphVersion = process.env.FB_GRAPH_VERSION || 'v19.0';
-    // 1. Kiểm tra Token và lấy thông tin tài khoản Facebook
-    const profileResponse = await axios.get(`https://graph.facebook.com/${graphVersion}/me`, {
-      params: { fields: 'id,name,picture.width(150).height(150)', access_token: token },
-      timeout: 15000
-    });
-
-    const fbData = profileResponse.data;
-    if (!fbData || !fbData.id) {
-      return res.status(400).json({ success: false, message: 'Facebook Access Token không hợp lệ.' });
-    }
-
-    const fbAccountInfo = {
-      id: fbData.id,
-      name: fbData.name,
-      avatar: fbData.picture?.data?.url || null
-    };
-
-    // 2. Lưu User Facebook Token gắn với tài khoản của user hiện tại
-    await saveFacebookUser({
-      id: req.user.sub,
-      name: fbData.name,
-      picture: fbData.picture
-    }, token, 60 * 24 * 60 * 60);
-
-    // 3. Đồng bộ tất cả các Fanpage thuộc quyền quản lý của Token này vào tài khoản của user (req.user.sub)
-    let connectedPages = [];
-    try {
-      connectedPages = await syncFacebookPages(req.user.sub, token, fbAccountInfo);
-      console.log(`[Connect Facebook] Đã kết nối ${connectedPages.length} Fanpage cho tài khoản ${req.user.name} (FB: ${fbData.name})`);
-    } catch (pageErr) {
-      console.warn('[Connect Facebook Sync Warning]', pageErr.message);
-    }
+    // Xác thực token, tự đổi sang token dài hạn (nếu đã cấu hình App ID / Secret) rồi nạp toàn bộ Fanpage
+    const result = await tokenService.connectUserToken(req.user.sub, token);
+    const connectedPages = [...result.pages];
+    console.log(`[Connect Facebook] Đã kết nối ${connectedPages.length} Fanpage cho ${req.user.name} (FB: ${result.fbAccount.name}, token ${result.tokenType}).`);
 
     // Nếu là Page token đơn lẻ
     if (connectedPages.length === 0) {
       try {
-        const pageCheck = await axios.get(`https://graph.facebook.com/${graphVersion}/${fbData.id}`, {
-          params: { fields: 'id,name,category', access_token: token },
+        const pageCheck = await axios.get(`https://graph.facebook.com/${graphVersion}/${result.fbAccount.id}`, {
+          params: { fields: 'id,name,category', access_token: result.token },
           timeout: 10000
         });
         if (pageCheck.data?.category) {
-          const manualPage = await saveManualFacebookPage(req.user.sub, fbData.id, token);
+          const manualPage = await saveManualFacebookPage(req.user.sub, result.fbAccount.id, result.token);
           connectedPages.push(manualPage);
         }
       } catch {}
     }
 
+    const tokenNote = result.tokenType === 'never' || result.tokenType === 'long'
+      ? (result.exchanged ? ' Đã tự đổi sang token dài hạn — token Fanpage sẽ không hết hạn.' : ' Token dài hạn — token Fanpage sẽ không hết hạn.')
+      : result.appConfigured
+        ? ` Chưa đổi được sang token dài hạn: ${result.exchangeError || 'không rõ lý do'}`
+        : ' Lưu ý: token này có thể là token ngắn hạn (hết hạn sau 1–2 giờ). Quản trị viên hãy cấu hình App ID & App Secret trong Cài đặt để tool tự đổi sang token dài hạn.';
     return res.json({
       success: true,
-      fbUser: fbAccountInfo,
+      fbUser: result.fbAccount,
       count: connectedPages.length,
       pages: connectedPages,
-      message: `Kết nối thành công tài khoản Facebook "${fbData.name}"! Đã đồng bộ ${connectedPages.length} Fanpage.`
+      tokenType: result.tokenType,
+      expiresAt: result.expiresAt,
+      exchanged: result.exchanged,
+      message: `Kết nối thành công tài khoản Facebook "${result.fbAccount.name}"! Đã đồng bộ ${connectedPages.length} Fanpage.${tokenNote}`
     });
   } catch (error) {
     const errMsg = error.response?.data?.error?.message || error.message || 'Không thể xác thực Facebook Token.';
     return res.status(400).json({ success: false, message: errMsg });
+  }
+});
+
+// Trạng thái token từng nick Facebook (loại token, hạn dùng) + khả năng tự gia hạn
+app.get('/api/channels/token-status', requireAuth, async (req, res) => {
+  try {
+    return res.json({ success: true, ...(await tokenService.getTokenStatus(req.user.sub)), loginUrl: '/api/auth/facebook' });
+  } catch (error) {
+    return sendApiError(res, 'Token Status Error', error, 'Không thể tải trạng thái token.');
+  }
+});
+
+// Làm mới ngay: kiểm tra token tài khoản, đổi sang dài hạn nếu được, lấy lại token Fanpage
+app.post('/api/channels/token-renew', requireAuth, async (req, res) => {
+  try {
+    const results = await tokenService.renewAll({ appUserId: req.user.sub, force: true, refreshPages: true });
+    const expired = results.filter((item) => item.status === 'expired');
+    return res.json({
+      success: expired.length === 0,
+      results,
+      ...(await tokenService.getTokenStatus(req.user.sub)),
+      message: results.length === 0
+        ? 'Chưa có nick Facebook nào được kết nối bằng token tài khoản.'
+        : expired.length
+          ? `${expired.length} nick Facebook đã hết hạn — Facebook không cho tự gia hạn token đã hết hạn, hãy đăng nhập lại Facebook.`
+          : `Đã làm mới token cho ${results.length} nick Facebook và các Fanpage trực thuộc.`
+    });
+  } catch (error) {
+    return sendApiError(res, 'Token Renew Error', error, 'Không thể làm mới token.');
   }
 });
 
@@ -2660,6 +2693,10 @@ const server = app.listen(PORT, () => {
     .catch((error) => console.error('[Messenger Init Error]', error.message));
   // Khởi động tiến trình tự động giám sát sức khỏe Token định kỳ (Module 2)
   tokenHealthCheckService.startScheduler(6);
+  // Tự kiểm tra / đổi sang token dài hạn / lấy lại token Fanpage mỗi 30 phút
+  tokenService.ensureTokenSchema()
+    .then(() => tokenService.startTokenAutoRenew())
+    .catch((error) => console.error('[Token Auto Renew Init Error]', error.message));
 
   // Khởi động bộ đếm giờ độc lập cho bài đăng & comment seeding (hoạt động kể cả không có Redis)
   standaloneScheduler.startStandaloneScheduler(10000);
