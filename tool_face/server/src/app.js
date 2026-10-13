@@ -39,6 +39,8 @@ const channelGroupService = require('./utils/ChannelGroupService');
 const messengerService = require('./utils/MessengerService');
 const autoReplyService = require('./utils/MessengerAutoReplyService');
 const instagramService = require('./utils/InstagramService');
+const commentAiService = require('./utils/CommentAiService');
+const { commentAiRouter } = require('./modules/comment-ai/comment-ai.routes');
 
 const tokenService = require('./utils/FacebookTokenService');
 
@@ -103,6 +105,7 @@ app.use(express.json({
   }
 }));
 app.use('/api', loadSession);
+app.use('/api/comment-ai', commentAiRouter);
 
 const mediaDirectory = process.env.APP_DATA_DIR
   ? path.join(process.env.APP_DATA_DIR, 'uploads')
@@ -1699,6 +1702,7 @@ app.post('/api/webhooks/messenger', async (req, res) => {
     return res.sendStatus(403);
   }
   res.status(200).send('EVENT_RECEIVED');
+  commentAiService.handleWebhookBody(req.body).catch((error) => console.warn('[CommentAI Webhook]', error.message));
   try {
     const pool = await getPool();
     const result = await pool.request().query('SELECT page_id FROM dbo.FacebookPages');
@@ -2700,6 +2704,9 @@ const server = app.listen(PORT, () => {
 
   // Khởi động bộ đếm giờ độc lập cho bài đăng & comment seeding (hoạt động kể cả không có Redis)
   standaloneScheduler.startStandaloneScheduler(10000);
+
+  // AI Bình luận: quét bình luận mới mỗi 2 phút (webhook feed vẫn là đường chính khi đã đăng ký)
+  if (process.env.POLL_COMMENTS !== 'off') commentAiService.startPolling(120000);
 
   // Tùy chọn gộp Worker chạy chung một tiến trình (Dành cho Render / Cloud Free không tốn thêm $7/tháng)
   if (process.env.RUN_WORKER_IN_PROCESS === 'true') {

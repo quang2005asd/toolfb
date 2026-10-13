@@ -10,6 +10,7 @@ import { PERMISSIONS, hasPermission } from '../../utils/permissions';
 import {
   BarChart3,
   Bell,
+  Bot,
   CalendarDays,
   ChevronDown,
   CircleHelp,
@@ -39,6 +40,7 @@ const navigation = [
   { label: 'Bài đăng', href: '/post-planner/list', icon: List },
   { label: 'Tin nhắn', href: '/inbox', icon: MessageCircle, badge: 'messenger' },
   { label: 'Báo cáo', href: '/post-planner/dashboard', icon: BarChart3 },
+  { label: 'AI Bình luận', href: '/comment-ai', icon: Bot },
   { label: 'Kênh', href: '/channels', icon: UsersRound },
   { label: 'Thành viên', href: '/users', icon: UserCog, permission: PERMISSIONS.USERS_MANAGE }
 ];
