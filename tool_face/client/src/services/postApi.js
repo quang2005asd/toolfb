@@ -1,7 +1,8 @@
 import axios from 'axios';
+import { API_BASE } from './apiBase';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: API_BASE,
   withCredentials: true,
   timeout: 30000 // 30s timeout
 });
@@ -75,7 +76,7 @@ export const postApi = {
     return response.data;
   },
 
-  templateUrl: 'http://localhost:5000/api/posts/template',
+  templateUrl: `${API_BASE}/posts/template`,
 
   // 3. Kích hoạt đăng ngay cho 1 bài viết cụ thể
   triggerPostNow: async (postId) => {

@@ -1,7 +1,8 @@
 import axios from 'axios';
+import { API_BASE } from './apiBase';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: API_BASE,
   withCredentials: true
 });
 
@@ -77,7 +78,7 @@ export const channelApi = {
     const response = await api.post('/channels/token-renew');
     return response.data;
   },
-  facebookLoginUrl: 'http://localhost:5000/api/auth/facebook',
+  facebookLoginUrl: `${API_BASE}/auth/facebook`,
 
   // Instagram Business / Creator liên kết với Fanpage
   instagramAccounts: async () => {
