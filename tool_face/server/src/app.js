@@ -39,7 +39,12 @@ const channelGroupService = require('./utils/ChannelGroupService');
 const messengerService = require('./utils/MessengerService');
 const autoReplyService = require('./utils/MessengerAutoReplyService');
 const instagramService = require('./utils/InstagramService');
+<<<<<<< HEAD
 const tiktokService = require('./utils/TikTokService');
+=======
+const commentAiService = require('./utils/CommentAiService');
+const { commentAiRouter } = require('./modules/comment-ai/comment-ai.routes');
+>>>>>>> cd7bb7d5d9bc5f81f3d2dc96997718688d3d1d92
 
 const tokenService = require('./utils/FacebookTokenService');
 
@@ -104,6 +109,7 @@ app.use(express.json({
   }
 }));
 app.use('/api', loadSession);
+app.use('/api/comment-ai', commentAiRouter);
 
 const mediaDirectory = process.env.APP_DATA_DIR
   ? path.join(process.env.APP_DATA_DIR, 'uploads')
@@ -1749,6 +1755,7 @@ app.post('/api/webhooks/messenger', async (req, res) => {
     return res.sendStatus(403);
   }
   res.status(200).send('EVENT_RECEIVED');
+  commentAiService.handleWebhookBody(req.body).catch((error) => console.warn('[CommentAI Webhook]', error.message));
   try {
     const pool = await getPool();
     const result = await pool.request().query('SELECT page_id FROM dbo.FacebookPages');
@@ -2824,8 +2831,13 @@ const server = app.listen(PORT, () => {
   // Khởi động bộ đếm giờ độc lập cho bài đăng & comment seeding (hoạt động kể cả không có Redis)
   standaloneScheduler.startStandaloneScheduler(10000);
 
+<<<<<<< HEAD
   // Khởi tạo schema TikTok (bảng TikTokAccounts + cột Posts.platform, Posts.tiktok_account_id)
   tiktokService.ensureTikTokSchema().catch((error) => console.error('[TikTok Schema Init Error]', error.message));
+=======
+  // AI Bình luận: quét bình luận mới mỗi 2 phút (webhook feed vẫn là đường chính khi đã đăng ký)
+  if (process.env.POLL_COMMENTS !== 'off') commentAiService.startPolling(120000);
+>>>>>>> cd7bb7d5d9bc5f81f3d2dc96997718688d3d1d92
 
   // Tùy chọn gộp Worker chạy chung một tiến trình (Dành cho Render / Cloud Free không tốn thêm $7/tháng)
   if (process.env.RUN_WORKER_IN_PROCESS === 'true') {

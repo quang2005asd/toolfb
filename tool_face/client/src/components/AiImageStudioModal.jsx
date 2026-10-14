@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import aiApi from '../services/aiApi';
 import postApi from '../services/postApi';
+import { API_ORIGIN } from '../services/apiBase';
 
 const STYLE_PRESETS = [
   { id: 'photorealistic', label: '📸 Chân thực (Photo)', desc: 'Ảnh chụp máy ảnh chuyên nghiệp, ánh sáng studio' },
@@ -38,8 +39,8 @@ export function resolveMediaUrl(url) {
   if (!url) return '';
   if (typeof url !== 'string') return '';
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:')) return url;
-  if (url.startsWith('local://')) return `http://localhost:5000/api/media/${url.slice('local://'.length)}`;
-  if (url.startsWith('/api/')) return `http://localhost:5000${url}`;
+  if (url.startsWith('local://')) return `${API_ORIGIN}/api/media/${url.slice('local://'.length)}`;
+  if (url.startsWith('/api/')) return `${API_ORIGIN}${url}`;
   return url;
 }
 

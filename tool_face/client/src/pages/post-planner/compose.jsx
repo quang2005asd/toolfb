@@ -40,7 +40,11 @@ import postApi from '../../services/postApi';
 import channelApi from '../../services/channelApi';
 import aiApi from '../../services/aiApi';
 import channelGroupApi from '../../services/channelGroupApi';
+<<<<<<< HEAD
 import PlatformIcon from '../../components/PlatformIcon';
+=======
+import { API_BASE } from '../../services/apiBase';
+>>>>>>> cd7bb7d5d9bc5f81f3d2dc96997718688d3d1d92
 import { MAX_AI_POSTS, detectPostCount, splitAiPosts, stripMarkdown } from '../../utils/aiPosts';
 
 // Khoảng cách giữa các bài khi lên lịch nhiều bài AI cùng lúc (phút)
@@ -774,7 +778,7 @@ export default function ComposePage() {
       const link = router.query.mediaLink;
       const preview = (typeof router.query.previewUrl === 'string' && router.query.previewUrl)
         ? router.query.previewUrl
-        : (link.startsWith('local://') ? `http://localhost:5000/api/media/${link.slice(8)}` : link);
+        : (link.startsWith('local://') ? `${API_BASE}/media/${link.slice(8)}` : link);
       const mediaItem = {
         mediaLink: link,
         previewUrl: preview,
