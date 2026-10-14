@@ -25,6 +25,7 @@ import {
 import MainLayout from '../../components/layout/MainLayout';
 import PlatformIcon from '../../components/PlatformIcon';
 import InstagramChannels from '../../components/channels/InstagramChannels';
+import TikTokChannels from '../../components/channels/TikTokChannels';
 import TokenHealthBanner from '../../components/channels/TokenHealthBanner';
 import useAuth from '../../hooks/useAuth';
 import { PERMISSIONS } from '../../utils/permissions';
@@ -36,20 +37,23 @@ const PRESET_COLORS = ['#00f2fe', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#
 // Mỗi nền tảng là một tab riêng; thêm nền tảng mới bằng cách khai báo thêm vào đây
 const PLATFORMS = [
   { id: 'facebook', label: 'Facebook', hint: 'Fanpage & nick Facebook' },
-  { id: 'instagram', label: 'Instagram', hint: 'Tài khoản liên kết Fanpage' }
+  { id: 'instagram', label: 'Instagram', hint: 'Tài khoản liên kết Fanpage' },
+  { id: 'tiktok', label: 'TikTok', hint: 'Tài khoản Cookie / Puppeteer' }
 ];
-const UPCOMING_PLATFORMS = ['TikTok', 'Zalo OA'];
+const UPCOMING_PLATFORMS = ['Zalo OA', 'YouTube'];
 
 export default function ChannelsPage() {
   const router = useRouter();
   const { can } = useAuth();
   const platform = PLATFORMS.some((item) => item.id === router.query.platform) ? router.query.platform : 'facebook';
   const [instagramCount, setInstagramCount] = useState(null);
+  const [tiktokCount, setTiktokCount] = useState(null);
   const [tokenInfo, setTokenInfo] = useState(null);
   const [renewingTokens, setRenewingTokens] = useState(false);
 
   useEffect(() => {
     channelApi.instagramAccounts().then((res) => setInstagramCount((res.accounts || []).length)).catch(() => {});
+    channelApi.tiktokAccounts().then((res) => setTiktokCount((res.accounts || []).length)).catch(() => {});
   }, []);
 
   const switchPlatform = (id) => {
@@ -427,7 +431,7 @@ export default function ChannelsPage() {
       {/* Chọn nền tảng: Facebook / Instagram (các nền tảng khác sẽ được bổ sung) */}
       <div className="platform-tabs" role="tablist" aria-label="Nền tảng">
         {PLATFORMS.map((item) => {
-          const count = item.id === 'facebook' ? channels.length : instagramCount;
+          const count = item.id === 'facebook' ? channels.length : item.id === 'instagram' ? instagramCount : tiktokCount;
           return (
             <button
               type="button"
@@ -450,7 +454,9 @@ export default function ChannelsPage() {
         </span>
       </div>
 
-      {platform === 'instagram' ? (
+      {platform === 'tiktok' ? (
+        <TikTokChannels onCountChange={setTiktokCount} />
+      ) : platform === 'instagram' ? (
         <InstagramChannels onCountChange={setInstagramCount} />
       ) : (
       <>

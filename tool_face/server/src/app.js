@@ -39,6 +39,7 @@ const channelGroupService = require('./utils/ChannelGroupService');
 const messengerService = require('./utils/MessengerService');
 const autoReplyService = require('./utils/MessengerAutoReplyService');
 const instagramService = require('./utils/InstagramService');
+const tiktokService = require('./utils/TikTokService');
 
 const tokenService = require('./utils/FacebookTokenService');
 
@@ -426,11 +427,13 @@ app.use('/uploads', express.static(mediaDirectory));
 
 app.post('/api/media', requireAuth, handleMediaUpload, (req, res) => {
   if (!req.file) return res.status(400).json({ success: false, message: 'Vui lòng chọn ảnh hoặc video.' });
+  const isVideo = req.file.mimetype.startsWith('video/') || /\.(mp4|mov|avi|wmv|flv|webm|mkv)$/i.test(req.file.originalname);
   return res.status(201).json({
     success: true,
     mediaLink: `local://${req.file.filename}`,
     previewUrl: `/api/media/${req.file.filename}`,
     fileName: req.file.originalname,
+    mediaType: isVideo ? 'video' : 'image',
     size: req.file.size
   });
 });
@@ -1685,6 +1688,53 @@ app.post('/api/channels/instagram/sync', requireAuth, async (req, res) => {
   }
 });
 
+// ════════════════════════════════════════════════════════════════
+// TIKTOK CHANNELS API (Cookie / Puppeteer Automation)
+// ════════════════════════════════════════════════════════════════
+app.get('/api/channels/tiktok', requireAuth, async (req, res) => {
+  try {
+    const accounts = await tiktokService.listTikTokAccounts(req.user.sub);
+    return res.json({ success: true, accounts });
+  } catch (error) {
+    return sendApiError(res, 'TikTok List Accounts Error', error, 'Không thể tải danh sách tài khoản TikTok.');
+  }
+});
+
+app.post('/api/channels/tiktok', requireAuth, async (req, res) => {
+  try {
+    const { cookies, nickname } = req.body;
+    if (!cookies) {
+      return res.status(400).json({ success: false, message: 'Vui lòng nhập Cookie hoặc Session ID của tài khoản TikTok.' });
+    }
+    const result = await tiktokService.addOrUpdateTikTokAccount({
+      userId: req.user.sub,
+      cookiesRaw: cookies,
+      nicknameOverride: nickname
+    });
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    return sendApiError(res, 'TikTok Add Account Error', error, error.message || 'Không thể liên kết tài khoản TikTok.');
+  }
+});
+
+app.post('/api/channels/tiktok/:id/check', requireAuth, async (req, res) => {
+  try {
+    const result = await tiktokService.checkTikTokAccountHealth(Number(req.params.id));
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    return sendApiError(res, 'TikTok Check Account Error', error, error.message || 'Không thể kiểm tra tài khoản TikTok.');
+  }
+});
+
+app.delete('/api/channels/tiktok/:id', requireAuth, async (req, res) => {
+  try {
+    await tiktokService.deleteTikTokAccount(Number(req.params.id));
+    return res.json({ success: true, message: 'Đã xóa liên kết tài khoản TikTok thành công.' });
+  } catch (error) {
+    return sendApiError(res, 'TikTok Delete Account Error', error, 'Không thể xóa tài khoản TikTok.');
+  }
+});
+
 // Webhook Messenger / Instagram: cấu hình Callback URL https://<domain>/api/webhooks/messenger trong Meta App
 app.get('/api/webhooks/messenger', (req, res) => {
   const verifyToken = process.env.MESSENGER_VERIFY_TOKEN;
@@ -1764,8 +1814,82 @@ app.post('/api/posts', requireAuth, async (req, res) => {
   const mediaType = String(req.body.mediaType || 'text').toLowerCase();
   const mediaLinks = Array.isArray(req.body.mediaLinks) ? req.body.mediaLinks : [];
   const scheduledAt = new Date(req.body.scheduledAt || Date.now());
+  const platform = String(req.body.platform || 'facebook').toLowerCase();
 
   if (!content) return res.status(400).json({ success: false, message: 'Nội dung bài đăng không được để trống.' });
+  if (Number.isNaN(scheduledAt.getTime())) return res.status(400).json({ success: false, message: 'Thời gian đăng không hợp lệ.' });
+
+  // ── XỬ LÝ ĐĂNG BÀI TIKTOK ──
+  if (platform === 'tiktok') {
+    const rawTiktokIds = Array.isArray(req.body.tiktokAccountIds) && req.body.tiktokAccountIds.length > 0
+      ? req.body.tiktokAccountIds
+      : (req.body.tiktokAccountId ? [req.body.tiktokAccountId] : (Array.isArray(req.body.pageIds) ? req.body.pageIds : []));
+    const targetTiktokIds = [...new Set(rawTiktokIds.map((id) => String(id || '').trim()))].filter(Boolean);
+
+    if (targetTiktokIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'Vui lòng chọn ít nhất một tài khoản TikTok để đăng bài.' });
+    }
+    if (mediaType !== 'video' && mediaType !== 'reel') {
+      return res.status(400).json({ success: false, message: 'TikTok chỉ hỗ trợ đăng dạng Video hoặc Reels. Vui lòng chọn tệp video.' });
+    }
+    if (mediaLinks.length === 0) {
+      return res.status(400).json({ success: false, message: 'Bài đăng TikTok bắt buộc phải đính kèm video.' });
+    }
+
+    try {
+      await ensurePostOwnershipSchema();
+      const pool = await getPool();
+      const createdPosts = [];
+
+      for (const ttId of targetTiktokIds) {
+        try {
+          const result = await pool.request()
+            .input('pageId', sql.VarChar, String(ttId))
+            .input('ownerId', sql.VarChar(64), req.user.sub)
+            .input('content', sql.NVarChar, content)
+            .input('mediaType', sql.VarChar, 'video')
+            .input('mediaLinks', sql.NVarChar, JSON.stringify(mediaLinks))
+            .input('scheduledAt', sql.DateTime2, scheduledAt)
+            .input('status', sql.VarChar, 'pending')
+            .input('platform', sql.VarChar(50), 'tiktok')
+            .input('tiktokAccountId', sql.VarChar(50), String(ttId))
+            .query(`
+              INSERT INTO Posts (page_id, content, media_type, media_links, scheduled_at, status, created_by_user_id, platform, tiktok_account_id)
+              OUTPUT INSERTED.id
+              VALUES (@pageId, @content, @mediaType, @mediaLinks, @scheduledAt, @status, @ownerId, @platform, @tiktokAccountId);
+            `);
+          const postId = result.recordset[0].id;
+          createdPosts.push({ postId, pageId: ttId });
+          await standaloneScheduler.schedulePost(postId, scheduledAt);
+        } catch (err) {
+          console.error(`[TikTok Create Post Error for account ${ttId}]`, err.message);
+        }
+      }
+
+      if (createdPosts.length === 0) {
+        return res.status(500).json({ success: false, message: 'Không thể tạo bài đăng TikTok.' });
+      }
+
+      const createdPostIds = createdPosts.map((p) => p.postId);
+      const isNow = Math.abs(scheduledAt.getTime() - Date.now()) < 5 * 60 * 1000;
+      return res.status(202).json({
+        success: true,
+        postId: createdPostIds[0],
+        postIds: createdPostIds,
+        count: createdPostIds.length,
+        status: 'pending',
+        scheduledAt,
+        message: isNow
+          ? `⚡ Đã đưa vào hàng đợi đăng ngay lên ${createdPostIds.length} tài khoản TikTok!`
+          : `Đã lên lịch đăng video cho ${createdPostIds.length} tài khoản TikTok.`
+      });
+    } catch (ttErr) {
+      console.error('[TikTok Create Post Fatal Error]', ttErr);
+      return res.status(500).json({ success: false, message: 'Lỗi hệ thống khi tạo bài đăng TikTok: ' + ttErr.message });
+    }
+  }
+
+  // ── XỬ LÝ ĐĂNG BÀI FACEBOOK (MẶC ĐỊNH) ──
   if (targetPageIds.length === 0) return res.status(400).json({ success: false, message: 'Vui lòng chọn ít nhất một Fanpage hợp lệ.' });
   if (!['text', 'image', 'video', 'reel', 'story'].includes(mediaType)) return res.status(400).json({ success: false, message: 'Loại bài đăng phải là text, image, video, reel hoặc story.' });
   if (mediaType === 'reel' && mediaLinks.length === 0) return res.status(400).json({ success: false, message: 'Bài đăng Reels bắt buộc phải đính kèm video.' });
@@ -1773,7 +1897,6 @@ app.post('/api/posts', requireAuth, async (req, res) => {
     if (localMediaFilename(link)) return false;
     try { return new URL(link).protocol !== 'https:'; } catch { return true; }
   }))) return res.status(400).json({ success: false, message: 'Media cần URL HTTPS công khai hoặc media đã tải lên.' });
-  if (Number.isNaN(scheduledAt.getTime())) return res.status(400).json({ success: false, message: 'Thời gian đăng không hợp lệ.' });
 
   const comments = Array.isArray(req.body.comments) ? req.body.comments.slice(0, 5) : [];
   try {
@@ -2700,6 +2823,9 @@ const server = app.listen(PORT, () => {
 
   // Khởi động bộ đếm giờ độc lập cho bài đăng & comment seeding (hoạt động kể cả không có Redis)
   standaloneScheduler.startStandaloneScheduler(10000);
+
+  // Khởi tạo schema TikTok (bảng TikTokAccounts + cột Posts.platform, Posts.tiktok_account_id)
+  tiktokService.ensureTikTokSchema().catch((error) => console.error('[TikTok Schema Init Error]', error.message));
 
   // Tùy chọn gộp Worker chạy chung một tiến trình (Dành cho Render / Cloud Free không tốn thêm $7/tháng)
   if (process.env.RUN_WORKER_IN_PROCESS === 'true') {

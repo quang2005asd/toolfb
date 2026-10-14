@@ -37,8 +37,10 @@ import {
 } from 'lucide-react';
 import MainLayout from '../../components/layout/MainLayout';
 import postApi from '../../services/postApi';
+import channelApi from '../../services/channelApi';
 import aiApi from '../../services/aiApi';
 import channelGroupApi from '../../services/channelGroupApi';
+import PlatformIcon from '../../components/PlatformIcon';
 import { MAX_AI_POSTS, detectPostCount, splitAiPosts, stripMarkdown } from '../../utils/aiPosts';
 
 // Khoảng cách giữa các bài khi lên lịch nhiều bài AI cùng lúc (phút)
@@ -378,6 +380,274 @@ function FacebookMockupPreview({
   );
 }
 
+// ── Realistic TikTok Mockup Component ─────────────────────────────────────
+function TikTokMockupPreview({
+  accountName,
+  accountUsername,
+  avatarUrl,
+  content,
+  mediaPreviewUrl,
+  scheduledAt
+}) {
+  const formattedTime = scheduledAt
+    ? `Lên lịch: ${new Date(scheduledAt).toLocaleString('vi-VN')}`
+    : 'Đăng ngay';
+
+  const renderCaption = (text) => {
+    if (!text) return 'Chưa nhập mô tả video TikTok...';
+    const parts = text.split(/(#[\w\p{L}]+)/gu);
+    return parts.map((part, i) =>
+      part.startsWith('#') ? (
+        <span key={i} style={{ color: '#00f2fe', fontWeight: 600 }}> {part}</span>
+      ) : (
+        part
+      )
+    );
+  };
+
+  return (
+    <div
+      style={{
+        position: 'relative',
+        width: '100%',
+        maxWidth: 340,
+        margin: '0 auto',
+        borderRadius: 22,
+        overflow: 'hidden',
+        background: '#010101',
+        border: '1.5px solid rgba(254, 44, 85, 0.4)',
+        boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6), 0 0 24px rgba(254, 44, 85, 0.15)',
+        aspectRatio: '9/16',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        color: '#fff',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      }}
+    >
+      {/* Background Video */}
+      {mediaPreviewUrl ? (
+        <video
+          src={mediaPreviewUrl}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            zIndex: 1
+          }}
+          controls
+          loop
+          muted
+          playsInline
+        />
+      ) : (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#666',
+            gap: 10,
+            zIndex: 1
+          }}
+        >
+          <PlatformIcon platform="tiktok" size={48} />
+          <span style={{ fontSize: 12, color: '#888' }}>Đính kèm video để xem trước TikTok</span>
+        </div>
+      )}
+
+      {/* Dark overlay gradients */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'linear-gradient(180deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0) 25%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.85) 100%)',
+          zIndex: 2,
+          pointerEvents: 'none'
+        }}
+      />
+
+      {/* Top Header */}
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 3,
+          padding: '14px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <PlatformIcon platform="tiktok" size={18} />
+          <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: -0.3 }}>TikTok Studio</span>
+        </div>
+        <div style={{ display: 'flex', gap: 14, fontSize: 13, fontWeight: 700 }}>
+          <span style={{ opacity: 0.65 }}>Bạn bè</span>
+          <span style={{ borderBottom: '2px solid #fff', paddingBottom: 2 }}>Dành cho bạn</span>
+        </div>
+        <span
+          style={{
+            fontSize: 10.5,
+            background: 'rgba(254, 44, 85, 0.9)',
+            padding: '2px 8px',
+            borderRadius: 10,
+            fontWeight: 700
+          }}
+        >
+          9:16
+        </span>
+      </div>
+
+      {/* Right Action Sidebar */}
+      <div
+        style={{
+          position: 'absolute',
+          right: 10,
+          bottom: 90,
+          zIndex: 3,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 14
+        }}
+      >
+        {/* Avatar */}
+        <div style={{ position: 'relative', marginBottom: 4 }}>
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt=""
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                border: '2px solid #fff',
+                objectFit: 'cover'
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                background: '#111',
+                border: '2px solid #FE2C55',
+                display: 'grid',
+                placeItems: 'center'
+              }}
+            >
+              <PlatformIcon platform="tiktok" size={20} />
+            </div>
+          )}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: -6,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: 16,
+              height: 16,
+              borderRadius: '50%',
+              background: '#FE2C55',
+              display: 'grid',
+              placeItems: 'center',
+              fontSize: 12,
+              fontWeight: 900
+            }}
+          >
+            +
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+          <span style={{ fontSize: 24 }}>❤️</span>
+          <span style={{ fontSize: 11, fontWeight: 700 }}>88.5K</span>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+          <span style={{ fontSize: 22 }}>💬</span>
+          <span style={{ fontSize: 11, fontWeight: 700 }}>1.2K</span>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+          <span style={{ fontSize: 22 }}>🔖</span>
+          <span style={{ fontSize: 11, fontWeight: 700 }}>3.4K</span>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+          <span style={{ fontSize: 22 }}>↗️</span>
+          <span style={{ fontSize: 11, fontWeight: 700 }}>890</span>
+        </div>
+
+        <div
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: '50%',
+            background: 'linear-gradient(45deg, #111, #333)',
+            border: '2px solid #222',
+            display: 'grid',
+            placeItems: 'center',
+            fontSize: 14
+          }}
+        >
+          🎵
+        </div>
+      </div>
+
+      {/* Bottom Video Info */}
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 3,
+          padding: '14px 16px',
+          paddingRight: 60
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+          <strong style={{ fontSize: 14, textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+            @{accountUsername || 'kênh_tiktok'}
+          </strong>
+          {accountName && (
+            <span style={{ fontSize: 11.5, opacity: 0.8, color: '#e5e7eb' }}>
+              · {accountName}
+            </span>
+          )}
+        </div>
+
+        <p
+          style={{
+            fontSize: 12.5,
+            lineHeight: 1.45,
+            margin: '0 0 8px',
+            textShadow: '0 1px 2px rgba(0,0,0,0.8)',
+            maxHeight: 52,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
+          }}
+        >
+          {renderCaption(content)}
+        </p>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, opacity: 0.9 }}>
+          <span>🎵 Âm thanh gốc - @{accountUsername || 'kênh_tiktok'}</span>
+        </div>
+
+        <div style={{ marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(0,0,0,0.55)', padding: '2px 8px', borderRadius: 6, fontSize: 10.5, color: '#38bdf8' }}>
+          <span>⏰ {formattedTime}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const steps = ['Viết bài', 'Chọn kênh', 'Xem lại & xuất bản'];
 
 const popularEmojis = ['🔥', '✨', '❤️', '👍', '🚀', '📌', '💡', '🎉', '👇', '👉', '📢', '🎯', '⭐', '💥', '✅', '💯', '😍', '👏', '🎁', '⚡', '☕', '🌟', '💪', '💬'];
@@ -387,6 +657,9 @@ const popularHashtags = ['#kinhdoanh', '#viral', '#facebook', '#marketing', '#xu
 export default function ComposePage() {
   const router = useRouter();
   const [step, setStep] = useState(0);
+  const [targetPlatform, setTargetPlatform] = useState('facebook'); // 'facebook' | 'tiktok'
+  const [tiktokAccounts, setTiktokAccounts] = useState([]);
+  const [selectedTiktokIds, setSelectedTiktokIds] = useState([]);
   const [postType, setPostType] = useState('feed'); // 'feed' | 'reel' | 'story'
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -448,9 +721,10 @@ export default function ComposePage() {
   useEffect(() => {
     Promise.allSettled([
       postApi.getChannels(),
-      channelGroupApi.list()
+      channelGroupApi.list(),
+      channelApi.tiktokAccounts()
     ])
-      .then(([chanRes, groupRes]) => {
+      .then(([chanRes, groupRes, tiktokRes]) => {
         let availableChannels = [];
         let availableGroups = [];
 
@@ -464,6 +738,10 @@ export default function ComposePage() {
         if (groupRes.status === 'fulfilled') {
           availableGroups = groupRes.value.groups || [];
           setGroups(availableGroups);
+        }
+
+        if (tiktokRes.status === 'fulfilled') {
+          setTiktokAccounts(tiktokRes.value.accounts || []);
         }
 
         // Pre-select group or page from URL query
@@ -809,15 +1087,26 @@ export default function ComposePage() {
       showToast('error', 'Nội dung bài đăng không được để trống.');
       return;
     }
-    if (selectedPageIds.length === 0) {
-      showToast('error', 'Vui lòng chọn ít nhất một Fanpage trước khi đăng.');
-      return;
+    if (targetPlatform === 'tiktok') {
+      if (selectedTiktokIds.length === 0) {
+        showToast('error', 'Vui lòng chọn ít nhất một tài khoản TikTok trước khi đăng.');
+        return;
+      }
+      if (!uploadedMedia || uploadedMedia.mediaType !== 'video') {
+        showToast('error', 'TikTok bắt buộc phải đính kèm tệp Video (MP4/WebM). Vui lòng tải video lên.');
+        return;
+      }
+    } else {
+      if (selectedPageIds.length === 0) {
+        showToast('error', 'Vui lòng chọn ít nhất một Fanpage trước khi đăng.');
+        return;
+      }
     }
     if (uploadingMedia) {
       showToast('error', 'Đợi ảnh/video tải lên xong trước khi lưu bài.');
       return;
     }
-    if (postType === 'reel' && (!uploadedMedia || uploadedMedia.mediaType !== 'video')) {
+    if (targetPlatform === 'facebook' && postType === 'reel' && (!uploadedMedia || uploadedMedia.mediaType !== 'video')) {
       showToast('error', 'Facebook Reels bắt buộc phải đính kèm tệp Video (tỷ lệ chuẩn 9:16).');
       return;
     }
@@ -839,7 +1128,9 @@ export default function ComposePage() {
     setSaving(true);
     setNotice('');
     try {
-      const finalMediaType = postType === 'reel'
+      const finalMediaType = targetPlatform === 'tiktok'
+        ? 'video'
+        : postType === 'reel'
         ? 'reel'
         : postType === 'story'
         ? 'story'
@@ -854,7 +1145,9 @@ export default function ComposePage() {
       const scheduledTimeToSend = isPublishNow ? new Date().toISOString() : parsedDate.toISOString();
 
       const result = await postApi.createPost({
-        pageIds: selectedPageIds,
+        platform: targetPlatform,
+        pageIds: targetPlatform === 'tiktok' ? selectedTiktokIds : selectedPageIds,
+        tiktokAccountIds: selectedTiktokIds,
         content: content.trim(),
         mediaType: finalMediaType,
         mediaLinks: finalMediaLinks,
@@ -893,6 +1186,9 @@ export default function ComposePage() {
     mediaList.forEach((m) => m.previewUrl && URL.revokeObjectURL(m.previewUrl));
     setMediaList([]);
 
+    const isVideo = file.type.startsWith('video/') || /\.(mp4|mov|avi|wmv|flv|webm|mkv)$/i.test(file.name);
+    const mediaType = isVideo ? 'video' : 'image';
+
     const previewUrl = URL.createObjectURL(file);
     setMediaPreviewUrl(previewUrl);
     setUploadedMedia(null);
@@ -903,7 +1199,7 @@ export default function ComposePage() {
     formData.append('file', file);
     try {
       const uploaded = await postApi.uploadMedia(formData);
-      setUploadedMedia({ ...uploaded, previewUrl });
+      setUploadedMedia({ ...uploaded, previewUrl, mediaType: uploaded.mediaType || mediaType });
       const uploadMsg = `Đã tải lên ${uploaded.fileName} thành công.`;
       setNotice(uploadMsg);
       showToast('success', uploadMsg);
@@ -1069,11 +1365,52 @@ export default function ComposePage() {
             </div>
 
             <div className="panel-body">
-              {/* LỰA CHỌN ĐỊNH DẠNG XUẤT BẢN */}
+              {/* CHỌN NỀN TẢNG XUẤT BẢN: FACEBOOK HOẶC TIKTOK */}
               <div style={{ marginBottom: 20 }}>
                 <label className="field-label" style={{ marginBottom: 8, display: 'block' }}>
-                  1. Chọn hình thức đăng Facebook *
+                  1. Chọn nền tảng xuất bản *
                 </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <button
+                    type="button"
+                    onClick={() => setTargetPlatform('facebook')}
+                    className={`compose-type-pill${targetPlatform === 'facebook' ? ' is-active' : ''}`}
+                    style={targetPlatform === 'facebook' ? { border: '2px solid #1877f2' } : {}}
+                  >
+                    <PlatformIcon platform="facebook" size={20} />
+                    <span style={{ fontSize: 13, fontWeight: 700 }}>Facebook</span>
+                    <span style={{ fontSize: 11, opacity: 0.75, fontWeight: 400 }}>Fanpage Facebook</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTargetPlatform('tiktok');
+                      setPostType('feed');
+                    }}
+                    className={`compose-type-pill${targetPlatform === 'tiktok' ? ' is-active' : ''}`}
+                    style={targetPlatform === 'tiktok' ? { border: '2px solid #FE2C55' } : {}}
+                  >
+                    <PlatformIcon platform="tiktok" size={20} />
+                    <span style={{ fontSize: 13, fontWeight: 700 }}>TikTok</span>
+                    <span style={{ fontSize: 11, opacity: 0.75, fontWeight: 400 }}>Cookie / Puppeteer</span>
+                  </button>
+                </div>
+              </div>
+
+              {targetPlatform === 'tiktok' ? (
+                <div style={{ marginBottom: 20, fontSize: 12.5, color: '#FE2C55', background: 'rgba(254, 44, 85, 0.08)', padding: '12px 14px', borderRadius: 10, border: '1px solid rgba(254, 44, 85, 0.25)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Film size={20} style={{ flexShrink: 0, color: '#FE2C55' }} />
+                  <div>
+                    <strong>Chế độ đăng TikTok (Cách 2 - Puppeteer):</strong> Hệ thống tự động mở trình duyệt ngầm, dán Cookie và upload video. Vui lòng đính kèm tệp Video (MP4/WebM).
+                  </div>
+                </div>
+              ) : (
+                /* LỰA CHỌN ĐỊNH DẠNG XUẤT BẢN FACEBOOK */
+                <div style={{ marginBottom: 20 }}>
+                  <label className="field-label" style={{ marginBottom: 8, display: 'block' }}>
+                    2. Chọn hình thức đăng Facebook *
+                  </label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
                   <button
                     type="button"
@@ -1129,6 +1466,7 @@ export default function ComposePage() {
                   </div>
                 )}
               </div>
+              )}
 
               {/* ────────────────── 1. ĐỊNH DẠNG REELS ────────────────── */}
               {postType === 'reel' && (
@@ -1503,33 +1841,56 @@ export default function ComposePage() {
             </div>
           </div>
 
-          {/* CỘT PHẢI: LIVE FACEBOOK MOCKUP PREVIEW THỜI GIAN THỰC */}
+          {/* CỘT PHẢI: LIVE MOCKUP PREVIEW THỜI GIAN THỰC */}
           <div className="compose-preview-sticky">
             <div className="panel" style={{ margin: 0 }}>
               <div className="panel-heading" style={{ padding: '12px 16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px #10b981' }} />
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: targetPlatform === 'tiktok' ? '#FE2C55' : '#10b981', boxShadow: targetPlatform === 'tiktok' ? '0 0 8px #FE2C55' : '0 0 8px #10b981' }} />
                   <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>
-                    Xem trước thực tế trên Facebook
+                    {targetPlatform === 'tiktok' ? 'Xem trước video trên TikTok' : 'Xem trước thực tế trên Facebook'}
                   </span>
                 </div>
-                <span style={{ fontSize: 11, background: 'rgba(37, 99, 235, 0.08)', color: 'var(--blue)', padding: '2px 8px', borderRadius: 99, fontWeight: 700 }}>
-                  {postType === 'reel' ? 'REELS 9:16' : postType === 'story' ? 'STORY 24H' : 'BẢNG TIN'}
+                <span style={{
+                  fontSize: 11,
+                  background: targetPlatform === 'tiktok' ? 'rgba(254, 44, 85, 0.12)' : 'rgba(37, 99, 235, 0.08)',
+                  color: targetPlatform === 'tiktok' ? '#FE2C55' : 'var(--blue)',
+                  padding: '2px 8px',
+                  borderRadius: 99,
+                  fontWeight: 700
+                }}>
+                  {targetPlatform === 'tiktok' ? 'TIKTOK VIDEO 9:16' : (postType === 'reel' ? 'REELS 9:16' : postType === 'story' ? 'STORY 24H' : 'BẢNG TIN')}
                 </span>
               </div>
               <div className="panel-body" style={{ padding: '14px 16px' }}>
-                <div style={{ maxWidth: postType === 'feed' ? '100%' : 310, margin: '0 auto' }}>
-                  <FacebookMockupPreview
-                    postType={postType}
-                    pageName={channels.find((c) => selectedPageIds.includes(c.id))?.name || 'Fanpage của bạn'}
-                    content={content}
-                    title={title}
-                    mediaPreviewUrl={mediaPreviewUrl}
-                    uploadedMedia={uploadedMedia}
-                    mediaList={mediaList}
-                    scheduledAt={scheduledAt}
-                    comments={comments}
-                  />
+                <div style={{ maxWidth: targetPlatform === 'tiktok' || postType !== 'feed' ? 340 : '100%', margin: '0 auto' }}>
+                  {targetPlatform === 'tiktok' ? (
+                    (() => {
+                      const selAcc = tiktokAccounts.find((a) => selectedTiktokIds.includes(a.id)) || tiktokAccounts[0];
+                      return (
+                        <TikTokMockupPreview
+                          accountName={selAcc?.nickname}
+                          accountUsername={selAcc?.username}
+                          avatarUrl={selAcc?.avatar_url}
+                          content={content}
+                          mediaPreviewUrl={mediaPreviewUrl}
+                          scheduledAt={scheduledAt}
+                        />
+                      );
+                    })()
+                  ) : (
+                    <FacebookMockupPreview
+                      postType={postType}
+                      pageName={channels.find((c) => selectedPageIds.includes(c.id))?.name || 'Fanpage của bạn'}
+                      content={content}
+                      title={title}
+                      mediaPreviewUrl={mediaPreviewUrl}
+                      uploadedMedia={uploadedMedia}
+                      mediaList={mediaList}
+                      scheduledAt={scheduledAt}
+                      comments={comments}
+                    />
+                  )}
                 </div>
                 <div style={{ textAlign: 'center', marginTop: 12 }}>
                   <span className="muted" style={{ fontSize: 11 }}>
@@ -1548,22 +1909,99 @@ export default function ComposePage() {
           {/* Cột chọn kênh */}
           <section className="panel compose-panel">
             <div className="panel-heading">
-              <h2>Chọn Fanpage đăng bài</h2>
+              <h2>{targetPlatform === 'tiktok' ? 'Chọn tài khoản TikTok đăng video' : 'Chọn Fanpage đăng bài'}</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span className="muted" style={{ fontSize: 12 }}>
-                  Đã chọn: <strong style={{ color: '#00f2fe' }}>{selectedPageIds.length}</strong>/{channels.length}
+                  Đã chọn: <strong style={{ color: targetPlatform === 'tiktok' ? '#FE2C55' : '#00f2fe' }}>
+                    {targetPlatform === 'tiktok' ? selectedTiktokIds.length : selectedPageIds.length}
+                  </strong>/
+                  {targetPlatform === 'tiktok' ? tiktokAccounts.length : channels.length}
                 </span>
                 <button
                   className="button button-quiet"
                   type="button"
                   style={{ minHeight: 24, padding: '0 8px', fontSize: 11 }}
-                  onClick={selectedPageIds.length === channels.length ? deselectAllPages : selectAllPages}
+                  onClick={() => {
+                    if (targetPlatform === 'tiktok') {
+                      if (selectedTiktokIds.length === tiktokAccounts.length) {
+                        setSelectedTiktokIds([]);
+                      } else {
+                        setSelectedTiktokIds(tiktokAccounts.map((a) => a.id));
+                      }
+                    } else {
+                      if (selectedPageIds.length === channels.length) {
+                        deselectAllPages();
+                      } else {
+                        selectAllPages();
+                      }
+                    }
+                  }}
                 >
-                  {selectedPageIds.length === channels.length ? 'Bỏ chọn hết' : 'Chọn tất cả'}
+                  {(targetPlatform === 'tiktok' ? selectedTiktokIds.length === tiktokAccounts.length : selectedPageIds.length === channels.length) ? 'Bỏ chọn hết' : 'Chọn tất cả'}
                 </button>
               </div>
             </div>
             <div className="panel-body">
+              {targetPlatform === 'tiktok' ? (
+                tiktokAccounts.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '36px 16px', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 12, border: '1px dashed var(--line)' }}>
+                    <div style={{ margin: '0 auto 10px', display: 'inline-block' }}>
+                      <PlatformIcon platform="tiktok" size={40} />
+                    </div>
+                    <p style={{ marginTop: 8, fontSize: 14, fontWeight: 500 }}>Chưa có tài khoản TikTok nào được liên kết.</p>
+                    <Link
+                      href="/channels?platform=tiktok"
+                      className="button button-primary"
+                      style={{ marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 6, background: '#FE2C55', borderColor: '#FE2C55', color: '#fff' }}
+                    >
+                      <Plus size={15} /> Thêm Cookie TikTok tại Quản lý Kênh
+                    </Link>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {tiktokAccounts.map((acc) => {
+                      const isChecked = selectedTiktokIds.includes(acc.id);
+                      return (
+                        <div
+                          key={acc.id}
+                          onClick={() => {
+                            setSelectedTiktokIds((prev) => (prev.includes(acc.id) ? prev.filter((id) => id !== acc.id) : [...prev, acc.id]));
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                            padding: '12px 14px',
+                            borderRadius: 12,
+                            cursor: 'pointer',
+                            background: isChecked ? 'rgba(254, 44, 85, 0.12)' : 'rgba(255, 255, 255, 0.02)',
+                            border: isChecked ? '1px solid #FE2C55' : '1px solid rgba(255, 255, 255, 0.08)',
+                            boxShadow: isChecked ? '0 4px 14px rgba(254, 44, 85, 0.15)' : 'none',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <div style={{ color: isChecked ? '#FE2C55' : 'var(--muted)', display: 'flex', alignItems: 'center' }}>
+                            {isChecked ? <CheckSquare size={18} /> : <Square size={18} />}
+                          </div>
+                          {acc.avatar_url ? (
+                            <img src={acc.avatar_url} alt="" style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover' }} />
+                          ) : (
+                            <PlatformIcon platform="tiktok" size={28} />
+                          )}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 600, fontSize: 13.5 }}>{acc.nickname || acc.username}</div>
+                            <div className="muted" style={{ fontSize: 12 }}>@{acc.username}</div>
+                          </div>
+                          <span style={{ fontSize: 11.5, padding: '3px 8px', borderRadius: 6, background: acc.status === 'active' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: acc.status === 'active' ? '#10b981' : '#ef4444' }}>
+                            {acc.status === 'active' ? 'Cookie hoạt động' : 'Hết hạn'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
+              ) : (
+                <>
               {/* CHỌN NHANH THEO NHÓM KÊNH */}
               {groups.length > 0 && (
                 <div style={{ marginBottom: 14, padding: '10px 12px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 10, border: '1px solid rgba(255, 255, 255, 0.08)' }}>
@@ -1739,6 +2177,8 @@ export default function ComposePage() {
               {!channelLoading && channels.length === 0 && !channelError && (
                 <p className="muted">Chưa có Fanpage nào được đồng bộ. Vui lòng vào trang Kênh để kết nối lại.</p>
               )}
+                </>
+              )}
             </div>
           </section>
 
@@ -1760,25 +2200,27 @@ export default function ComposePage() {
                       const now = new Date();
                       const localNow = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
                       setScheduledAt(localNow.toISOString().slice(0, 16));
-                      showToast('info', '⚡ Đã chọn: Đăng ngay lập tức lên Facebook');
+                      showToast('info', targetPlatform === 'tiktok' ? '⚡ Đã chọn: Đăng ngay lập tức lên TikTok' : '⚡ Đã chọn: Đăng ngay lập tức lên Facebook');
                     }}
                     style={{
                       padding: '12px 14px',
                       borderRadius: 10,
                       cursor: 'pointer',
-                      border: isPublishNow ? '2px solid #f59e0b' : '1px solid rgba(255,255,255,0.12)',
-                      background: isPublishNow ? 'rgba(245, 158, 11, 0.16)' : 'rgba(255,255,255,0.03)',
-                      color: isPublishNow ? '#fbbf24' : 'var(--muted)',
+                      border: isPublishNow ? (targetPlatform === 'tiktok' ? '2px solid #FE2C55' : '2px solid #f59e0b') : '1px solid rgba(255,255,255,0.12)',
+                      background: isPublishNow ? (targetPlatform === 'tiktok' ? 'rgba(254, 44, 85, 0.16)' : 'rgba(245, 158, 11, 0.16)') : 'rgba(255,255,255,0.03)',
+                      color: isPublishNow ? (targetPlatform === 'tiktok' ? '#FE2C55' : '#fbbf24') : 'var(--muted)',
                       textAlign: 'left',
                       transition: 'all 0.2s ease',
-                      boxShadow: isPublishNow ? '0 0 16px rgba(245, 158, 11, 0.3)' : 'none'
+                      boxShadow: isPublishNow ? (targetPlatform === 'tiktok' ? '0 0 16px rgba(254, 44, 85, 0.3)' : '0 0 16px rgba(245, 158, 11, 0.3)') : 'none'
                     }}
                   >
-                    <div style={{ fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, color: isPublishNow ? '#fbbf24' : '#fff' }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, color: isPublishNow ? (targetPlatform === 'tiktok' ? '#FE2C55' : '#fbbf24') : '#fff' }}>
                       ⚡ Đăng ngay lập tức
                     </div>
                     <div style={{ fontSize: 11, marginTop: 4, opacity: 0.85, lineHeight: 1.3 }}>
-                      Xuất bản trực tiếp lên Facebook ngay khi bạn bấm nút
+                      {targetPlatform === 'tiktok'
+                        ? 'Xuất bản video trực tiếp lên TikTok (qua Puppeteer) ngay khi bấm nút'
+                        : 'Xuất bản trực tiếp lên Facebook ngay khi bạn bấm nút'}
                     </div>
                   </button>
 
@@ -1811,7 +2253,9 @@ export default function ComposePage() {
 
                 {isPublishNow ? (
                   <div style={{ padding: '12px 14px', borderRadius: 10, background: 'rgba(245, 158, 11, 0.08)', border: '1px dashed rgba(245, 158, 11, 0.35)', color: '#fcd34d', fontSize: 12.5, lineHeight: 1.4 }}>
-                    🚀 <strong>Chế độ Đăng ngay đang bật:</strong> Bài viết sẽ được gửi lập tức đến Facebook Graph API và xuất bản lên <strong>{selectedPageIds.length} Fanpage</strong> đã chọn ngay sau khi bạn bấm xác nhận.
+                    🚀 <strong>Chế độ Đăng ngay đang bật:</strong> {targetPlatform === 'tiktok'
+                      ? `Video sẽ được tự động đăng lên ${selectedTiktokIds.length} tài khoản TikTok qua Puppeteer ngay sau khi bạn bấm xác nhận.`
+                      : `Bài viết sẽ được gửi lập tức đến Facebook Graph API và xuất bản lên ${selectedPageIds.length} Fanpage đã chọn ngay sau khi bạn bấm xác nhận.`}
                   </div>
                 ) : (
                   <div>
@@ -1859,7 +2303,9 @@ export default function ComposePage() {
                       }}
                     />
                     <p className="muted" style={{ fontSize: 11, marginTop: 4, marginBottom: 0 }}>
-                      💡 Khuyến nghị hẹn trước ít nhất 15 phút để Facebook đồng bộ lịch đăng chuẩn xác nhất.
+                      {targetPlatform === 'tiktok'
+                        ? '💡 Video sẽ được tự động tải lên kênh TikTok đã chọn đúng vào khung giờ này.'
+                        : '💡 Khuyến nghị hẹn trước ít nhất 15 phút để Facebook đồng bộ lịch đăng chuẩn xác nhất.'}
                     </p>
                   </div>
                 )}
@@ -1874,7 +2320,9 @@ export default function ComposePage() {
                       Comment Seeding Boost ({comments.length}/5)
                     </span>
                     <span className="muted" style={{ fontSize: 11, display: 'block', marginTop: 2 }}>
-                      Tự động bình luận mồi sau khi đăng để kích thích thuật toán Facebook đẩy Reach & Feed
+                      {targetPlatform === 'tiktok'
+                        ? 'Bình luận mồi tự động (chỉ áp dụng đối với Fanpage Facebook, TikTok đang phát triển)'
+                        : 'Tự động bình luận mồi sau khi đăng để kích thích thuật toán Facebook đẩy Reach & Feed'}
                     </span>
                   </div>
 
@@ -2040,51 +2488,95 @@ export default function ComposePage() {
             <h2>{isPublishNow ? '⚡ Xác nhận xuất bản bài viết ngay lập tức' : 'Kiểm tra bài viết trước khi lên lịch'}</h2>
           </div>
           <div className="panel-body" style={{ maxWidth: 820 }}>
-            {/* Danh sách các page sẽ nhận bài */}
+            {/* Danh sách các kênh/page sẽ nhận bài */}
             <div style={{ marginBottom: 16 }}>
               <span className="muted" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
-                Các Fanpage sẽ đăng ({selectedPageIds.length} Page):
+                {targetPlatform === 'tiktok'
+                  ? `Các tài khoản TikTok sẽ đăng (${selectedTiktokIds.length} tài khoản):`
+                  : `Các Fanpage sẽ đăng (${selectedPageIds.length} Page):`}
               </span>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {selectedPageIds.map((id) => {
-                  const channel = channels.find((c) => c.id === id);
-                  return (
-                    <span
-                      key={id}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        background: 'rgba(37, 99, 235, 0.08)',
-                        border: '1px solid rgba(37, 99, 235, 0.25)',
-                        borderRadius: 16,
-                        padding: '4px 12px',
-                        fontSize: 12.5,
-                        color: 'var(--blue)',
-                        fontWeight: 600
-                      }}
-                    >
-                      <span className="fb-mark" style={{ width: 16, height: 16, fontSize: 10 }}>f</span>
-                      {channel?.name || id}
-                    </span>
-                  );
-                })}
+                {targetPlatform === 'tiktok' ? (
+                  selectedTiktokIds.map((id) => {
+                    const acc = tiktokAccounts.find((a) => a.id === id);
+                    return (
+                      <span
+                        key={id}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          background: 'rgba(254, 44, 85, 0.10)',
+                          border: '1px solid rgba(254, 44, 85, 0.35)',
+                          borderRadius: 16,
+                          padding: '4px 12px',
+                          fontSize: 12.5,
+                          color: '#FE2C55',
+                          fontWeight: 600
+                        }}
+                      >
+                        <PlatformIcon platform="tiktok" size={15} />
+                        {acc ? `${acc.nickname || acc.username} (@${acc.username})` : `TikTok #${id}`}
+                      </span>
+                    );
+                  })
+                ) : (
+                  selectedPageIds.map((id) => {
+                    const channel = channels.find((c) => c.id === id);
+                    return (
+                      <span
+                        key={id}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          background: 'rgba(37, 99, 235, 0.08)',
+                          border: '1px solid rgba(37, 99, 235, 0.25)',
+                          borderRadius: 16,
+                          padding: '4px 12px',
+                          fontSize: 12.5,
+                          color: 'var(--blue)',
+                          fontWeight: 600
+                        }}
+                      >
+                        <span className="fb-mark" style={{ width: 16, height: 16, fontSize: 10 }}>f</span>
+                        {channel?.name || id}
+                      </span>
+                    );
+                  })
+                )}
               </div>
             </div>
 
-            {/* Mô phỏng bài đăng Facebook */}
-            <div style={{ maxWidth: postType === 'feed' ? 620 : 330, margin: '0 auto 16px' }}>
-              <FacebookMockupPreview
-                postType={postType}
-                pageName={channels.find((c) => selectedPageIds.includes(c.id))?.name || 'Fanpage của bạn'}
-                content={content}
-                title={title}
-                mediaPreviewUrl={mediaPreviewUrl}
-                uploadedMedia={uploadedMedia}
-                mediaList={mediaList}
-                scheduledAt={scheduledAt}
-                comments={comments}
-              />
+            {/* Mô phỏng bài đăng thực tế */}
+            <div style={{ maxWidth: targetPlatform === 'tiktok' || postType !== 'feed' ? 340 : 620, margin: '0 auto 16px' }}>
+              {targetPlatform === 'tiktok' ? (
+                (() => {
+                  const selAcc = tiktokAccounts.find((a) => selectedTiktokIds.includes(a.id)) || tiktokAccounts[0];
+                  return (
+                    <TikTokMockupPreview
+                      accountName={selAcc?.nickname}
+                      accountUsername={selAcc?.username}
+                      avatarUrl={selAcc?.avatar_url}
+                      content={content}
+                      mediaPreviewUrl={mediaPreviewUrl}
+                      scheduledAt={scheduledAt}
+                    />
+                  );
+                })()
+              ) : (
+                <FacebookMockupPreview
+                  postType={postType}
+                  pageName={channels.find((c) => selectedPageIds.includes(c.id))?.name || 'Fanpage của bạn'}
+                  content={content}
+                  title={title}
+                  mediaPreviewUrl={mediaPreviewUrl}
+                  uploadedMedia={uploadedMedia}
+                  mediaList={mediaList}
+                  scheduledAt={scheduledAt}
+                  comments={comments}
+                />
+              )}
             </div>
 
 
@@ -2168,20 +2660,20 @@ export default function ComposePage() {
 
         {step < 2 && (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            {step === 1 && isPublishNow && selectedPageIds.length > 0 && (
+            {step === 1 && isPublishNow && (targetPlatform === 'tiktok' ? selectedTiktokIds.length > 0 : selectedPageIds.length > 0) && (
               <button
                 className="button button-primary"
                 type="button"
                 onClick={createScheduledPost}
-                disabled={saving || uploadingMedia || selectedPageIds.length === 0}
+                disabled={saving || uploadingMedia || (targetPlatform === 'tiktok' ? selectedTiktokIds.length === 0 : selectedPageIds.length === 0)}
                 style={{
-                  background: 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
-                  borderColor: '#f59e0b',
+                  background: targetPlatform === 'tiktok' ? '#FE2C55' : 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
+                  borderColor: targetPlatform === 'tiktok' ? '#FE2C55' : '#f59e0b',
                   boxShadow: '0 0 16px rgba(245, 158, 11, 0.4)',
                   fontWeight: 700
                 }}
               >
-                {saving ? '⚡ Đang xuất bản…' : `⚡ Đăng ngay (${selectedPageIds.length} Page)`} <Send size={15} />
+                {saving ? '⚡ Đang xuất bản…' : `⚡ Đăng ngay (${targetPlatform === 'tiktok' ? selectedTiktokIds.length + ' TikTok' : selectedPageIds.length + ' Page'})`} <Send size={15} />
               </button>
             )}
             <button
@@ -2192,14 +2684,29 @@ export default function ComposePage() {
                   setNotice('Nhập nội dung bài viết trước khi tiếp tục.');
                   return;
                 }
-                if (step === 1 && selectedPageIds.length === 0) {
-                  setNotice('Vui lòng chọn ít nhất một Fanpage đăng bài.');
+                const isVideoFile = uploadedMedia && (
+                  uploadedMedia.mediaType === 'video' ||
+                  (uploadedMedia.fileName && /\.(mp4|mov|avi|wmv|flv|webm|mkv)$/i.test(uploadedMedia.fileName)) ||
+                  (uploadedMedia.mediaLink && /\.(mp4|mov|avi|wmv|flv|webm|mkv)$/i.test(uploadedMedia.mediaLink))
+                );
+                if (step === 0 && targetPlatform === 'tiktok' && !isVideoFile) {
+                  setNotice('Đăng TikTok bắt buộc phải đính kèm tệp Video.');
                   return;
+                }
+                if (step === 1) {
+                  if (targetPlatform === 'tiktok' && selectedTiktokIds.length === 0) {
+                    setNotice('Vui lòng chọn ít nhất một tài khoản TikTok.');
+                    return;
+                  }
+                  if (targetPlatform === 'facebook' && selectedPageIds.length === 0) {
+                    setNotice('Vui lòng chọn ít nhất một Fanpage đăng bài.');
+                    return;
+                  }
                 }
                 setNotice('');
                 setStep(step + 1);
               }}
-              disabled={step === 1 && (channelLoading || selectedPageIds.length === 0)}
+              disabled={step === 1 && (targetPlatform === 'tiktok' ? selectedTiktokIds.length === 0 : channelLoading || selectedPageIds.length === 0)}
             >
               {step === 1 ? 'Xem trước & xác nhận' : 'Tiếp tục'} <ArrowRight size={15} />
             </button>
@@ -2211,17 +2718,19 @@ export default function ComposePage() {
             className="button button-primary"
             type="button"
             onClick={createScheduledPost}
-            disabled={saving || uploadingMedia || selectedPageIds.length === 0}
+            disabled={saving || uploadingMedia || (targetPlatform === 'tiktok' ? selectedTiktokIds.length === 0 : selectedPageIds.length === 0)}
             style={isPublishNow ? {
-              background: 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
-              borderColor: '#f59e0b',
+              background: targetPlatform === 'tiktok' ? '#FE2C55' : 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
+              borderColor: targetPlatform === 'tiktok' ? '#FE2C55' : '#f59e0b',
               boxShadow: '0 0 20px rgba(245, 158, 11, 0.45)',
               fontWeight: 700
-            } : undefined}
+            } : (targetPlatform === 'tiktok' ? { background: '#FE2C55', borderColor: '#FE2C55', color: '#fff' } : undefined)}
           >
             {saving
-              ? (isPublishNow ? '⚡ Đang xuất bản lên Facebook…' : 'Đang lưu lịch…')
-              : (isPublishNow ? `⚡ Đăng ngay lập tức (${selectedPageIds.length} Page)` : `Lên lịch đăng (${selectedPageIds.length} Page)`)} <Send size={15} />
+              ? '⚡ Đang xuất bản…'
+              : (isPublishNow
+                  ? `⚡ Đăng ngay lập tức (${targetPlatform === 'tiktok' ? selectedTiktokIds.length + ' TikTok' : selectedPageIds.length + ' Page'})`
+                  : `Lên lịch đăng (${targetPlatform === 'tiktok' ? selectedTiktokIds.length + ' TikTok' : selectedPageIds.length + ' Page'})`)} <Send size={15} />
           </button>
         )}
 

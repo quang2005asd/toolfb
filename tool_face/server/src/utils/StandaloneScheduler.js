@@ -9,6 +9,13 @@
 const { sql, getPool } = require('../../config/db');
 const { executePublishPost, executePublishComment } = require('./PostExecutionService');
 
+function isDueScheduledPost(scheduledAt, nowMs = Date.now()) {
+  if (scheduledAt == null || scheduledAt === '') return false;
+  const scheduledTime = new Date(scheduledAt).getTime();
+  if (!Number.isFinite(scheduledTime)) return false;
+  return scheduledTime <= nowMs;
+}
+
 let pollInterval = null;
 let isPolling = false;
 let redisAvailable = false;
@@ -29,16 +36,19 @@ async function pollPendingPosts() {
   try {
     const pool = await getPool();
     const result = await pool.request().query(`
-      SELECT id, scheduled_at, status
+      SELECT id, scheduled_at, status, facebook_post_id
       FROM Posts
       WHERE status IN ('pending', 'scheduled')
-        AND (facebook_post_id IS NULL OR facebook_post_id = '')
         AND scheduled_at IS NOT NULL
-        AND scheduled_at <= SYSUTCDATETIME()
       ORDER BY scheduled_at ASC;
     `);
 
-    const duePosts = result.recordset || [];
+    const nowMs = Date.now();
+    const duePosts = (result.recordset || []).filter((post) => {
+      if (post.facebook_post_id) return false;
+      return isDueScheduledPost(post.scheduled_at, nowMs);
+    });
+
     for (const post of duePosts) {
       console.log(`⏰ [StandaloneScheduler] Phát hiện bài viết #${post.id} đến giờ đăng. Đang xuất bản...`);
       executePublishPost(post.id).catch((err) => {
@@ -194,6 +204,7 @@ async function scheduleComment(commentId, delayMinutes) {
 }
 
 module.exports = {
+  isDueScheduledPost,
   startStandaloneScheduler,
   stopStandaloneScheduler,
   schedulePost,

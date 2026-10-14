@@ -286,6 +286,12 @@ async function executePublishPost(postId) {
     return;
   }
 
+  // Điều hướng nếu là bài đăng TikTok
+  if (post.platform === 'tiktok') {
+    const { executePublishTikTokPost } = require('./TikTokPuppeteerService');
+    return executePublishTikTokPost(postId);
+  }
+
   const claimResult = await pool.request()
     .input('id', sql.Int, postId)
     .query("UPDATE Posts SET status = 'publishing' OUTPUT INSERTED.id WHERE id = @id AND status IN ('pending', 'scheduled')");

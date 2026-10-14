@@ -4,12 +4,22 @@ import { useId } from 'react';
 export const PLATFORM_META = {
   facebook: { label: 'Facebook', color: '#1877f2' },
   messenger: { label: 'Messenger', color: '#0a7cff' },
-  instagram: { label: 'Instagram', color: '#d62976' }
+  instagram: { label: 'Instagram', color: '#d62976' },
+  tiktok: { label: 'TikTok', color: '#000000' }
 };
 
 export default function PlatformIcon({ platform, size = 16, title }) {
   const label = title || PLATFORM_META[platform]?.label || platform;
   const gradientId = useId();
+  if (platform === 'tiktok') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" role="img" aria-label={label} className="platform-icon">
+        <rect width="24" height="24" rx="6" fill="#010101" />
+        <path fill="#25F4EE" d="M16.6 8.2a4.4 4.4 0 0 1-2.9-1.3v5.6a3.8 3.8 0 1 1-3.8-3.8c.3 0 .7 0 1 .1v2.1a1.8 1.8 0 1 0 1.2 1.7V4h2.1a4.4 4.4 0 0 0 2.4 2.1Z" />
+        <path fill="#FE2C55" d="M16.1 8.6a4.4 4.4 0 0 1-2.9-1.3v5.6a3.8 3.8 0 1 1-3.8-3.8c.3 0 .7 0 1 .1v2.1a1.8 1.8 0 1 0 1.2 1.7V4.4h2.1a4.4 4.4 0 0 0 2.4 2.1Z" opacity="0.85" />
+      </svg>
+    );
+  }
   if (platform === 'instagram') {
     return (
       <svg width={size} height={size} viewBox="0 0 24 24" role="img" aria-label={label} className="platform-icon">
