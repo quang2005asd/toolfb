@@ -75,7 +75,7 @@ docker compose -f docker-compose.prod.yml up -d --build
 docker compose -f docker-compose.prod.yml logs -f caddy server   # Ctrl+C để thoát xem log
 ```
 
-Lần đầu build mất 3–8 phút. Khi log Caddy báo `certificate obtained successfully`, mở `https://ten-mien-cua-ban.com`:
+Lần đầu build mất 5–10 phút (image server ~1,6 GB vì có Chromium cho đăng bài TikTok; không dùng TikTok thì thêm `INSTALL_CHROMIUM: "false"` vào `build.args` của service server để image nhẹ hơn). Khi log Caddy báo `certificate obtained successfully`, mở `https://ten-mien-cua-ban.com`:
 
 - Đăng nhập `admin` với mật khẩu `ADMIN_PASSWORD`.
 - Mở `https://ten-mien-cua-ban.com/privacy` — trang này phải xem được **không cần đăng nhập** (Meta sẽ kiểm tra).

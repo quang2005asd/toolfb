@@ -230,7 +230,7 @@ router.get('/diagnostics', handle('Diagnostics', async (req, res) => {
 const webhookRouter = express.Router();
 
 webhookRouter.get('/', (req, res) => {
-  const expected = process.env.FB_VERIFY_TOKEN;
+  const expected = process.env.FB_VERIFY_TOKEN || process.env.MESSENGER_VERIFY_TOKEN;
   if (expected && req.query['hub.mode'] === 'subscribe' && req.query['hub.verify_token'] === expected) {
     return res.status(200).send(req.query['hub.challenge']);
   }
@@ -239,7 +239,8 @@ webhookRouter.get('/', (req, res) => {
 
 function signatureValid(req) {
   const secret = process.env.FACEBOOK_APP_SECRET;
-  if (!secret) return true; // chưa cấu hình thì không kiểm tra được
+  // Chưa có App Secret thì không xác thực được nguồn gửi → từ chối (tránh nhận sự kiện giả mạo)
+  if (!secret) return false;
   const provided = String(req.get('x-hub-signature-256') || '');
   if (!req.rawBody || !provided) return false;
   const expected = `sha256=${crypto.createHmac('sha256', secret).update(req.rawBody).digest('hex')}`;

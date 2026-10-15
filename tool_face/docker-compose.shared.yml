@@ -29,6 +29,12 @@ x-app-env: &app-env
   PUBLIC_OPERATOR_NAME: ${PUBLIC_OPERATOR_NAME:-}
   PUBLIC_CONTACT_EMAIL: ${PUBLIC_CONTACT_EMAIL:?Thiếu PUBLIC_CONTACT_EMAIL (email liên hệ hiện trên trang Chính sách)}
   PUBLIC_POLICY_UPDATED_AT: ${PUBLIC_POLICY_UPDATED_AT:-}
+  # AI Bình luận: quét bình luận mới mỗi 2 phút (off = chỉ dùng webhook), giãn cách trả lời trên cùng Fanpage
+  POLL_COMMENTS: ${POLL_COMMENTS:-on}
+  REPLY_MIN_GAP_MS: ${REPLY_MIN_GAP_MS:-6000}
+  # Thông báo khách tiềm năng qua Telegram (có thể nhập trong trang Cài đặt thay vì ở đây)
+  TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+  TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
 
 x-logging: &logging
   driver: json-file
@@ -61,7 +67,7 @@ services:
     volumes:
       - server_data:/app/data
       - server_uploads:/app/uploads
-    mem_limit: 1g
+    mem_limit: 1536m
     cpus: "2.0"
     logging: *logging
     depends_on:
@@ -77,7 +83,7 @@ services:
     volumes:
       - server_data:/app/data
       - server_uploads:/app/uploads
-    mem_limit: 768m
+    mem_limit: 1536m
     cpus: "1.0"
     logging: *logging
     depends_on:

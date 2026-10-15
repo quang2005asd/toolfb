@@ -29,6 +29,12 @@ x-app-env: &app-env
   PUBLIC_OPERATOR_NAME: ${PUBLIC_OPERATOR_NAME:-}
   PUBLIC_CONTACT_EMAIL: ${PUBLIC_CONTACT_EMAIL:?Thiếu PUBLIC_CONTACT_EMAIL (email liên hệ hiện trên trang Chính sách)}
   PUBLIC_POLICY_UPDATED_AT: ${PUBLIC_POLICY_UPDATED_AT:-}
+  # AI Bình luận: quét bình luận mới mỗi 2 phút (off = chỉ dùng webhook), giãn cách trả lời trên cùng Fanpage
+  POLL_COMMENTS: ${POLL_COMMENTS:-on}
+  REPLY_MIN_GAP_MS: ${REPLY_MIN_GAP_MS:-6000}
+  # Thông báo khách tiềm năng qua Telegram (có thể nhập trong trang Cài đặt thay vì ở đây)
+  TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+  TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
 
 services:
   redis:
