@@ -3,28 +3,30 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { CheckCircle2, ChevronLeft, ChevronRight, List, Plus, X } from 'lucide-react';
 import MainLayout from '../../components/layout/MainLayout';
+import PlatformIcon from '../../components/PlatformIcon';
 import postApi from '../../services/postApi';
 
 const weekdays = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
 const REFRESH_MS = 20000;
 
-// Thông báo sau khi trang soạn bài chuyển sang (query: created, posts, failed, date, mode)
-function buildCreatedNotice({ created, posts, failed, date, mode }) {
+// Thông báo sau khi trang soạn bài chuyển sang (query: created, posts, failed, date, mode, platform)
+function buildCreatedNotice({ created, posts, failed, date, mode, platform }) {
   const rows = Number(created) || 0;
   const postCount = Number(posts) || 1;
   const failedCount = Number(failed) || 0;
   const day = date ? new Date(`${date}T00:00:00`).toLocaleDateString('vi-VN') : '';
+  const channelLabel = platform === 'tiktok' ? 'tài khoản TikTok' : 'Fanpage';
   let text;
   if (postCount > 1) {
     text = mode === 'now'
-      ? `Đã gửi đăng ngay ${postCount} bài riêng lẻ (${rows} lượt đăng trên các Fanpage).`
+      ? `Đã gửi đăng ngay ${postCount} bài riêng lẻ (${rows} lượt đăng trên các ${channelLabel}).`
       : `Đã lên lịch ${postCount} bài riêng lẻ (${rows} lượt đăng), bắt đầu từ ngày ${day}.`;
   } else {
     text = mode === 'now'
-      ? `Đã gửi yêu cầu đăng ngay lên ${rows} Fanpage. Trạng thái sẽ tự cập nhật trên lịch.`
-      : `Đã lên lịch bài viết cho ${rows} Fanpage vào ngày ${day}.`;
+      ? `Đã gửi yêu cầu đăng ngay lên ${rows} ${channelLabel}. Trạng thái sẽ tự cập nhật trên lịch.`
+      : `Đã lên lịch bài viết cho ${rows} ${channelLabel} vào ngày ${day}.`;
   }
-  if (failedCount > 0) text += ` ${failedCount} bài không lên lịch được, hãy kiểm tra lại Fanpage.`;
+  if (failedCount > 0) text += ` ${failedCount} bài không lên lịch được, hãy kiểm tra lại kết nối.`;
   return text;
 }
 
@@ -105,7 +107,25 @@ export default function CalendarPage() {
           const dayPosts = postsByDay[key] || [];
           const today = date.toDateString() === new Date().toDateString();
           const highlighted = inMonth && key === highlightDay;
-          return <div className={`calendar-cell${inMonth ? '' : ' is-outside'}${today ? ' is-today-cell' : ''}${highlighted ? ' is-just-created' : ''}`} key={`${key}-${index}`}><span className={`calendar-day${today ? ' is-today' : ''}`}>{date.getDate()}</span>{dayPosts.slice(0, 3).map((post) => <div className={`calendar-event ${post.status || 'pending'}`} key={post.id} title={post.content}>{post.content || `Bài #${post.id}`}</div>)}{dayPosts.length > 3 && <small className="muted">+{dayPosts.length - 3} bài khác</small>}</div>;
+          return (
+            <div className={`calendar-cell${inMonth ? '' : ' is-outside'}${today ? ' is-today-cell' : ''}${highlighted ? ' is-just-created' : ''}`} key={`${key}-${index}`}>
+              <span className={`calendar-day${today ? ' is-today' : ''}`}>{date.getDate()}</span>
+              {dayPosts.slice(0, 3).map((post) => (
+                <div
+                  className={`calendar-event ${post.status || 'pending'}`}
+                  key={post.id}
+                  title={post.content}
+                  style={post.platform === 'tiktok' ? { borderLeft: '3px solid #FE2C55', display: 'flex', alignItems: 'center', gap: 4 } : { display: 'flex', alignItems: 'center', gap: 4 }}
+                >
+                  <PlatformIcon platform={post.platform === 'tiktok' ? 'tiktok' : 'facebook'} size={12} />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {post.content || `Bài #${post.id}`}
+                  </span>
+                </div>
+              ))}
+              {dayPosts.length > 3 && <small className="muted">+{dayPosts.length - 3} bài khác</small>}
+            </div>
+          );
         })}</div>
       </section>
     </MainLayout>

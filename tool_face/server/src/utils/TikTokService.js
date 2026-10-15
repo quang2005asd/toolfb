@@ -146,12 +146,13 @@ async function addOrUpdateTikTokAccount({ userId, cookiesRaw, nicknameOverride }
 
   // Kiểm tra xem đã có tài khoản với sessionId hoặc username này chưa
   const existing = await pool.request()
+    .input('userId', sql.VarChar(64), String(userId || ''))
     .input('username', sql.VarChar(150), username)
     .input('sessionId', sql.VarChar(255), sessionId || '')
     .query(`
       SELECT id FROM TikTokAccounts 
-      WHERE username = @username 
-         OR (session_id IS NOT NULL AND session_id != '' AND session_id = @sessionId)
+      WHERE (username = @username OR (session_id IS NOT NULL AND session_id != '' AND session_id = @sessionId))
+        AND (@userId = '' OR user_id = @userId OR user_id IS NULL OR user_id = '')
     `);
 
   const cookiesJson = JSON.stringify(cookiesArray);
@@ -201,10 +202,14 @@ async function addOrUpdateTikTokAccount({ userId, cookiesRaw, nicknameOverride }
     .input('nowIso', sql.VarChar(50), nowIso)
     .query(`
       INSERT INTO TikTokAccounts (user_id, username, nickname, avatar_url, session_id, cookies_json, status, created_at, updated_at)
+      OUTPUT INSERTED.id
       VALUES (@userId, @username, @nickname, @avatarUrl, @sessionId, @cookiesJson, @status, @nowIso, @nowIso)
     `);
 
+  const createdId = insertRes.recordset?.[0]?.id || null;
+
   return {
+    id: createdId,
     username,
     nickname,
     avatarUrl,
@@ -218,11 +223,17 @@ async function addOrUpdateTikTokAccount({ userId, cookiesRaw, nicknameOverride }
  */
 async function listTikTokAccounts(userId) {
   const pool = await getPool();
-  const res = await pool.request().query(`
+  const request = pool.request();
+  let query = `
     SELECT id, user_id, username, nickname, avatar_url, status, error_message, created_at, updated_at
     FROM TikTokAccounts
-    ORDER BY id DESC
-  `);
+  `;
+  if (userId) {
+    query += ` WHERE user_id = @userId OR user_id IS NULL OR user_id = ''`;
+    request.input('userId', sql.VarChar(64), String(userId));
+  }
+  query += ` ORDER BY id DESC`;
+  const res = await request.query(query);
 
   return res.recordset || [];
 }

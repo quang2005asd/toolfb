@@ -207,8 +207,8 @@ function PostDetailModal({ postId, onClose, onRefresh, channelName }) {
         >
           <div>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>Chi tiết bài đăng #{postId}</h2>
-            <span className="muted" style={{ fontSize: 12 }}>
-              Kênh: <strong style={{ color: '#00f2fe' }}>{channelName}</strong>
+            <span className="muted" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+              Kênh: <PlatformIcon platform={post?.platform === 'tiktok' ? 'tiktok' : 'facebook'} size={15} /> <strong style={{ color: post?.platform === 'tiktok' ? '#FE2C55' : '#00f2fe' }}>{channelName}</strong>
             </span>
           </div>
           <button
@@ -366,8 +366,29 @@ function PostDetailModal({ postId, onClose, onRefresh, channelName }) {
                 </div>
               )}
 
+              {/* Liên kết TikTok (Nếu là TikTok & đã đăng) */}
+              {post.status === 'published' && post.platform === 'tiktok' && (
+                <div style={{ background: 'rgba(254, 44, 85, 0.08)', border: '1px solid rgba(254, 44, 85, 0.25)', borderRadius: 12, padding: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <CheckCircle2 size={16} color="#FE2C55" /> Đã xuất bản lên TikTok (qua Puppeteer tự động)
+                    </span>
+                    <a
+                      href="/api/media/tiktok_debug_5_final_result.png"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="button button-quiet"
+                      style={{ minHeight: 26, fontSize: 11.5, padding: '0 8px', color: '#FE2C55' }}
+                      title="Xem ảnh chụp xác nhận kết quả"
+                    >
+                      Ảnh kết quả <ExternalLink size={13} style={{ marginLeft: 4 }} />
+                    </a>
+                  </div>
+                </div>
+              )}
+
               {/* Liên kết Facebook & Analytics (Nếu đã đăng) */}
-              {post.status === 'published' && post.facebook_post_id && (
+              {post.status === 'published' && post.platform !== 'tiktok' && post.facebook_post_id && (
                 <div style={{ background: 'linear-gradient(135deg, rgba(24, 119, 242, 0.12), rgba(0, 242, 254, 0.08))', border: '1px solid rgba(24, 119, 242, 0.3)', borderRadius: 12, padding: 14 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -441,8 +462,8 @@ function PostDetailModal({ postId, onClose, onRefresh, channelName }) {
                 </div>
               )}
 
-              {/* Đăng Seeding Ngay Cho Bài Đã Xuất Bản */}
-              {post.status === 'published' && post.facebook_post_id && (
+              {/* Đăng Seeding Ngay Cho Bài Đã Xuất Bản (Chỉ áp dụng với Facebook) */}
+              {post.status === 'published' && post.platform !== 'tiktok' && post.facebook_post_id && (
                 <div style={{ background: 'rgba(0, 242, 254, 0.04)', border: '1px solid rgba(0, 242, 254, 0.25)', borderRadius: 10, padding: 14 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: '#00f2fe', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -514,6 +535,7 @@ export default function PostListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [platformFilter, setPlatformFilter] = useState('all');
   const [pageIdFilter, setPageIdFilter] = useState('all');
   const [channels, setChannels] = useState([]);
   const [tiktokAccounts, setTiktokAccounts] = useState([]);
@@ -528,7 +550,13 @@ export default function PostListPage() {
     setLoading(true);
     setError('');
     try {
-      const data = await postApi.getPostsList({ page, limit: pageSize, status: statusFilter, pageId: pageIdFilter });
+      const data = await postApi.getPostsList({
+        page,
+        limit: pageSize,
+        status: statusFilter,
+        pageId: pageIdFilter,
+        platform: platformFilter
+      });
       setPosts(data.posts || data.data || []);
       setTotal(data.total || 0);
     } catch (err) {
@@ -537,7 +565,7 @@ export default function PostListPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageIdFilter, pageSize, statusFilter]);
+  }, [page, pageIdFilter, pageSize, statusFilter, platformFilter]);
 
   useEffect(() => {
     fetchPosts();
@@ -639,20 +667,36 @@ export default function PostListPage() {
         </div>
       }
     >
-      {selectedPostId && (
-        <PostDetailModal
-          postId={selectedPostId}
-          onClose={() => setSelectedPostId(null)}
-          onRefresh={fetchPosts}
-          channelName={channels.find((c) => c.id === String(posts.find((p) => p.id === selectedPostId)?.page_id))?.name || 'Fanpage'}
-        />
-      )}
+      {selectedPostId && (() => {
+        const selPost = posts.find((p) => p.id === selectedPostId);
+        const isTikTok = selPost?.platform === 'tiktok';
+        let chName = 'Fanpage';
+        if (isTikTok) {
+          const acc = tiktokAccounts.find((a) => String(a.id) === String(selPost?.tiktok_account_id || selPost?.page_id));
+          chName = acc ? `${acc.nickname || acc.username} (@${acc.username})` : (selPost?.tiktok_account_id ? `TikTok #${selPost.tiktok_account_id}` : 'TikTok');
+        } else {
+          chName = channels.find((c) => c.id === String(selPost?.page_id))?.name || 'Fanpage';
+        }
+        return (
+          <PostDetailModal
+            postId={selectedPostId}
+            onClose={() => setSelectedPostId(null)}
+            onRefresh={fetchPosts}
+            channelName={chName}
+          />
+        );
+      })()}
 
       <section className="panel">
         <div className="filter-bar">
           <div><strong>Danh sách bài đăng</strong><span className="muted"> · {total} mục</span></div>
           <div className="table-tools">
-            <select className="field" style={{ width: 180 }} aria-label="Lọc trạng thái" value={statusFilter} onChange={(e) => { setPage(1); setStatusFilter(e.target.value); }}>
+            <select className="field" style={{ width: 160 }} aria-label="Lọc nền tảng" value={platformFilter} onChange={(e) => { setPage(1); setPlatformFilter(e.target.value); }}>
+              <option value="all">Tất cả nền tảng</option>
+              <option value="facebook">📘 Facebook</option>
+              <option value="tiktok">🎵 TikTok</option>
+            </select>
+            <select className="field" style={{ width: 170 }} aria-label="Lọc trạng thái" value={statusFilter} onChange={(e) => { setPage(1); setStatusFilter(e.target.value); }}>
               <option value="all">Tất cả trạng thái</option>
               <option value="pending">Chờ đăng</option>
               <option value="publishing">Đang đăng</option>
@@ -660,9 +704,10 @@ export default function PostListPage() {
               <option value="failed">Thất bại</option>
               <option value="cancelled">Đã hủy</option>
             </select>
-            <select className="field" style={{ width: 180 }} aria-label="Lọc Fanpage" value={pageIdFilter} onChange={(e) => { setPage(1); setPageIdFilter(e.target.value); }}>
-              <option value="all">Tất cả Fanpage</option>
-              {channels.map((channel) => <option value={channel.id} key={channel.id}>{channel.name}</option>)}
+            <select className="field" style={{ width: 170 }} aria-label="Lọc kênh" value={pageIdFilter} onChange={(e) => { setPage(1); setPageIdFilter(e.target.value); }}>
+              <option value="all">Tất cả kênh</option>
+              {channels.map((channel) => <option value={channel.id} key={channel.id}>FB: {channel.name}</option>)}
+              {tiktokAccounts.map((acc) => <option value={String(acc.id)} key={`tt-${acc.id}`}>TT: {acc.nickname || acc.username}</option>)}
             </select>
           </div>
         </div>

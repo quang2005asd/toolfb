@@ -1170,7 +1170,8 @@ export default function ComposePage() {
           created: ids.length,
           posts: 1,
           date: toDateKey(isPublishNow ? new Date() : parsedDate),
-          mode: isPublishNow ? 'now' : 'scheduled'
+          mode: isPublishNow ? 'now' : 'scheduled',
+          platform: targetPlatform
         }
       });
     } catch (error) {

@@ -2135,6 +2135,7 @@ app.get('/api/posts', requireAuth, async (req, res) => {
     const limit = Number.isInteger(limitValue) && limitValue > 0 ? Math.min(limitValue, 100) : 10;
     const status = String(req.query.status || 'all');
     const pageId = String(req.query.pageId || 'all');
+    const platform = String(req.query.platform || 'all').toLowerCase();
     const filters = [];
     const countRequest = pool.request();
     const postsRequest = pool.request();
@@ -2147,6 +2148,11 @@ app.get('/api/posts', requireAuth, async (req, res) => {
       filters.push('page_id = @pageId');
       countRequest.input('pageId', sql.VarChar, pageId);
       postsRequest.input('pageId', sql.VarChar, pageId);
+    }
+    if (platform !== 'all') {
+      filters.push('platform = @platform');
+      countRequest.input('platform', sql.VarChar, platform);
+      postsRequest.input('platform', sql.VarChar, platform);
     }
     filters.push(applyPostScope(req, countRequest));
     applyPostScope(req, postsRequest);

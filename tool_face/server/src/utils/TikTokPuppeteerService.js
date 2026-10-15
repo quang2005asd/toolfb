@@ -25,8 +25,8 @@ function getBrowserExecutablePath() {
   const windowsPaths = [
     'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
     'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-    'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe'
+    'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'
   ];
 
   for (const p of windowsPaths) {
@@ -171,7 +171,7 @@ async function uploadVideoToTikTok({ tiktokAccountId, mediaLink, caption }) {
 
     // Kiểm tra nếu bị redirect sang trang login -> Cookie hết hạn
     const currentUrl = page.url();
-    if (currentUrl.includes('/login')) {
+    if (currentUrl.includes('/login') || currentUrl.includes('passport.tiktok.com')) {
       throw new Error('Cookie TikTok đã hết hạn hoặc không có quyền truy cập. Vui lòng cập nhật Cookie mới.');
     }
 
@@ -207,7 +207,13 @@ async function uploadVideoToTikTok({ tiktokAccountId, mediaLink, caption }) {
     console.log(`⬆️ [TikTok Puppeteer] Đang upload tệp: ${filePath}`);
     await uploadInput.uploadFile(filePath);
 
-    const uploadsDir = path.resolve(__dirname, '../../uploads');
+    const uploadsDir = process.env.APP_DATA_DIR
+      ? path.join(process.env.APP_DATA_DIR, 'uploads')
+      : path.resolve(__dirname, '../../uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      try { fs.mkdirSync(uploadsDir, { recursive: true }); } catch (_) {}
+    }
+
     const takeDebugPic = async (label) => {
       try {
         const p = path.join(uploadsDir, `tiktok_debug_${label}.png`);
@@ -230,7 +236,11 @@ async function uploadVideoToTikTok({ tiktokAccountId, mediaLink, caption }) {
               act.push('Dismiss Cancel Prompt (No)');
             }
             // Các popup hướng dẫn / gợi ý / bật tính năng của TikTok Studio
-            if (t === 'turn on' || t === 'got it' || t === 'bật' || t === 'đã hiểu' || t === 'not now' || t === 'để sau') {
+            if (
+              t === 'turn on' || t === 'got it' || t === 'bật' || t === 'đã hiểu' ||
+              t === 'not now' || t === 'để sau' || t === 'close' || t === 'đóng' ||
+              t === 'dismiss' || t === 'bỏ qua'
+            ) {
               b.click();
               act.push(t);
             }
@@ -295,10 +305,10 @@ async function uploadVideoToTikTok({ tiktokAccountId, mediaLink, caption }) {
       await dismissAllPopups();
 
       const btnStatus = await page.evaluate(() => {
-        const allButtons = Array.from(document.querySelectorAll('button'));
+        const allButtons = Array.from(document.querySelectorAll('button, div[role="button"]'));
         const postBtns = allButtons.filter(b => {
-          const t = (b.innerText || b.textContent || '').trim().toLowerCase();
-          return t === 'post' || t === 'đăng' || t === 'post video' || t === 'đăng video';
+          const t = (b.innerText || b.textContent || '').trim().toLowerCase().replace(/\s+/g, ' ');
+          return t === 'post' || t === 'đăng' || t === 'post video' || t === 'đăng video' || t === 'publish' || t === 'xuất bản';
         });
 
         if (postBtns.length === 0) return { exists: false };
@@ -312,7 +322,7 @@ async function uploadVideoToTikTok({ tiktokAccountId, mediaLink, caption }) {
         return {
           exists: true,
           disabled,
-          text: btn.innerText.trim()
+          text: (btn.innerText || btn.textContent || '').trim()
         };
       });
 
@@ -338,10 +348,10 @@ async function uploadVideoToTikTok({ tiktokAccountId, mediaLink, caption }) {
 
     console.log('🚀 [TikTok Puppeteer] Đang bấm nút Đăng bài (Post)...');
     const clickSuccess = await page.evaluate(() => {
-      const allButtons = Array.from(document.querySelectorAll('button'));
+      const allButtons = Array.from(document.querySelectorAll('button, div[role="button"]'));
       const postBtn = allButtons.find(b => {
-        const t = (b.innerText || b.textContent || '').trim().toLowerCase();
-        return t === 'post' || t === 'đăng' || t === 'post video' || t === 'đăng video';
+        const t = (b.innerText || b.textContent || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        return t === 'post' || t === 'đăng' || t === 'post video' || t === 'đăng video' || t === 'publish' || t === 'xuất bản';
       });
 
       if (postBtn && !postBtn.disabled) {
