@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import aiApi from '../services/aiApi';
 import postApi from '../services/postApi';
+import { API_BASE_URL, mediaUrl } from '../services/apiBase';
 
 const STYLE_PRESETS = [
   { id: 'photorealistic', label: '📸 Chân thực (Photo)', desc: 'Ảnh chụp máy ảnh chuyên nghiệp, ánh sáng studio' },
@@ -37,9 +38,12 @@ const RATIO_PRESETS = [
 export function resolveMediaUrl(url) {
   if (!url) return '';
   if (typeof url !== 'string') return '';
+  // Link cũ lưu dạng http://localhost:5000/api/... → đổi về API cùng domain
+  const legacy = url.match(/^https?:\/\/(?:localhost|127\.0\.0\.1):5000\/api(\/.*)$/i);
+  if (legacy) return `${API_BASE_URL}${legacy[1]}`;
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:')) return url;
-  if (url.startsWith('local://')) return `http://localhost:5000/api/media/${url.slice('local://'.length)}`;
-  if (url.startsWith('/api/')) return `http://localhost:5000${url}`;
+  if (url.startsWith('local://')) return mediaUrl(url);
+  if (url.startsWith('/api/')) return `${API_BASE_URL}${url.slice('/api'.length)}`;
   return url;
 }
 

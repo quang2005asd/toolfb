@@ -718,8 +718,8 @@ async function sendMessage({ conversationId, text, image, userId, refresh = true
 }
 
 // ═══ WEBHOOK (ĐỒNG BỘ GẦN NHƯ TỨC THÌ KHI DEPLOY CÓ DOMAIN HTTPS) ═══
-function verifyWebhookSignature(rawBody, signatureHeader) {
-  const appSecret = process.env.FACEBOOK_APP_SECRET;
+// appSecret: App Secret nhập ở Cài đặt → Meta App (hoặc FACEBOOK_APP_SECRET)
+function verifyWebhookSignature(rawBody, signatureHeader, appSecret = process.env.FACEBOOK_APP_SECRET) {
   if (!appSecret || !rawBody || typeof signatureHeader !== 'string' || !signatureHeader.startsWith('sha256=')) return false;
   const expected = Buffer.from(`sha256=${crypto.createHmac('sha256', appSecret).update(rawBody).digest('hex')}`);
   const provided = Buffer.from(signatureHeader);
@@ -729,15 +729,19 @@ function verifyWebhookSignature(rawBody, signatureHeader) {
 const webhookTimers = new Map();
 
 // Sự kiện webhook chỉ dùng làm tín hiệu: gom trong 1,5 giây rồi đồng bộ lại từ Graph API
-function handleWebhookPayload(body, knownPageIds) {
+// Webhook Instagram gửi entry.id là ID tài khoản Instagram → igToPage đổi về Fanpage đã liên kết
+function handleWebhookPayload(body, knownPageIds, igToPage = new Map()) {
   if (!['page', 'instagram'].includes(body?.object) || !Array.isArray(body.entry)) return 0;
+  const isInstagram = body.object === 'instagram';
   let queued = 0;
   for (const entry of body.entry) {
-    const pageId = String(entry.id || '');
-    if (!knownPageIds.has(pageId) || !Array.isArray(entry.messaging)) continue;
+    const entryId = String(entry.id || '');
+    const pageId = isInstagram ? igToPage.get(entryId) : entryId;
+    if (!pageId || !knownPageIds.has(pageId) || !Array.isArray(entry.messaging)) continue;
+    const ownerId = isInstagram ? entryId : pageId;
     const customers = new Set();
     for (const event of entry.messaging) {
-      const customerId = String(event.sender?.id) === pageId ? event.recipient?.id : event.sender?.id;
+      const customerId = String(event.sender?.id) === ownerId ? event.recipient?.id : event.sender?.id;
       if (customerId) customers.add(String(customerId));
     }
     const pending = webhookTimers.get(pageId) || { timer: null, customers: new Set() };
@@ -784,6 +788,29 @@ async function getMessagingPageIds() {
 
 let cycleRunning = false;
 let lastInstagramRefresh = 0;
+const webhookSubscriptionRetry = new Map(); // pageId -> thời điểm được thử lại (Infinity = đã đăng ký)
+const WEBHOOK_SUBSCRIBE_RETRY_MS = 10 * 60 * 1000;
+
+// Fanpage phải được đăng ký với app thì Meta mới gửi webhook tin nhắn (cần quyền pages_manage_metadata).
+// Chỉ chạy khi đã cấu hình webhook (MESSENGER_VERIFY_TOKEN) — bản chạy thử trên máy không đụng tới cài đặt Fanpage.
+async function ensurePageWebhookSubscription(pageId) {
+  const key = String(pageId);
+  if (!process.env.MESSENGER_VERIFY_TOKEN || (webhookSubscriptionRetry.get(key) || 0) > Date.now()) return false;
+  webhookSubscriptionRetry.set(key, Date.now() + WEBHOOK_SUBSCRIBE_RETRY_MS);
+  try {
+    const token = await getPageToken(key);
+    await axios.post(`${GRAPH}/${key}/subscribed_apps`, null, {
+      params: { subscribed_fields: 'messages,message_echoes', access_token: token },
+      timeout: 15000
+    });
+    webhookSubscriptionRetry.set(key, Infinity);
+    console.log(`[Messenger Webhook] Đã đăng ký nhận webhook tin nhắn cho Fanpage ${key}.`);
+    return true;
+  } catch (error) {
+    console.warn(`[Messenger Webhook] Chưa đăng ký được webhook cho Fanpage ${key}:`, error.response?.data?.error?.message || error.message);
+    return false;
+  }
+}
 
 // Một vòng: làm mới danh sách hội thoại mọi Page → chỉ tải tin của hội thoại có thay đổi → chạy hook
 async function runSyncCycle({ force = false } = {}) {
@@ -796,6 +823,7 @@ async function runSyncCycle({ force = false } = {}) {
       await instagramService.syncInstagramAccounts(pageIds, getPageToken).catch(() => {});
     }
     for (const pageId of pageIds) {
+      await ensurePageWebhookSubscription(pageId).catch(() => {});
       let result;
       try {
         result = await syncPageConversations(pageId, { force });
@@ -852,7 +880,28 @@ function getAutoSyncInfo() {
   return { ...autoSyncState };
 }
 
+// Fanpage không còn tài khoản nào kết nối: xóa tin nhắn, hội thoại, cài đặt trả lời tự động và Instagram liên kết
+// (đúng cam kết ở trang Xóa dữ liệu khi người dùng gỡ kết nối)
+async function purgeDisconnectedPageData() {
+  await ensureMessengerSchema();
+  const pool = await getPool();
+  const tables = ['MessengerMessages', 'MessengerConversations', 'MessengerAutoReplyLog', 'MessengerAutoReplySettings', 'InstagramAccounts'];
+  const removed = {};
+  for (const table of tables) {
+    try {
+      const result = await pool.request().query(`DELETE FROM dbo.${table} WHERE page_id NOT IN (SELECT page_id FROM dbo.FacebookPages)`);
+      removed[table] = result.rowsAffected?.[0] ?? null;
+    } catch (error) {
+      removed[table] = `bỏ qua: ${error.message}`;
+    }
+  }
+  tokenCache.clear();
+  return removed;
+}
+
 module.exports = {
+  ensurePageWebhookSubscription,
+  purgeDisconnectedPageData,
   MAX_TEXT_LENGTH,
   MessengerError,
   ensureMessengerSchema,

@@ -594,7 +594,28 @@ class SqliteRequest {
       });
     }
 
-    const sqlStr = translated.sql;
+    // db.run / db.all của sqlite3 chỉ chạy câu lệnh ĐẦU TIÊN: query có nhiều câu (DELETE ...; DELETE ...; hoặc
+    // UPDATE ...; SELECT ...) phải chạy lần lượt, giống mssql trả recordset của câu SELECT và rowsAffected từng câu
+    // Tách trên câu T-SQL gốc rồi chuyển đổi từng câu (TOP → LIMIT, OUTPUT → RETURNING áp dụng đúng câu của nó)
+    const parts = splitSqlStatements(command);
+    const statements = parts.length > 1
+      ? parts.map((part) => translateQuery(part)).filter((item) => !item.isNoOp && item.sql).map((item) => item.sql)
+      : [translated.sql];
+    if (statements.length > 1) {
+      let recordset = [];
+      const rowsAffected = [];
+      for (const statement of statements) {
+        const result = await this.runStatement(statement);
+        rowsAffected.push(result.rowsAffected[0]);
+        if (result.isSelect) recordset = result.recordset;
+      }
+      return { recordset, rowsAffected };
+    }
+    const { isSelect, ...result } = await this.runStatement(statements[0] || translated.sql);
+    return result;
+  }
+
+  runStatement(sqlStr) {
     const isSelectOrReturning = /^\s*SELECT\b/i.test(sqlStr) || /\bRETURNING\b/i.test(sqlStr);
     const execParams = filterParamsForSql(sqlStr, this.parameters);
 
@@ -620,7 +641,8 @@ class SqliteRequest {
           }
           resolve({
             recordset,
-            rowsAffected: [recordset.length]
+            rowsAffected: [recordset.length],
+            isSelect: true
           });
         });
       } else {
@@ -631,12 +653,49 @@ class SqliteRequest {
           }
           resolve({
             recordset: [],
-            rowsAffected: [this.changes || 0]
+            rowsAffected: [this.changes || 0],
+            isSelect: false
           });
         });
       }
     });
   }
+}
+
+// Tách các câu lệnh theo dấu ; nằm ngoài chuỗi '...' / "..." và ngoài chú thích --
+function splitSqlStatements(sqlText) {
+  const statements = [];
+  let current = '';
+  let quote = null;
+  for (let i = 0; i < sqlText.length; i += 1) {
+    const ch = sqlText[i];
+    if (quote) {
+      current += ch;
+      if (ch === quote) {
+        if (sqlText[i + 1] === quote) { current += sqlText[i + 1]; i += 1; } else { quote = null; }
+      }
+      continue;
+    }
+    if (ch === '-' && sqlText[i + 1] === '-') {
+      const end = sqlText.indexOf('\n', i);
+      i = end === -1 ? sqlText.length : end;
+      current += '\n';
+      continue;
+    }
+    if (ch === "'" || ch === '"') {
+      quote = ch;
+      current += ch;
+      continue;
+    }
+    if (ch === ';') {
+      if (current.trim()) statements.push(current.trim());
+      current = '';
+      continue;
+    }
+    current += ch;
+  }
+  if (current.trim()) statements.push(current.trim());
+  return statements;
 }
 
 class SqlitePool {

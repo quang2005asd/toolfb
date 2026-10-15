@@ -88,6 +88,10 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      # Worker đăng bài hẹn giờ: phải dùng cùng SESSION_SECRET với server để giải mã token Fanpage
+      - SESSION_SECRET=${SESSION_SECRET:-toolfb_super_secure_jwt_secret_key_2025}
+      - FACEBOOK_APP_ID=${FACEBOOK_APP_ID:-}
+      - FACEBOOK_APP_SECRET=${FACEBOOK_APP_SECRET:-}
     volumes:
       - server_data:/app/data
       - server_uploads:/app/uploads

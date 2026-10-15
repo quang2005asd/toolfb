@@ -1,0 +1,24 @@
+# Caddy tự xin và gia hạn chứng chỉ HTTPS (Let's Encrypt) cho {$DOMAIN}
+# Mọi request (trang web + /api) đi vào nginx của client; nginx chuyển /api sang server.
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# Upload ảnh / video bài đăng (server cho phép tới 100 MB)
+	request_body {
+		max_size 110MB
+	}
+
+	reverse_proxy client:3000
+}
+
+# www.ten-mien → ten-mien
+www.{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}

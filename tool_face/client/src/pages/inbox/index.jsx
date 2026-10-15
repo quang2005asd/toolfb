@@ -400,8 +400,10 @@ export default function InboxPage() {
   const threadItems = useMemo(() => buildThreadItems(thread?.messages || []), [thread]);
   const activeConversation = thread?.conversation || conversations.find((item) => item.id === activeId) || null;
   const totalUnread = conversations.reduce((sum, item) => sum + (item.unreadCount || 0), 0);
+  const igNeedsCheck = (page) => page.instagram?.status === 'linked' && !page.instagram.conversationCount;
   const problemPages = pages.filter((page) => ['no_permission', 'token_expired', 'error'].includes(page.status)
-    || ['ig_access_disabled', 'token_expired', 'error'].includes(page.instagram?.status));
+    || ['ig_access_disabled', 'token_expired', 'error'].includes(page.instagram?.status)
+    || igNeedsCheck(page));
   const canReply = activeConversation ? activeConversation.canReply !== false : false;
   const autoReplyOn = (autoReplySummary?.enabled || 0) > 0;
 
@@ -470,9 +472,15 @@ export default function InboxPage() {
                 </span>
               )];
               if (page.instagram) {
-                const igStatus = PAGE_STATUS[page.instagram.status] || PAGE_STATUS.unknown;
+                // Đã kết nối nhưng Meta chưa trả về hội thoại nào (thường do app Meta chưa được duyệt)
+                const igEmpty = page.instagram.status === 'linked' && !page.instagram.conversationCount;
+                const igStatus = igEmpty
+                  ? { tone: 'warn', label: 'Chưa thấy hội thoại' }
+                  : PAGE_STATUS[page.instagram.status] || PAGE_STATUS.unknown;
+                const igTitle = page.instagram.statusMessage
+                  || (igEmpty ? 'Meta chưa trả về hội thoại Instagram nào. Vào Kênh → Instagram → "Kiểm tra tin nhắn" để xem nguyên nhân.' : igStatus.label);
                 chips.push(
-                  <span key={`${page.id}-ig`} className={`inbox-page-chip is-${igStatus.tone}`} title={page.instagram.statusMessage || igStatus.label}>
+                  <span key={`${page.id}-ig`} className={`inbox-page-chip is-${igStatus.tone}`} title={igTitle}>
                     <span className="inbox-page-dot" aria-hidden="true" />
                     <PlatformIcon platform="instagram" size={13} />
                     <strong>@{page.instagram.username}</strong>
@@ -483,8 +491,8 @@ export default function InboxPage() {
               return chips;
             })}
             {problemPages.length > 0 && (
-              <Link href={pages.some((page) => page.instagram?.status === 'ig_access_disabled') ? '/channels?platform=instagram' : '/channels'} className="inbox-page-fix">
-                Xem hướng dẫn khắc phục tại trang Kênh →
+              <Link href={pages.some((page) => page.instagram?.status === 'ig_access_disabled' || igNeedsCheck(page)) ? '/channels?platform=instagram' : '/channels'} className="inbox-page-fix">
+                {pages.some(igNeedsCheck) ? 'Kiểm tra tin nhắn Instagram tại trang Kênh →' : 'Xem hướng dẫn khắc phục tại trang Kênh →'}
               </Link>
             )}
           </div>

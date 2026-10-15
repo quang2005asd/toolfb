@@ -62,6 +62,15 @@ Hệ thống sẽ tự động khởi tạo 4 dịch vụ:
 
 ---
 
+## 🌍 Chạy Thật Cho Người Dùng (VPS + Tên Miền + HTTPS)
+
+Bản `docker-compose.yml` ở trên chỉ dành cho chạy thử trên máy. Khi đưa lên Internet dùng `docker-compose.prod.yml` (Caddy tự cấp HTTPS, bắt buộc đặt mật khẩu admin, khóa bí mật riêng, trang Chính sách / Điều khoản / Xóa dữ liệu cho Meta):
+
+- Hướng dẫn từng bước: [deploy/HUONG-DAN-VPS.md](deploy/HUONG-DAN-VPS.md)
+- Cấu hình Meta App, xác minh doanh nghiệp, App Review: [deploy/META-APP-REVIEW.md](deploy/META-APP-REVIEW.md)
+
+---
+
 ## 💻 Cách 2: Chạy Thủ Công Từng Phần (Local Development)
 
 Nếu bạn cần sửa code frontend hoặc backend liên tục (Hot Reload):
@@ -124,7 +133,8 @@ npm run worker
 
 # Terminal 3: Chạy Client Frontend (Port 3000)
 cd client
-npm run dev
+# next dev không có nginx chuyển /api → server, nên chỉ đường tới API (PowerShell: $env:NEXT_PUBLIC_API_URL="http://localhost:5000/api")
+NEXT_PUBLIC_API_URL=http://localhost:5000/api npm run dev
 ```
 
 Truy cập: **http://localhost:3000**

@@ -83,15 +83,15 @@ const {
 } = require('./middlewares/auth');
 
 const app = express();
-const frontendOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:3000';
+// Chỉ domain của tool (CLIENT_ORIGIN, có thể nhiều domain cách nhau dấu phẩy) và localhost được gọi API kèm cookie.
+// Trình duyệt gọi cùng domain qua /api nên không cần CORS; website lạ bị chặn đọc dữ liệu đăng nhập.
+const allowedOrigins = new Set((process.env.CLIENT_ORIGIN || 'http://localhost:3000')
+  .split(',').map((item) => item.trim().replace(/\/$/, '')).filter(Boolean));
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
     const clean = origin.replace(/\/$/, '');
-    if (clean === frontendOrigin || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(clean)) {
-      return callback(null, true);
-    }
-    return callback(null, true);
+    callback(null, allowedOrigins.has(clean) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(clean));
   },
   credentials: true
 }));
@@ -1111,6 +1111,7 @@ app.get('/api/channels/accounts', requireAuth, async (req, res) => {
 app.delete('/api/channels/accounts/:fbAccountId', requireAuth, async (req, res) => {
   try {
     await disconnectFbAccount(req.user.sub, req.params.fbAccountId);
+    await messengerService.purgeDisconnectedPageData().catch((error) => console.warn('[Purge Page Data]', error.message));
     return res.json({ success: true, message: 'Đã xóa tài khoản Facebook và toàn bộ Fanpage trực thuộc.' });
   } catch (error) {
     return sendApiError(res, 'Delete Account Error', error, 'Không thể xóa tài khoản Facebook.');
@@ -1288,6 +1289,7 @@ app.post('/api/channels/token-renew', requireAuth, async (req, res) => {
 app.delete('/api/channels/:pageId', requireAuth, async (req, res) => {
   try {
     await disconnectFacebookPage(req.user.sub, req.params.pageId);
+    await messengerService.purgeDisconnectedPageData().catch((error) => console.warn('[Purge Page Data]', error.message));
     return res.json({ success: true, message: 'Đã hủy kết nối Fanpage.' });
   } catch (error) {
     return sendApiError(res, 'Disconnect Error', error, 'Không thể hủy kết nối Page.');
@@ -1379,9 +1381,27 @@ async function getMessengerPages(userId) {
   return [...unique.values()];
 }
 
+// Số hội thoại Instagram đã đồng bộ theo Fanpage: "đã liên kết" nhưng 0 hội thoại thường do Meta ẩn tin (Standard Access)
+async function countInstagramConversations(pageIds) {
+  const counts = new Map();
+  if (!pageIds.length) return counts;
+  try {
+    await messengerService.ensureMessengerSchema();
+    const pool = await getPool();
+    const request = pool.request();
+    pageIds.forEach((id, index) => request.input(`pg${index}`, sql.VarChar(64), String(id)));
+    const rows = await request.query(`SELECT page_id, COUNT(*) AS total FROM dbo.MessengerConversations WHERE platform='instagram' AND page_id IN (${pageIds.map((_, index) => `@pg${index}`).join(', ')}) GROUP BY page_id`);
+    rows.recordset.forEach((row) => counts.set(String(row.page_id), Number(row.total) || 0));
+  } catch (error) {
+    console.warn('[Instagram] Không đếm được hội thoại Instagram:', error.message);
+  }
+  return counts;
+}
+
 async function describeMessengerPages(pages) {
   const accounts = await instagramService.listInstagramAccounts(pages.map((page) => String(page.id))).catch(() => []);
   const byPage = new Map(accounts.map((account) => [String(account.pageId), account]));
+  const igCounts = await countInstagramConversations([...byPage.keys()]);
   return pages.map((page) => {
     const supportsMessaging = Array.isArray(page.tasks) && page.tasks.includes('MESSAGING');
     let status = messengerService.getPageStatus(page.id, 'messenger');
@@ -1404,7 +1424,8 @@ async function describeMessengerPages(pages) {
         username: instagram.username,
         profilePictureUrl: instagram.profilePictureUrl,
         status: instagramStatus.state,
-        statusMessage: instagramStatus.message
+        statusMessage: instagramStatus.message,
+        conversationCount: igCounts.get(String(page.id)) || 0
       } : null
     };
   });
@@ -1644,6 +1665,7 @@ async function instagramChannelsPayload(pages) {
   const pageIds = pages.map((page) => String(page.id));
   const accounts = await instagramService.listInstagramAccounts(pageIds);
   const byPage = new Map(accounts.map((account) => [String(account.pageId), account]));
+  const counts = await countInstagramConversations(pageIds);
   return {
     accounts: accounts.map((account) => {
       const status = messengerService.getPageStatus(account.pageId, 'instagram');
@@ -1651,7 +1673,8 @@ async function instagramChannelsPayload(pages) {
         ...account,
         pageName: pages.find((page) => String(page.id) === String(account.pageId))?.name || null,
         messagingStatus: status.state,
-        messagingMessage: status.message
+        messagingMessage: status.message,
+        conversationCount: counts.get(String(account.pageId)) || 0
       };
     }),
     pagesWithoutInstagram: pages.filter((page) => !byPage.has(String(page.id))).map((page) => ({ id: String(page.id), name: page.name }))
@@ -1685,6 +1708,81 @@ app.post('/api/channels/instagram/sync', requireAuth, async (req, res) => {
   }
 });
 
+// signed_request của Meta: "<chữ ký base64url>.<payload base64url>", ký HMAC-SHA256 bằng App Secret
+function parseSignedRequest(signedRequest, appSecret) {
+  if (typeof signedRequest !== 'string' || !appSecret) return null;
+  const [encodedSignature, payload] = signedRequest.split('.', 2);
+  if (!encodedSignature || !payload) return null;
+  const expected = crypto.createHmac('sha256', appSecret).update(payload).digest();
+  const provided = Buffer.from(encodedSignature, 'base64url');
+  if (provided.length !== expected.length || !crypto.timingSafeEqual(provided, expected)) return null;
+  try {
+    const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    return String(data.algorithm || '').toUpperCase() === 'HMAC-SHA256' ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+// Data Deletion Request Callback: Meta gọi khi người dùng gỡ app trong cài đặt Facebook và yêu cầu xóa dữ liệu
+app.post('/api/meta/data-deletion', express.urlencoded({ extended: false }), async (req, res) => {
+  const { appSecret } = await tokenService.getMetaAppCredentials().catch(() => ({}));
+  const data = parseSignedRequest(req.body?.signed_request, appSecret || process.env.FACEBOOK_APP_SECRET);
+  if (!data?.user_id) return res.status(400).json({ error: 'invalid_signed_request' });
+
+  const fbUserId = String(data.user_id);
+  const code = crypto.randomBytes(8).toString('hex');
+  try {
+    const pool = await getPool();
+    const owners = await pool.request()
+      .input('fbUserId', sql.VarChar(64), fbUserId)
+      .query('SELECT app_user_id FROM dbo.ConnectedFbAccounts WHERE fb_user_id=@fbUserId');
+    for (const row of owners.recordset) {
+      await disconnectFbAccount(row.app_user_id, fbUserId);
+      const remaining = await pool.request()
+        .input('appUserId', sql.VarChar(64), String(row.app_user_id))
+        .query('SELECT COUNT(*) AS total FROM dbo.ConnectedFbAccounts WHERE app_user_id=@appUserId');
+      // Token người dùng cũ lưu theo tài khoản tool: xóa khi tài khoản tool không còn nick Facebook nào
+      if (!Number(remaining.recordset[0]?.total)) {
+        await pool.request()
+          .input('appUserId', sql.VarChar(64), String(row.app_user_id))
+          .query('DELETE FROM dbo.FacebookUsers WHERE facebook_user_id=@appUserId');
+      }
+    }
+    await messengerService.purgeDisconnectedPageData();
+    console.log(`[Data Deletion] Đã xóa dữ liệu Facebook theo yêu cầu của Meta (mã ${code}, ${owners.recordset.length} liên kết).`);
+  } catch (error) {
+    console.error('[Data Deletion Error]', error.message);
+  }
+  return res.json({ url: `${clientOrigin()}/data-deletion?code=${code}`, confirmation_code: code });
+});
+
+// Thông tin công khai cho trang Chính sách quyền riêng tư / Điều khoản / Xóa dữ liệu (Meta yêu cầu khi duyệt app)
+app.get('/api/public/site-info', (_req, res) => {
+  return res.json({
+    appName: process.env.PUBLIC_APP_NAME || 'Tool Face',
+    operatorName: process.env.PUBLIC_OPERATOR_NAME || null,
+    contactEmail: process.env.PUBLIC_CONTACT_EMAIL || null,
+    siteUrl: clientOrigin(),
+    policyUpdatedAt: process.env.PUBLIC_POLICY_UPDATED_AT || null
+  });
+});
+
+// Kiểm tra từng bước đọc tin nhắn Instagram của một Fanpage (chỉ đọc, không gửi tin)
+app.get('/api/channels/instagram/:pageId/diagnose', requireAuth, async (req, res) => {
+  try {
+    const pages = await getMessengerPages(req.user.sub);
+    const pageId = String(req.params.pageId);
+    if (!pages.some((page) => String(page.id) === pageId)) {
+      return res.status(404).json({ success: false, message: 'Fanpage không thuộc tài khoản của bạn.' });
+    }
+    const diagnosis = await instagramService.diagnoseMessaging(pageId, messengerService.getPageToken);
+    return res.json({ success: true, ...diagnosis });
+  } catch (error) {
+    return sendApiError(res, 'Instagram Diagnose Error', error, 'Không thể kiểm tra kết nối tin nhắn Instagram.');
+  }
+});
+
 // Webhook Messenger / Instagram: cấu hình Callback URL https://<domain>/api/webhooks/messenger trong Meta App
 app.get('/api/webhooks/messenger', (req, res) => {
   const verifyToken = process.env.MESSENGER_VERIFY_TOKEN;
@@ -1695,14 +1793,21 @@ app.get('/api/webhooks/messenger', (req, res) => {
 });
 
 app.post('/api/webhooks/messenger', async (req, res) => {
-  if (!messengerService.verifyWebhookSignature(req.rawBody, req.get('x-hub-signature-256'))) {
+  const { appSecret } = await tokenService.getMetaAppCredentials().catch(() => ({}));
+  if (!messengerService.verifyWebhookSignature(req.rawBody, req.get('x-hub-signature-256'), appSecret || process.env.FACEBOOK_APP_SECRET)) {
     return res.sendStatus(403);
   }
   res.status(200).send('EVENT_RECEIVED');
   try {
     const pool = await getPool();
     const result = await pool.request().query('SELECT page_id FROM dbo.FacebookPages');
-    messengerService.handleWebhookPayload(req.body, new Set(result.recordset.map((row) => String(row.page_id))));
+    const pageIds = result.recordset.map((row) => String(row.page_id));
+    const igAccounts = await instagramService.listInstagramAccounts(pageIds).catch(() => []);
+    messengerService.handleWebhookPayload(
+      req.body,
+      new Set(pageIds),
+      new Map(igAccounts.map((account) => [String(account.id), String(account.pageId)]))
+    );
   } catch (error) {
     console.warn('[Messenger Webhook]', error.message);
   }
@@ -2679,8 +2784,12 @@ app.use((error, _req, res, _next) => {
 });
 
 const PORT = process.env.PORT || 5000;
+const KNOWN_DEFAULT_SESSION_SECRETS = new Set(['toolfb_super_secure_jwt_secret_key_2025']);
 const server = app.listen(PORT, () => {
   console.log(`Server listening on ${PORT}`);
+  if (process.env.NODE_ENV === 'production' && KNOWN_DEFAULT_SESSION_SECRETS.has(process.env.SESSION_SECRET)) {
+    console.warn('[Security] CẢNH BÁO: SESSION_SECRET đang là giá trị mặc định công khai. Khi đưa lên Internet hãy đặt chuỗi ngẫu nhiên riêng (openssl rand -hex 32).');
+  }
   // Khởi tạo bảng tài khoản và tạo sẵn tài khoản Admin mặc định
   ensureAppUserSchema().catch((error) => console.error('[AppUsers Init Error]', error.message));
   // Hộp thư Messenger + Instagram: tạo bảng và tự động đồng bộ (mặc định 5 giây, đặt 0 để tắt)

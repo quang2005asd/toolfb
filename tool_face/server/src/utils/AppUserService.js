@@ -69,17 +69,43 @@ async function ensureAppUserSchema() {
   return schemaPromise;
 }
 
-// Tạo sẵn tài khoản Admin mặc định (admin | 1) nếu chưa tồn tại
+// Mật khẩu Admin khi deploy lấy từ ADMIN_PASSWORD (tối thiểu 8 ký tự); không đặt thì dùng "1" cho bản chạy thử trên máy
+function configuredAdminPassword() {
+  const value = process.env.ADMIN_PASSWORD || '';
+  if (!value) return null;
+  if (value.length < 8) {
+    console.warn('[AppUsers] ADMIN_PASSWORD phải có ít nhất 8 ký tự — bỏ qua.');
+    return null;
+  }
+  return value;
+}
+
+// Tạo sẵn tài khoản Admin mặc định nếu chưa tồn tại
 async function seedDefaultAdmin(pool) {
+  const adminPassword = configuredAdminPassword();
   const existing = await pool.request()
     .input('username', sql.VarChar(64), DEFAULT_ADMIN.username)
-    .query('SELECT id FROM dbo.AppUsers WHERE username = @username');
-  if (existing.recordset.length > 0) return;
+    .query('SELECT id, password_hash FROM dbo.AppUsers WHERE username = @username');
+  const current = existing.recordset[0];
+  if (current) {
+    // Đưa CSDL cũ lên VPS: admin còn mật khẩu "1" thì thay ngay bằng ADMIN_PASSWORD
+    if (adminPassword && verifyPassword(DEFAULT_ADMIN.password, current.password_hash)) {
+      await pool.request()
+        .input('id', sql.Int, current.id)
+        .input('passwordHash', sql.NVarChar(255), hashPassword(adminPassword))
+        .input('now', sql.DateTime2, new Date())
+        .query('UPDATE dbo.AppUsers SET password_hash = @passwordHash, updated_at = @now WHERE id = @id');
+      console.log('[AppUsers] Đã thay mật khẩu mặc định của admin bằng ADMIN_PASSWORD.');
+    } else if (!adminPassword && process.env.NODE_ENV === 'production' && verifyPassword(DEFAULT_ADMIN.password, current.password_hash)) {
+      console.warn('[AppUsers] CẢNH BÁO: admin vẫn dùng mật khẩu mặc định "1". Hãy đổi mật khẩu hoặc đặt ADMIN_PASSWORD trước khi mở tool ra Internet.');
+    }
+    return;
+  }
 
   const now = new Date();
   await pool.request()
     .input('username', sql.VarChar(64), DEFAULT_ADMIN.username)
-    .input('passwordHash', sql.NVarChar(255), hashPassword(DEFAULT_ADMIN.password))
+    .input('passwordHash', sql.NVarChar(255), hashPassword(adminPassword || DEFAULT_ADMIN.password))
     .input('displayName', sql.NVarChar(120), DEFAULT_ADMIN.displayName)
     .input('role', sql.VarChar(20), 'admin')
     .input('now', sql.DateTime2, now)

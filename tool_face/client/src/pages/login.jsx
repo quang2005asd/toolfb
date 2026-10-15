@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import {
   AlertCircle,
@@ -17,7 +18,7 @@ import {
   User,
   UserPlus
 } from 'lucide-react';
-import authApi from '../services/authApi';
+import authApi, { SERVER_DOWN_MESSAGE, describeAuthError, isServerDown } from '../services/authApi';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -82,6 +83,27 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [suggestRegister, setSuggestRegister] = useState(false);
+  const [serverDown, setServerDown] = useState(false);
+
+  // Báo ngay khi máy chủ API đang tắt, tự kiểm tra lại mỗi 5 giây cho tới khi chạy lại
+  useEffect(() => {
+    let cancelled = false;
+    let timer = null;
+    const ping = async () => {
+      try {
+        await authApi.health();
+        if (!cancelled) {
+          setServerDown(false);
+          setErrorMessage((message) => (message === SERVER_DOWN_MESSAGE ? '' : message));
+        }
+      } catch (err) {
+        if (!cancelled) setServerDown(isServerDown(err));
+      }
+      if (!cancelled) timer = setTimeout(ping, 5000);
+    };
+    ping();
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, []);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -163,7 +185,8 @@ export default function LoginPage() {
         setLoginPassword('');
         loginPasswordRef.current?.focus();
       }
-      setErrorMessage(err.response?.data?.message || err.message || 'Đăng nhập thất bại.');
+      if (isServerDown(err)) setServerDown(true);
+      setErrorMessage(describeAuthError(err, 'Đăng nhập thất bại.'));
     } finally {
       setLoadingLogin(false);
     }
@@ -207,7 +230,8 @@ export default function LoginPage() {
       const code = err.response?.data?.code;
       if (code === 'username_taken') setUsernameStatus('taken');
       if (code === 'email_taken') setEmailStatus('taken');
-      setErrorMessage(err.response?.data?.message || err.message || 'Đăng ký thất bại.');
+      if (isServerDown(err)) setServerDown(true);
+      setErrorMessage(describeAuthError(err, 'Đăng ký thất bại.'));
     } finally {
       setLoadingReg(false);
     }
@@ -262,6 +286,12 @@ export default function LoginPage() {
             : 'Tạo tài khoản Thành viên mới. Quản lý hoặc Quản trị viên có thể nâng quyền cho bạn sau.'}
         </p>
 
+        {serverDown && errorMessage !== SERVER_DOWN_MESSAGE && (
+          <div className="notice login-error auth-notice-error" role="alert">
+            <AlertCircle size={16} />
+            <span>{SERVER_DOWN_MESSAGE}</span>
+          </div>
+        )}
         {errorMessage && (
           <div className="notice login-error auth-notice-error">
             <AlertCircle size={16} />
@@ -422,6 +452,11 @@ export default function LoginPage() {
         <div className="login-security">
           <ShieldCheck size={16} /> Mật khẩu được mã hóa an toàn; quyền hạn và dữ liệu được phân theo vai trò Quản trị viên, Quản lý và Thành viên.
         </div>
+        <nav className="login-legal-links" aria-label="Chính sách">
+          <Link href="/privacy">Chính sách quyền riêng tư</Link>
+          <Link href="/terms">Điều khoản sử dụng</Link>
+          <Link href="/data-deletion">Xóa dữ liệu</Link>
+        </nav>
       </section>
     </main>
   );
