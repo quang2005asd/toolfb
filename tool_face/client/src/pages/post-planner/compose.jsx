@@ -1668,7 +1668,7 @@ export default function ComposePage() {
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                       <label className="field-label" htmlFor="post-content" style={{ margin: 0 }}>
-                        3. Nội dung bài đăng Facebook *
+                        {targetPlatform === 'tiktok' ? '3. Mô tả / Caption TikTok *' : '3. Nội dung bài đăng Facebook *'}
                       </label>
                       <div className="compose-toolbar" style={{ margin: 0, padding: 0, background: 'none' }}>
                         <button
@@ -1723,7 +1723,7 @@ export default function ComposePage() {
                       id="post-content"
                       ref={contentRef}
                       className="compose-editor"
-                      placeholder="Bạn đang muốn chia sẻ điều gì lên các Fanpage hôm nay? Nhập nội dung bài viết..."
+                      placeholder={targetPlatform === 'tiktok' ? 'Nhập mô tả / caption video TikTok, thêm hashtag #fyp #viral...' : 'Bạn đang muốn chia sẻ điều gì lên các Fanpage hôm nay? Nhập nội dung bài viết...'}
                       value={content}
                       onChange={(event) => setContent(event.target.value)}
                       rows={6}
@@ -1738,12 +1738,12 @@ export default function ComposePage() {
                   {/* ĐÍNH KÈM ẢNH HOẶC VIDEO */}
                   <div>
                     <label className="field-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>4. Đính kèm Ảnh hoặc Video (tùy chọn)</span>
-                      <span className="muted" style={{ fontSize: 11 }}>Ảnh &lt; 1MB · Video &lt; 50MB</span>
+                      <span>{targetPlatform === 'tiktok' ? '4. Đính kèm Video TikTok (bắt buộc)' : '4. Đính kèm Ảnh hoặc Video (tùy chọn)'}</span>
+                      <span className="muted" style={{ fontSize: 11 }}>{targetPlatform === 'tiktok' ? 'Chỉ nhận Video MP4/WebM · Tối đa 50MB' : 'Ảnh < 1MB · Video < 50MB'}</span>
                     </label>
 
-                    {mediaList.length > 0 ? (
-                      /* GIAO DIỆN QUẢN LÝ ALBUM ẢNH */
+                    {mediaList.length > 0 && targetPlatform !== 'tiktok' ? (
+                      /* GIAO DIỆN QUẢN LÝ ALBUM ẢNH (chỉ Facebook) */
                       <div style={{ marginTop: 8, background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(0, 242, 254, 0.25)', borderRadius: 12, padding: 14 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                           <div>
@@ -1805,15 +1805,15 @@ export default function ComposePage() {
                         )}
                       </div>
                     ) : !uploadedMedia && !mediaPreviewUrl ? (
-                      <label className="compose-media-dropzone" style={{ marginTop: 6, padding: '16px 14px' }}>
-                        <ImagePlus size={24} style={{ color: 'var(--muted)' }} />
+                      <label className="compose-media-dropzone" style={{ marginTop: 6, padding: '16px 14px', borderColor: targetPlatform === 'tiktok' ? 'rgba(254,44,85,0.4)' : undefined }}>
+                        {targetPlatform === 'tiktok' ? <Film size={24} style={{ color: '#FE2C55' }} /> : <ImagePlus size={24} style={{ color: 'var(--muted)' }} />}
                         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>
-                          {uploadingMedia ? 'Đang tải lên máy chủ…' : 'Bấm để thêm Ảnh (chọn nhiều để tạo Album) hoặc Video'}
+                          {uploadingMedia ? 'Đang tải lên máy chủ…' : (targetPlatform === 'tiktok' ? '🎬 Bấm để chọn file Video (MP4, WebM, MOV...)' : 'Bấm để thêm Ảnh (chọn nhiều để tạo Album) hoặc Video')}
                         </div>
                         <span className="muted" style={{ fontSize: 11 }}>
-                          Hỗ trợ tải lên cùng lúc nhiều ảnh để xuất bản dạng Album Facebook
+                          {targetPlatform === 'tiktok' ? 'TikTok chỉ hỗ trợ Video — không hỗ trợ đăng ảnh tĩnh' : 'Hỗ trợ tải lên cùng lúc nhiều ảnh để xuất bản dạng Album Facebook'}
                         </span>
-                        <input type="file" accept="image/*,video/*" multiple hidden onChange={handleMediaChange} disabled={uploadingMedia} />
+                        <input type="file" accept={targetPlatform === 'tiktok' ? 'video/*' : 'image/*,video/*'} multiple={targetPlatform !== 'tiktok'} hidden onChange={handleMediaChange} disabled={uploadingMedia} />
                       </label>
                     ) : (
                       <div style={{ marginTop: 6, padding: '10px 14px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
