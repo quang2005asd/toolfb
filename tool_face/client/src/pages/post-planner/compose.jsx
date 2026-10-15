@@ -1132,12 +1132,12 @@ export default function ComposePage() {
       const finalMediaType = targetPlatform === 'tiktok'
         ? 'video'
         : postType === 'reel'
-        ? 'reel'
-        : postType === 'story'
-        ? 'story'
-        : mediaList.length > 0
-        ? 'image'
-        : (uploadedMedia?.mediaType || 'text');
+          ? 'reel'
+          : postType === 'story'
+            ? 'story'
+            : mediaList.length > 0
+              ? 'image'
+              : (uploadedMedia?.mediaType || 'text');
 
       const finalMediaLinks = mediaList.length > 0
         ? mediaList.map((m) => m.mediaLink)
@@ -1227,8 +1227,8 @@ export default function ComposePage() {
         event.target.value = '';
         return;
       }
-      if (file.size > 50 * 1024 * 1024) {
-        showToast('error', `Video vượt quá dung lượng tối đa 50MB (${(file.size / (1024 * 1024)).toFixed(2)}MB).`);
+      if (file.size > 100 * 1024 * 1024) {
+        showToast('error', `Video vượt quá dung lượng tối đa 100MB (${(file.size / (1024 * 1024)).toFixed(2)}MB).`);
         event.target.value = '';
         return;
       }
@@ -1245,8 +1245,8 @@ export default function ComposePage() {
         event.target.value = '';
         return;
       }
-      if (file.type.startsWith('video/') && file.size > 50 * 1024 * 1024) {
-        showToast('error', `Video Story vượt quá dung lượng tối đa 50MB (${(file.size / (1024 * 1024)).toFixed(2)}MB).`);
+      if (file.type.startsWith('video/') && file.size > 100 * 1024 * 1024) {
+        showToast('error', `Video Story vượt quá dung lượng tối đa 100MB (${(file.size / (1024 * 1024)).toFixed(2)}MB).`);
         event.target.value = '';
         return;
       }
@@ -1259,8 +1259,8 @@ export default function ComposePage() {
     const hasVideo = files.some((f) => f.type.startsWith('video/'));
     if (hasVideo) {
       const videoFile = files.find((f) => f.type.startsWith('video/'));
-      if (videoFile.size > 50 * 1024 * 1024) {
-        showToast('error', `Video vượt quá dung lượng tối đa 50MB (${(videoFile.size / (1024 * 1024)).toFixed(2)}MB).`);
+      if (videoFile.size > 100 * 1024 * 1024) {
+        showToast('error', `Video vượt quá dung lượng tối đa 100MB (${(videoFile.size / (1024 * 1024)).toFixed(2)}MB).`);
         event.target.value = '';
         return;
       }
@@ -1413,61 +1413,61 @@ export default function ComposePage() {
                   <label className="field-label" style={{ marginBottom: 8, display: 'block' }}>
                     2. Chọn hình thức đăng Facebook *
                   </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-                  <button
-                    type="button"
-                    onClick={() => setPostType('feed')}
-                    className={`compose-type-pill${postType === 'feed' ? ' is-active' : ''}`}
-                  >
-                    <Globe size={20} />
-                    <span style={{ fontSize: 13, fontWeight: 700 }}>Bảng tin (Feed)</span>
-                    <span style={{ fontSize: 11, opacity: 0.75, fontWeight: 400 }}>Chữ + Ảnh/Video</span>
-                  </button>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                    <button
+                      type="button"
+                      onClick={() => setPostType('feed')}
+                      className={`compose-type-pill${postType === 'feed' ? ' is-active' : ''}`}
+                    >
+                      <Globe size={20} />
+                      <span style={{ fontSize: 13, fontWeight: 700 }}>Bảng tin (Feed)</span>
+                      <span style={{ fontSize: 11, opacity: 0.75, fontWeight: 400 }}>Chữ + Ảnh/Video</span>
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setPostType('reel')}
-                    className={`compose-type-pill${postType === 'reel' ? ' is-active' : ''}`}
-                  >
-                    <Film size={20} />
-                    <span style={{ fontSize: 13, fontWeight: 700 }}>Facebook Reels</span>
-                    <span style={{ fontSize: 11, opacity: 0.75, fontWeight: 400 }}>Video ngắn dọc 9:16</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setPostType('reel')}
+                      className={`compose-type-pill${postType === 'reel' ? ' is-active' : ''}`}
+                    >
+                      <Film size={20} />
+                      <span style={{ fontSize: 13, fontWeight: 700 }}>Facebook Reels</span>
+                      <span style={{ fontSize: 11, opacity: 0.75, fontWeight: 400 }}>Video ngắn dọc 9:16</span>
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setPostType('story')}
-                    className={`compose-type-pill${postType === 'story' ? ' is-active' : ''}`}
-                  >
-                    <Clock size={20} />
-                    <span style={{ fontSize: 13, fontWeight: 700 }}>Tin (Story 24h)</span>
-                    <span style={{ fontSize: 11, opacity: 0.75, fontWeight: 400 }}>Đầu trang trong 24 giờ</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setPostType('story')}
+                      className={`compose-type-pill${postType === 'story' ? ' is-active' : ''}`}
+                    >
+                      <Clock size={20} />
+                      <span style={{ fontSize: 13, fontWeight: 700 }}>Tin (Story 24h)</span>
+                      <span style={{ fontSize: 11, opacity: 0.75, fontWeight: 400 }}>Đầu trang trong 24 giờ</span>
+                    </button>
+                  </div>
+
+                  {/* BANNER HƯỚNG DẪN THEO TỪNG ĐỊNH DẠNG */}
+                  {postType === 'reel' && (
+                    <div style={{ marginTop: 10, fontSize: 12.5, color: '#38bdf8', background: 'rgba(0, 242, 254, 0.08)', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(0, 242, 254, 0.25)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <Play size={18} style={{ flexShrink: 0, color: '#00f2fe' }} />
+                      <div>
+                        <strong>Chuẩn Facebook Reels:</strong> Bắt buộc đính kèm Video dọc tỷ lệ 9:16 (1080x1920), dung lượng &lt; 100MB, thời lượng khuyến nghị dưới 60 giây để cắn xu hướng tự nhiên.
+                      </div>
+                    </div>
+                  )}
+                  {postType === 'story' && (
+                    <div style={{ marginTop: 10, fontSize: 12.5, color: '#10b981', background: 'rgba(16, 185, 129, 0.08)', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(16, 185, 129, 0.25)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <Clock size={18} style={{ flexShrink: 0, color: '#10b981' }} />
+                      <div>
+                        <strong>Chuẩn Facebook Story:</strong> Tin sẽ nổi bật ở thanh đầu trang trong 24 giờ. Hỗ trợ ảnh 9:16 (dung lượng &lt; 1MB) hoặc video ngắn &lt; 100MB.
+                      </div>
+                    </div>
+                  )}
+                  {postType === 'feed' && (
+                    <div style={{ marginTop: 10, fontSize: 12, color: 'var(--muted)', background: 'rgba(255, 255, 255, 0.03)', padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                      💡 <strong>Bài viết thường:</strong> Hiển thị trên Newsfeed và Dòng thời gian của Fanpage. Có thể đăng chỉ văn bản, hoặc đính kèm ảnh (&lt;1MB) / video (&lt;100MB).
+                    </div>
+                  )}
                 </div>
-
-                {/* BANNER HƯỚNG DẪN THEO TỪNG ĐỊNH DẠNG */}
-                {postType === 'reel' && (
-                  <div style={{ marginTop: 10, fontSize: 12.5, color: '#38bdf8', background: 'rgba(0, 242, 254, 0.08)', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(0, 242, 254, 0.25)', display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <Play size={18} style={{ flexShrink: 0, color: '#00f2fe' }} />
-                    <div>
-                      <strong>Chuẩn Facebook Reels:</strong> Bắt buộc đính kèm Video dọc tỷ lệ 9:16 (1080x1920), dung lượng &lt; 50MB, thời lượng khuyến nghị dưới 60 giây để cắn xu hướng tự nhiên.
-                    </div>
-                  </div>
-                )}
-                {postType === 'story' && (
-                  <div style={{ marginTop: 10, fontSize: 12.5, color: '#10b981', background: 'rgba(16, 185, 129, 0.08)', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(16, 185, 129, 0.25)', display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <Clock size={18} style={{ flexShrink: 0, color: '#10b981' }} />
-                    <div>
-                      <strong>Chuẩn Facebook Story:</strong> Tin sẽ nổi bật ở thanh đầu trang trong 24 giờ. Hỗ trợ ảnh 9:16 (dung lượng &lt; 1MB) hoặc video ngắn &lt; 50MB.
-                    </div>
-                  </div>
-                )}
-                {postType === 'feed' && (
-                  <div style={{ marginTop: 10, fontSize: 12, color: 'var(--muted)', background: 'rgba(255, 255, 255, 0.03)', padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-                    💡 <strong>Bài viết thường:</strong> Hiển thị trên Newsfeed và Dòng thời gian của Fanpage. Có thể đăng chỉ văn bản, hoặc đính kèm ảnh (&lt;1MB) / video (&lt;50MB).
-                  </div>
-                )}
-              </div>
               )}
 
               {/* ────────────────── 1. ĐỊNH DẠNG REELS ────────────────── */}
@@ -1477,7 +1477,7 @@ export default function ComposePage() {
                   <div>
                     <label className="field-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span>2. Tải lên Video Reels 9:16 * (Bắt buộc)</span>
-                      <span className="muted" style={{ fontSize: 11 }}>Dung lượng &lt; 50MB · Tỷ lệ 9:16</span>
+                      <span className="muted" style={{ fontSize: 11 }}>Dung lượng &lt; 100MB · Tỷ lệ 9:16</span>
                     </label>
 
                     {!uploadedMedia && !mediaPreviewUrl ? (
@@ -1489,7 +1489,7 @@ export default function ComposePage() {
                           {uploadingMedia ? 'Đang tải lên máy chủ…' : 'Bấm để chọn hoặc kéo thả Video Reels'}
                         </div>
                         <div className="muted" style={{ fontSize: 12 }}>
-                          Định dạng MP4, MOV dọc (9:16) · Dung lượng tối đa 50MB
+                          Định dạng MP4, MOV dọc (9:16) · Dung lượng tối đa 100MB
                         </div>
                         <input type="file" accept="video/*" hidden onChange={handleMediaChange} disabled={uploadingMedia} />
                       </label>
@@ -1591,7 +1591,7 @@ export default function ComposePage() {
                   <div>
                     <label className="field-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span>2. Tải lên Ảnh hoặc Video Story 9:16 *</span>
-                      <span className="muted" style={{ fontSize: 11 }}>Ảnh &lt; 1MB · Video &lt; 50MB</span>
+                      <span className="muted" style={{ fontSize: 11 }}>Ảnh &lt; 1MB · Video &lt; 100MB</span>
                     </label>
 
                     {!uploadedMedia && !mediaPreviewUrl ? (
@@ -1603,7 +1603,7 @@ export default function ComposePage() {
                           {uploadingMedia ? 'Đang tải lên máy chủ…' : 'Bấm để chọn Ảnh hoặc Video Story 24h'}
                         </div>
                         <div className="muted" style={{ fontSize: 12 }}>
-                          Tỷ lệ khuyến nghị 9:16 (1080x1920) · Ảnh &lt; 1MB · Video &lt; 50MB
+                          Tỷ lệ khuyến nghị 9:16 (1080x1920) · Ảnh &lt; 1MB · Video &lt; 100MB
                         </div>
                         <input type="file" accept="image/*,video/*" hidden onChange={handleMediaChange} disabled={uploadingMedia} />
                       </label>
@@ -1739,7 +1739,7 @@ export default function ComposePage() {
                   <div>
                     <label className="field-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span>{targetPlatform === 'tiktok' ? '4. Đính kèm Video TikTok (bắt buộc)' : '4. Đính kèm Ảnh hoặc Video (tùy chọn)'}</span>
-                      <span className="muted" style={{ fontSize: 11 }}>{targetPlatform === 'tiktok' ? 'Chỉ nhận Video MP4/WebM · Tối đa 50MB' : 'Ảnh < 1MB · Video < 50MB'}</span>
+                      <span className="muted" style={{ fontSize: 11 }}>{targetPlatform === 'tiktok' ? 'Chỉ nhận Video MP4/WebM · Tối đa 100MB' : 'Ảnh < 1MB · Video < 100MB'}</span>
                     </label>
 
                     {mediaList.length > 0 && targetPlatform !== 'tiktok' ? (
@@ -2004,181 +2004,181 @@ export default function ComposePage() {
                 )
               ) : (
                 <>
-              {/* CHỌN NHANH THEO NHÓM KÊNH */}
-              {groups.length > 0 && (
-                <div style={{ marginBottom: 14, padding: '10px 12px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 10, border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                  <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Layers size={13} style={{ color: '#00f2fe' }} /> Chọn nhanh theo Nhóm kênh ({groups.length} nhóm):
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {groups.map((grp) => {
-                      const pIds = Array.isArray(grp.pageIds) ? grp.pageIds : [];
-                      const isAllInGroup = pIds.length > 0 && pIds.every((id) => selectedPageIds.includes(id));
+                  {/* CHỌN NHANH THEO NHÓM KÊNH */}
+                  {groups.length > 0 && (
+                    <div style={{ marginBottom: 14, padding: '10px 12px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 10, border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                      <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Layers size={13} style={{ color: '#00f2fe' }} /> Chọn nhanh theo Nhóm kênh ({groups.length} nhóm):
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {groups.map((grp) => {
+                          const pIds = Array.isArray(grp.pageIds) ? grp.pageIds : [];
+                          const isAllInGroup = pIds.length > 0 && pIds.every((id) => selectedPageIds.includes(id));
+                          return (
+                            <button
+                              key={grp.id}
+                              type="button"
+                              onClick={() => {
+                                if (isAllInGroup) {
+                                  setSelectedPageIds((prev) => prev.filter((id) => !pIds.includes(id)));
+                                } else {
+                                  setSelectedPageIds((prev) => [...new Set([...prev, ...pIds])]);
+                                }
+                              }}
+                              style={{
+                                background: isAllInGroup ? `${grp.color || 'var(--blue)'}18` : 'var(--field-bg)',
+                                border: `1px solid ${isAllInGroup ? (grp.color || 'var(--blue)') : 'var(--line)'}`,
+                                color: isAllInGroup ? (grp.color || 'var(--blue)') : 'var(--ink)',
+                                borderRadius: 16,
+                                padding: '4px 12px',
+                                fontSize: 12,
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: grp.color || 'var(--blue)' }} />
+                              {grp.name} ({pIds.length})
+                              {isAllInGroup && <Check size={12} />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CHỌN NHANH THEO NICK FACEBOOK */}
+                  {(() => {
+                    const fbAccounts = [];
+                    const map = {};
+                    for (const c of channels) {
+                      if (c.fbAccountId && !map[c.fbAccountId]) {
+                        map[c.fbAccountId] = true;
+                        fbAccounts.push({
+                          id: c.fbAccountId,
+                          name: c.fbAccountName || 'Nick Facebook',
+                          avatar: c.fbAccountAvatar || null
+                        });
+                      }
+                    }
+                    if (fbAccounts.length <= 1) return null;
+                    return (
+                      <div style={{ marginBottom: 14, padding: '10px 12px', background: 'rgba(37, 99, 235, 0.05)', borderRadius: 10, border: '1px solid rgba(37, 99, 235, 0.18)' }}>
+                        <div style={{ fontSize: 11.5, color: 'var(--blue)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}>
+                          <Users size={13} style={{ color: 'var(--blue)' }} /> Chọn nhanh theo Nick Facebook ({fbAccounts.length} nick):
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          {fbAccounts.map((acc) => {
+                            const accPages = channels.filter((c) => c.fbAccountId === acc.id).map((c) => c.id);
+                            const isAllSelected = accPages.length > 0 && accPages.every((pid) => selectedPageIds.includes(pid));
+                            return (
+                              <button
+                                key={acc.id}
+                                type="button"
+                                onClick={() => {
+                                  if (isAllSelected) {
+                                    setSelectedPageIds((prev) => prev.filter((id) => !accPages.includes(id)));
+                                  } else {
+                                    setSelectedPageIds((prev) => [...new Set([...prev, ...accPages])]);
+                                  }
+                                }}
+                                style={{
+                                  background: isAllSelected ? 'var(--blue)' : 'var(--field-bg)',
+                                  border: `1px solid ${isAllSelected ? 'var(--blue)' : 'var(--line)'}`,
+                                  color: isAllSelected ? '#ffffff' : 'var(--ink)',
+                                  borderRadius: 16,
+                                  padding: '4px 12px',
+                                  fontSize: 12,
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 6,
+                                  transition: 'all 0.15s ease'
+                                }}
+                              >
+                                {acc.avatar ? (
+                                  <img src={acc.avatar} alt="" style={{ width: 14, height: 14, borderRadius: '50%' }} />
+                                ) : (
+                                  <Users size={12} />
+                                )}
+                                <span>{acc.name} ({accPages.length})</span>
+                                {isAllSelected && <Check size={12} />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {channelLoading && <p className="muted">Đang tải danh sách Fanpage…</p>}
+                  {channelError && <div className="notice">{channelError}</div>}
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {channels.map((channel) => {
+                      const isChecked = selectedPageIds.includes(channel.id);
                       return (
-                        <button
-                          key={grp.id}
-                          type="button"
-                          onClick={() => {
-                            if (isAllInGroup) {
-                              setSelectedPageIds((prev) => prev.filter((id) => !pIds.includes(id)));
-                            } else {
-                              setSelectedPageIds((prev) => [...new Set([...prev, ...pIds])]);
-                            }
-                          }}
+                        <div
+                          key={channel.id}
+                          onClick={() => togglePageSelection(channel.id)}
                           style={{
-                            background: isAllInGroup ? `${grp.color || 'var(--blue)'}18` : 'var(--field-bg)',
-                            border: `1px solid ${isAllInGroup ? (grp.color || 'var(--blue)') : 'var(--line)'}`,
-                            color: isAllInGroup ? (grp.color || 'var(--blue)') : 'var(--ink)',
-                            borderRadius: 16,
-                            padding: '4px 12px',
-                            fontSize: 12,
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            display: 'inline-flex',
+                            display: 'flex',
                             alignItems: 'center',
-                            gap: 6,
+                            gap: 12,
+                            padding: '12px 14px',
+                            borderRadius: 12,
+                            cursor: 'pointer',
+                            background: isChecked ? 'linear-gradient(135deg, rgba(14, 165, 233, 0.16), rgba(37, 99, 235, 0.16))' : 'rgba(255, 255, 255, 0.02)',
+                            border: isChecked ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.08)',
+                            boxShadow: isChecked ? '0 4px 14px rgba(14, 165, 233, 0.18)' : 'none',
                             transition: 'all 0.15s ease'
                           }}
                         >
-                          <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: grp.color || 'var(--blue)' }} />
-                          {grp.name} ({pIds.length})
-                          {isAllInGroup && <Check size={12} />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* CHỌN NHANH THEO NICK FACEBOOK */}
-              {(() => {
-                const fbAccounts = [];
-                const map = {};
-                for (const c of channels) {
-                  if (c.fbAccountId && !map[c.fbAccountId]) {
-                    map[c.fbAccountId] = true;
-                    fbAccounts.push({
-                      id: c.fbAccountId,
-                      name: c.fbAccountName || 'Nick Facebook',
-                      avatar: c.fbAccountAvatar || null
-                    });
-                  }
-                }
-                if (fbAccounts.length <= 1) return null;
-                return (
-                  <div style={{ marginBottom: 14, padding: '10px 12px', background: 'rgba(37, 99, 235, 0.05)', borderRadius: 10, border: '1px solid rgba(37, 99, 235, 0.18)' }}>
-                    <div style={{ fontSize: 11.5, color: 'var(--blue)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}>
-                      <Users size={13} style={{ color: 'var(--blue)' }} /> Chọn nhanh theo Nick Facebook ({fbAccounts.length} nick):
-                    </div>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      {fbAccounts.map((acc) => {
-                        const accPages = channels.filter((c) => c.fbAccountId === acc.id).map((c) => c.id);
-                        const isAllSelected = accPages.length > 0 && accPages.every((pid) => selectedPageIds.includes(pid));
-                        return (
-                          <button
-                            key={acc.id}
-                            type="button"
-                            onClick={() => {
-                              if (isAllSelected) {
-                                setSelectedPageIds((prev) => prev.filter((id) => !accPages.includes(id)));
-                              } else {
-                                setSelectedPageIds((prev) => [...new Set([...prev, ...accPages])]);
-                              }
-                            }}
-                            style={{
-                              background: isAllSelected ? 'var(--blue)' : 'var(--field-bg)',
-                              border: `1px solid ${isAllSelected ? 'var(--blue)' : 'var(--line)'}`,
-                              color: isAllSelected ? '#ffffff' : 'var(--ink)',
-                              borderRadius: 16,
-                              padding: '4px 12px',
-                              fontSize: 12,
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 6,
-                              transition: 'all 0.15s ease'
-                            }}
-                          >
-                            {acc.avatar ? (
-                              <img src={acc.avatar} alt="" style={{ width: 14, height: 14, borderRadius: '50%' }} />
-                            ) : (
-                              <Users size={12} />
-                            )}
-                            <span>{acc.name} ({accPages.length})</span>
-                            {isAllSelected && <Check size={12} />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {channelLoading && <p className="muted">Đang tải danh sách Fanpage…</p>}
-              {channelError && <div className="notice">{channelError}</div>}
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {channels.map((channel) => {
-                  const isChecked = selectedPageIds.includes(channel.id);
-                  return (
-                    <div
-                      key={channel.id}
-                      onClick={() => togglePageSelection(channel.id)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 12,
-                        padding: '12px 14px',
-                        borderRadius: 12,
-                        cursor: 'pointer',
-                        background: isChecked ? 'linear-gradient(135deg, rgba(14, 165, 233, 0.16), rgba(37, 99, 235, 0.16))' : 'rgba(255, 255, 255, 0.02)',
-                        border: isChecked ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.08)',
-                        boxShadow: isChecked ? '0 4px 14px rgba(14, 165, 233, 0.18)' : 'none',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      <div style={{ color: isChecked ? '#00f2fe' : 'var(--muted)', display: 'flex', alignItems: 'center' }}>
-                        {isChecked ? <CheckSquare size={18} /> : <Square size={18} />}
-                      </div>
-                      <span className="fb-mark">f</span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                          <span style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 13.5 }}>{channel.name}</span>
-                          {channel.fbAccountName && (
-                            <span style={{
-                              fontSize: 10.5,
-                              color: '#93c5fd',
-                              background: 'rgba(59, 130, 246, 0.15)',
-                              border: '1px solid rgba(59, 130, 246, 0.3)',
-                              borderRadius: 10,
-                              padding: '1px 7px',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 4
-                            }}>
-                              {channel.fbAccountAvatar && (
-                                <img src={channel.fbAccountAvatar} alt="" style={{ width: 12, height: 12, borderRadius: '50%' }} />
+                          <div style={{ color: isChecked ? '#00f2fe' : 'var(--muted)', display: 'flex', alignItems: 'center' }}>
+                            {isChecked ? <CheckSquare size={18} /> : <Square size={18} />}
+                          </div>
+                          <span className="fb-mark">f</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                              <span style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 13.5 }}>{channel.name}</span>
+                              {channel.fbAccountName && (
+                                <span style={{
+                                  fontSize: 10.5,
+                                  color: '#93c5fd',
+                                  background: 'rgba(59, 130, 246, 0.15)',
+                                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                                  borderRadius: 10,
+                                  padding: '1px 7px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 4
+                                }}>
+                                  {channel.fbAccountAvatar && (
+                                    <img src={channel.fbAccountAvatar} alt="" style={{ width: 12, height: 12, borderRadius: '50%' }} />
+                                  )}
+                                  Nick: {channel.fbAccountName}
+                                </span>
                               )}
-                              Nick: {channel.fbAccountName}
+                            </div>
+                            <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>Facebook · {channel.category || 'Fanpage'} · ID: {channel.id}</div>
+                          </div>
+                          {isChecked && (
+                            <span style={{ fontSize: 11, color: '#00f2fe', background: 'rgba(0, 242, 254, 0.15)', padding: '2px 8px', borderRadius: 10 }}>
+                              Sẵn sàng đăng
                             </span>
                           )}
                         </div>
-                        <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>Facebook · {channel.category || 'Fanpage'} · ID: {channel.id}</div>
-                      </div>
-                      {isChecked && (
-                        <span style={{ fontSize: 11, color: '#00f2fe', background: 'rgba(0, 242, 254, 0.15)', padding: '2px 8px', borderRadius: 10 }}>
-                          Sẵn sàng đăng
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                      );
+                    })}
+                  </div>
 
-              {!channelLoading && channels.length === 0 && !channelError && (
-                <p className="muted">Chưa có Fanpage nào được đồng bộ. Vui lòng vào trang Kênh để kết nối lại.</p>
-              )}
+                  {!channelLoading && channels.length === 0 && !channelError && (
+                    <p className="muted">Chưa có Fanpage nào được đồng bộ. Vui lòng vào trang Kênh để kết nối lại.</p>
+                  )}
                 </>
               )}
             </div>
@@ -2731,8 +2731,8 @@ export default function ComposePage() {
             {saving
               ? '⚡ Đang xuất bản…'
               : (isPublishNow
-                  ? `⚡ Đăng ngay lập tức (${targetPlatform === 'tiktok' ? selectedTiktokIds.length + ' TikTok' : selectedPageIds.length + ' Page'})`
-                  : `Lên lịch đăng (${targetPlatform === 'tiktok' ? selectedTiktokIds.length + ' TikTok' : selectedPageIds.length + ' Page'})`)} <Send size={15} />
+                ? `⚡ Đăng ngay lập tức (${targetPlatform === 'tiktok' ? selectedTiktokIds.length + ' TikTok' : selectedPageIds.length + ' Page'})`
+                : `Lên lịch đăng (${targetPlatform === 'tiktok' ? selectedTiktokIds.length + ' TikTok' : selectedPageIds.length + ' Page'})`)} <Send size={15} />
           </button>
         )}
 
