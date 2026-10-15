@@ -9,7 +9,8 @@ services:
     container_name: tool-face-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      # Chỉ mở trong máy; cổng 6380 để không trùng Redis khác đang chạy trên máy
+      - "127.0.0.1:6380:6379"
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes
@@ -31,11 +32,17 @@ services:
     container_name: tool-face-server
     restart: unless-stopped
     ports:
-      - "5000:5000"
+      - "127.0.0.1:5000:5000"
     environment:
       - PORT=5000
       - NODE_ENV=production
-      - CLIENT_ORIGIN=http://localhost:3000
+      # Địa chỉ giao diện công khai, ví dụ https://tool.example.com (không có dấu / ở cuối)
+      - CLIENT_ORIGIN=${CLIENT_ORIGIN:-http://localhost:3000}
+      - BACKEND_URL=${BACKEND_URL:-http://localhost:5000}
+      - COOKIE_SECURE=${COOKIE_SECURE:-false}
+      # true để mở đăng ký tạm thời khi tạo tài khoản đầu tiên, xong đặt lại false
+      - ALLOW_REGISTER=${ALLOW_REGISTER:-false}
+      - FACEBOOK_ADMIN_IDS=${FACEBOOK_ADMIN_IDS:-}
       # Mặc định sử dụng SQLite độc lập zero-config; đổi sang mssql nếu muốn dùng SQL Server
       - USE_SQLITE=${USE_SQLITE:-true}
       - DB_TYPE=${DB_TYPE:-sqlite}
@@ -52,14 +59,20 @@ services:
       - REDIS_PORT=6379
       # Worker & Bảo mật
       - RUN_WORKER_IN_PROCESS=${RUN_WORKER_IN_PROCESS:-false}
-      - SESSION_SECRET=${SESSION_SECRET:-toolfb_super_secure_jwt_secret_key_2025}
+      # Bắt buộc đặt trong file .env cạnh docker-compose.yml (dài >= 32 ký tự)
+      - SESSION_SECRET=${SESSION_SECRET:?Hay dat SESSION_SECRET trong file .env}
       - FACEBOOK_APP_ID=${FACEBOOK_APP_ID:-}
       - FACEBOOK_APP_SECRET=${FACEBOOK_APP_SECRET:-}
       - FACEBOOK_REDIRECT_URI=${FACEBOOK_REDIRECT_URI:-http://localhost:5000/api/auth/facebook/callback}
       # Hộp thư Messenger + Instagram: chu kỳ tự đồng bộ (giây, 0 = tắt) và Verify Token cho webhook khi deploy có HTTPS
       - MESSENGER_SYNC_INTERVAL_SECONDS=${MESSENGER_SYNC_INTERVAL_SECONDS:-5}
       - MESSENGER_VERIFY_TOKEN=${MESSENGER_VERIFY_TOKEN:-}
+      # AI Bình luận: dùng chung Callback URL /api/webhooks/messenger (không cần FB_VERIFY_TOKEN riêng)
+      - POLL_COMMENTS=${POLL_COMMENTS:-on}
+      - REPLY_MIN_GAP_MS=${REPLY_MIN_GAP_MS:-6000}
     volumes:
+      - ./server/src:/app/src
+      - ./server/config:/app/config
       - server_data:/app/data
       - server_uploads:/app/uploads
     depends_on:
@@ -76,6 +89,7 @@ services:
       context: ./server
       dockerfile: Dockerfile
     container_name: tool-face-worker
+    profiles: ["queue"]
     command: ["node", "queues/start.workers.js"]
     restart: unless-stopped
     environment:
@@ -89,10 +103,12 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       # Worker đăng bài hẹn giờ: phải dùng cùng SESSION_SECRET với server để giải mã token Fanpage
-      - SESSION_SECRET=${SESSION_SECRET:-toolfb_super_secure_jwt_secret_key_2025}
+      - SESSION_SECRET=${SESSION_SECRET:?Hay dat SESSION_SECRET trong file .env}
       - FACEBOOK_APP_ID=${FACEBOOK_APP_ID:-}
       - FACEBOOK_APP_SECRET=${FACEBOOK_APP_SECRET:-}
     volumes:
+      - ./server/src:/app/src
+      - ./server/config:/app/config
       - server_data:/app/data
       - server_uploads:/app/uploads
     depends_on:
@@ -113,9 +129,11 @@ services:
     container_name: tool-face-client
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
       - NODE_ENV=production
+    volumes:
+      - ./client/out:/usr/share/nginx/html
     depends_on:
       - server
     networks:

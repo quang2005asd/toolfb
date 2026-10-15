@@ -133,8 +133,8 @@ npm run worker
 
 # Terminal 3: Chạy Client Frontend (Port 3000)
 cd client
-# next dev không có nginx chuyển /api → server, nên chỉ đường tới API (PowerShell: $env:NEXT_PUBLIC_API_URL="http://localhost:5000/api")
-NEXT_PUBLIC_API_URL=http://localhost:5000/api npm run dev
+# npm run dev tự gọi API ở http://localhost:5000 (đổi địa chỉ khác: đặt NEXT_PUBLIC_API_ORIGIN)
+npm run dev
 ```
 
 Truy cập: **http://localhost:3000**

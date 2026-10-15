@@ -246,6 +246,21 @@ CREATE TABLE IF NOT EXISTS InstagramAccounts (
   updated_at TEXT DEFAULT (datetime('now', 'localtime'))
 );
 
+CREATE TABLE IF NOT EXISTS TikTokAccounts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT,
+  username TEXT NOT NULL,
+  nickname TEXT,
+  avatar_url TEXT,
+  session_id TEXT,
+  cookies_json TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
+  error_message TEXT,
+  created_at TEXT DEFAULT (datetime('now', 'localtime')),
+  updated_at TEXT DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE INDEX IF NOT EXISTS IX_TikTokAccounts_username ON TikTokAccounts(username);
 CREATE INDEX IF NOT EXISTS IX_MessengerAutoReplyLog_page_created ON MessengerAutoReplyLog(page_id, created_at);
 CREATE INDEX IF NOT EXISTS IX_InstagramAccounts_page ON InstagramAccounts(page_id);
 CREATE INDEX IF NOT EXISTS IX_MessengerConversations_page_updated ON MessengerConversations(page_id, updated_time DESC);
@@ -262,7 +277,10 @@ CREATE INDEX IF NOT EXISTS IX_AiDrafts_user_status ON AiGeneratedDrafts(user_id,
 // Bổ sung cột mới cho các CSDL đã được tạo từ phiên bản cũ (CREATE TABLE IF NOT EXISTS không tự thêm cột)
 const COLUMN_MIGRATIONS = {
   Posts: {
-    published_at: 'TEXT'
+    published_at: 'TEXT',
+    platform: "TEXT NOT NULL DEFAULT 'facebook'",
+    tiktok_account_id: 'TEXT',
+    tiktok_publish_id: 'TEXT'
   },
   AppUsers: {
     email: 'TEXT',

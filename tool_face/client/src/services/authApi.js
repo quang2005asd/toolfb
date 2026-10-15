@@ -1,5 +1,7 @@
 import axios from 'axios';
-import { API_BASE_URL } from './apiBase';
+import { API_BASE } from './apiBase';
+
+const API_BASE_URL = API_BASE;
 
 export const SERVER_DOWN_MESSAGE = 'Không kết nối được máy chủ API. Máy chủ đang tắt hoặc đang khởi động lại — thử lại sau ít phút (quản trị viên: chạy "docker compose up -d" trong thư mục tool_face).';
 

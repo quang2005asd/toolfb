@@ -1,0 +1,5 @@
+# Caddy cài trên máy chủ (không nằm trong Docker). Tự lấy và gia hạn HTTPS.
+# Đổi tool.example.com thành tên miền của bạn (A record đã trỏ về IP máy chủ).
+tool.example.com {
+	reverse_proxy 127.0.0.1:3000
+}

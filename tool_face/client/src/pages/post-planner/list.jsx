@@ -25,6 +25,7 @@ import {
   FileText
 } from 'lucide-react';
 import { resolveMediaUrl } from '../../components/AiImageStudioModal';
+import PlatformIcon from '../../components/PlatformIcon';
 import useAuth from '../../hooks/useAuth';
 import { PERMISSIONS } from '../../utils/permissions';
 
@@ -515,6 +516,7 @@ export default function PostListPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [pageIdFilter, setPageIdFilter] = useState('all');
   const [channels, setChannels] = useState([]);
+  const [tiktokAccounts, setTiktokAccounts] = useState([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [selectedPostId, setSelectedPostId] = useState(null);
@@ -543,23 +545,27 @@ export default function PostListPage() {
 
   useEffect(() => {
     channelApi.list().then((result) => setChannels(result.channels || [])).catch(() => setChannels([]));
+    channelApi.tiktokAccounts().then((result) => setTiktokAccounts(result.accounts || [])).catch(() => setTiktokAccounts([]));
   }, []);
 
   // Hàm xử lý kích hoạt đăng ngay / Thử lại
   const handlePublishNow = async (id) => {
-    if (!confirm("Bạn có chắc chắn muốn đăng bài viết này lên Fanpage ngay lập tức?")) return;
+    const postItem = posts.find((p) => p.id === id);
+    const isTikTok = postItem?.platform === 'tiktok' || postItem?.page_id?.startsWith('tt_');
+    const platformLabel = isTikTok ? 'kênh TikTok (qua Puppeteer)' : 'Fanpage Facebook';
+    if (!confirm(`Bạn có chắc chắn muốn xuất bản bài viết này lên ${platformLabel} ngay lập tức?`)) return;
     setPublishingId(id);
     setToastNotice('');
     try {
       await postApi.triggerPostNow(id);
-      setToastNotice(`🚀 Đã gửi yêu cầu đăng ngay bài viết #${id}! Đang xử lý xuất bản lên Facebook...`);
-      // Đợi 1.5 giây để worker hoàn tất và tự làm mới danh sách
+      setToastNotice(`🚀 Đã gửi yêu cầu đăng ngay bài viết #${id}! Đang xử lý xuất bản lên ${isTikTok ? 'TikTok (Puppeteer)' : 'Facebook'}...`);
+      // Đợi 2.5 giây để scheduler kích hoạt và cập nhật danh sách
       setTimeout(async () => {
         await fetchPosts();
         setPublishingId(null);
-        setToastNotice(`✅ Bài viết #${id} đã được xuất bản lên Facebook thành công!`);
-        setTimeout(() => setToastNotice(''), 5000);
-      }, 1500);
+        setToastNotice(`✅ Đã kích hoạt lệnh đăng bài #${id} lên ${isTikTok ? 'TikTok' : 'Facebook'}!`);
+        setTimeout(() => setToastNotice(''), 6000);
+      }, 2500);
     } catch (err) {
       alert("Lỗi khi đăng bài: " + (err.response?.data?.message || err.message));
       setPublishingId(null);
@@ -721,8 +727,22 @@ export default function PostListPage() {
                     </td>
                   )}
                   <td>
-                    <span style={{ fontWeight: 600, color: 'var(--ink)' }}>
-                      {channels.find((c) => c.id === String(post.page_id))?.name || post.page_id || 'Fanpage'}
+                    <span style={{ fontWeight: 600, color: 'var(--ink)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      {post.platform === 'tiktok' ? (
+                        (() => {
+                          const acc = tiktokAccounts.find((a) => String(a.id) === String(post.tiktok_account_id || post.page_id));
+                          return (
+                            <>
+                              <PlatformIcon platform="tiktok" size={16} />
+                              <span style={{ color: '#FE2C55' }}>
+                                {acc ? `${acc.nickname || acc.username} (@${acc.username})` : `TikTok #${post.tiktok_account_id || post.page_id}`}
+                              </span>
+                            </>
+                          );
+                        })()
+                      ) : (
+                        channels.find((c) => c.id === String(post.page_id))?.name || post.page_id || 'Fanpage'
+                      )}
                     </span>
                   </td>
                   <td>

@@ -799,8 +799,19 @@ async function ensurePageWebhookSubscription(pageId) {
   webhookSubscriptionRetry.set(key, Date.now() + WEBHOOK_SUBSCRIBE_RETRY_MS);
   try {
     const token = await getPageToken(key);
+    // Gộp với các trường app đã đăng ký sẵn (vd: feed của AI Bình luận) để không ghi đè lẫn nhau
+    const fields = new Set(['messages', 'message_echoes']);
+    try {
+      const current = (await axios.get(`${GRAPH}/${key}/subscribed_apps`, { params: { access_token: token }, timeout: 15000 })).data.data || [];
+      const appId = String(process.env.FACEBOOK_APP_ID || '');
+      current
+        .filter((item) => !appId || String(item.id) === appId)
+        .forEach((item) => (item.subscribed_fields || []).forEach((field) => fields.add(field)));
+    } catch (readError) {
+      console.warn(`[Messenger Webhook] Không đọc được trường đã đăng ký của Fanpage ${key}:`, readError.response?.data?.error?.message || readError.message);
+    }
     await axios.post(`${GRAPH}/${key}/subscribed_apps`, null, {
-      params: { subscribed_fields: 'messages,message_echoes', access_token: token },
+      params: { subscribed_fields: [...fields].join(','), access_token: token },
       timeout: 15000
     });
     webhookSubscriptionRetry.set(key, Infinity);
