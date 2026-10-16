@@ -29,6 +29,8 @@ import {
 import MainLayout from '../../components/layout/MainLayout';
 import AiImageStudioModal, { resolveMediaUrl } from '../../components/AiImageStudioModal';
 import aiApi from '../../services/aiApi';
+import channelApi from '../../services/channelApi';
+import commentAiApi, { apiMessage } from '../../services/commentAiApi';
 
 /* ── Prompt Templates ── */
 const promptTemplates = [
@@ -100,6 +102,19 @@ export default function AIStudioPage() {
   const router = useRouter();
   const [studioOpen, setStudioOpen] = useState(false);
   const [activeDraftForStudio, setActiveDraftForStudio] = useState(null);
+  const [commentTemplateOpen, setCommentTemplateOpen] = useState(false);
+  const [commentTemplatePages, setCommentTemplatePages] = useState([]);
+  const [commentTemplatePageId, setCommentTemplatePageId] = useState('');
+  const [commentTemplateTopic, setCommentTemplateTopic] = useState('');
+  const [commentTemplateCount, setCommentTemplateCount] = useState(5);
+  const [commentTemplateDrafts, setCommentTemplateDrafts] = useState([]);
+  const [commentTemplateDraftPageId, setCommentTemplateDraftPageId] = useState('');
+  const [commentTemplateLoadingPages, setCommentTemplateLoadingPages] = useState(false);
+  const [commentTemplateGenerating, setCommentTemplateGenerating] = useState(false);
+  const [commentTemplateSaving, setCommentTemplateSaving] = useState(false);
+  const [commentTemplateNotice, setCommentTemplateNotice] = useState(null);
+  const [savedCommentTemplateCount, setSavedCommentTemplateCount] = useState(0);
+  const [savedCommentTemplatePageId, setSavedCommentTemplatePageId] = useState('');
 
   const handleOpenStudioForMessage = (messageText) => {
     const cleanTitle = messageText ? messageText.slice(0, 80).replace(/\n/g, ' ') : '';
@@ -257,6 +272,102 @@ export default function AIStudioPage() {
     setPrompt(templatePrompt);
     setShowTemplates(false);
     if (textareaRef.current) textareaRef.current.focus();
+  };
+
+  const handleOpenCommentTemplateGenerator = async () => {
+    setCommentTemplateOpen(true);
+    setShowTemplates(false);
+    setCommentTemplateNotice(null);
+    if (commentTemplatePages.length) return;
+    setCommentTemplateLoadingPages(true);
+    try {
+      const res = await channelApi.list(true);
+      const responsePages = res?.channels || res?.pages || [];
+      const pages = Array.isArray(responsePages) ? responsePages : [];
+      setCommentTemplatePages(pages);
+      const savedPageId = window.localStorage.getItem('commentAiPageId') || '';
+      const selected = pages.some((page) => String(page.id) === savedPageId)
+        ? savedPageId
+        : String(pages[0]?.id || '');
+      setCommentTemplatePageId(selected);
+      if (!selected) setCommentTemplateNotice({ type: 'error', text: 'Chưa có Fanpage nào được kết nối.' });
+    } catch (err) {
+      setCommentTemplateNotice({ type: 'error', text: apiMessage(err, 'Không tải được danh sách Fanpage.') });
+    } finally {
+      setCommentTemplateLoadingPages(false);
+    }
+  };
+
+  const handleGenerateCommentTemplateDrafts = async () => {
+    if (!commentTemplatePageId || commentTemplateGenerating) return;
+    setCommentTemplateGenerating(true);
+    setCommentTemplateNotice(null);
+    setSavedCommentTemplateCount(0);
+    try {
+      const res = await commentAiApi.generateTemplateDrafts(commentTemplatePageId, {
+        topic: commentTemplateTopic,
+        count: commentTemplateCount
+      });
+      const drafts = (res.drafts || []).map((draft, index) => ({
+        ...draft,
+        id: `${Date.now()}-${index}`,
+        selected: true
+      }));
+      setCommentTemplateDrafts(drafts);
+      setCommentTemplateDraftPageId(commentTemplatePageId);
+      setCommentTemplateNotice(drafts.length
+        ? { type: 'success', text: `AI đã tạo ${drafts.length} bản nháp. Hãy chỉnh sửa hoặc bỏ chọn trước khi lưu.` }
+        : { type: 'error', text: 'AI chưa tạo được bản nháp nào.' });
+    } catch (err) {
+      setCommentTemplateNotice({ type: 'error', text: apiMessage(err, 'Không tạo được mẫu trả lời.') });
+    } finally {
+      setCommentTemplateGenerating(false);
+    }
+  };
+
+  const handleSaveCommentTemplateDrafts = async () => {
+    const selected = commentTemplateDrafts.filter((draft) => draft.selected);
+    if (!selected.length || commentTemplateSaving) return;
+    if (commentTemplateDraftPageId !== commentTemplatePageId) {
+      setCommentTemplateNotice({ type: 'error', text: 'Các bản nháp được tạo cho Fanpage khác. Hãy chọn lại Fanpage đó hoặc tạo bản nháp mới.' });
+      return;
+    }
+    setCommentTemplateSaving(true);
+    setCommentTemplateNotice(null);
+    try {
+      window.localStorage.setItem('commentAiPageId', commentTemplatePageId);
+      const savedIds = [];
+      const results = [];
+      for (const draft of selected) {
+        try {
+          const res = await commentAiApi.createTemplate(commentTemplatePageId, {
+            name: draft.name,
+            keywords: draft.keywords,
+            content: draft.content,
+            mode: draft.mode
+          });
+          savedIds.push(draft.id);
+          results.push({ status: res.template?.status });
+        } catch (err) {
+          results.push({ error: `${draft.name}: ${apiMessage(err, 'Không lưu được mẫu.')}` });
+        }
+      }
+      setCommentTemplateDrafts((current) => current.filter((draft) => !savedIds.includes(draft.id)));
+      setSavedCommentTemplateCount(savedIds.length);
+      setSavedCommentTemplatePageId(savedIds.length ? commentTemplatePageId : '');
+      const pending = results.filter((result) => result.status === 'pending').length;
+      const approved = results.filter((result) => result.status === 'approved').length;
+      const failures = results.filter((result) => result.error).map((result) => result.error);
+      const summary = `Đã lưu ${savedIds.length} mẫu (${approved} đã duyệt, ${pending} chờ duyệt).`;
+      setCommentTemplateNotice({
+        type: failures.length ? 'error' : 'success',
+        text: failures.length ? `${summary} Lỗi: ${failures.join(' · ')}` : summary
+      });
+    } catch (err) {
+      setCommentTemplateNotice({ type: 'error', text: apiMessage(err, 'Không lưu được các mẫu đã chọn.') });
+    } finally {
+      setCommentTemplateSaving(false);
+    }
   };
 
   const quickChips = [
@@ -570,6 +681,137 @@ export default function AIStudioPage() {
 
           {/* Composer */}
           <div className="ai-composer-wrap">
+            {commentTemplateOpen && (
+              <section className="panel" style={{ marginBottom: 12 }}>
+                <div className="panel-heading">
+                  <h3 style={{ margin: 0 }}>Tạo mẫu trả lời cho Fanpage</h3>
+                  <button type="button" className="button button-quiet" aria-label="Đóng tạo mẫu" onClick={() => setCommentTemplateOpen(false)}>
+                    <X size={15} />
+                  </button>
+                </div>
+                <div className="panel-body" style={{ display: 'grid', gap: 12 }}>
+                  {commentTemplateNotice && (
+                    <div className="notice" style={{
+                      borderColor: commentTemplateNotice.type === 'error' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(16, 185, 129, 0.4)',
+                      color: commentTemplateNotice.type === 'error' ? '#ef4444' : '#10b981'
+                    }}>
+                      {commentTemplateNotice.text}
+                    </div>
+                  )}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+                    <label>
+                      <span className="field-label">Fanpage</span>
+                      <select
+                        className="field"
+                        value={commentTemplatePageId}
+                        onChange={(e) => setCommentTemplatePageId(e.target.value)}
+                        disabled={commentTemplateLoadingPages}
+                      >
+                        <option value="">{commentTemplateLoadingPages ? 'Đang tải Fanpage...' : 'Chọn Fanpage'}</option>
+                        {commentTemplatePages.map((page) => (
+                          <option key={page.id} value={String(page.id)}>{page.name || page.page_name || page.id}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      <span className="field-label">Số mẫu (tối đa 10)</span>
+                      <input
+                        className="field"
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={commentTemplateCount}
+                        onChange={(e) => setCommentTemplateCount(Math.min(10, Math.max(1, Number(e.target.value) || 1)))}
+                      />
+                    </label>
+                  </div>
+                  <label>
+                    <span className="field-label">Chủ đề hoặc nội dung bài đăng (không bắt buộc)</span>
+                    <textarea
+                      className="field"
+                      rows={3}
+                      value={commentTemplateTopic}
+                      onChange={(e) => setCommentTemplateTopic(e.target.value)}
+                      placeholder="Ví dụ: bài giới thiệu dòng sản phẩm mới hoặc dán nội dung bài đăng..."
+                    />
+                  </label>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className="button button-primary"
+                      onClick={handleGenerateCommentTemplateDrafts}
+                      disabled={!commentTemplatePageId || commentTemplateLoadingPages || commentTemplateGenerating}
+                    >
+                      <Sparkles size={14} /> {commentTemplateGenerating ? 'Đang tạo...' : 'Tạo bản nháp'}
+                    </button>
+                    <button
+                      type="button"
+                      className="button button-secondary"
+                      onClick={handleSaveCommentTemplateDrafts}
+                      disabled={commentTemplateSaving || commentTemplateDraftPageId !== commentTemplatePageId || !commentTemplateDrafts.some((draft) => draft.selected)}
+                    >
+                      <Check size={14} /> {commentTemplateSaving ? 'Đang lưu...' : 'Lưu vào mẫu'}
+                    </button>
+                    {savedCommentTemplateCount > 0 && (
+                      <Link
+                        href="/comment-ai/templates"
+                        className="button button-secondary"
+                        onClick={() => window.localStorage.setItem('commentAiPageId', savedCommentTemplatePageId)}
+                        style={{ textDecoration: 'none' }}
+                      >
+                        Mở Mẫu trả lời
+                      </Link>
+                    )}
+                  </div>
+                  {commentTemplateDrafts.length > 0 && commentTemplateDraftPageId !== commentTemplatePageId && (
+                    <small className="muted">Bản nháp thuộc Fanpage đã chọn lúc tạo; chọn lại Fanpage đó để lưu.</small>
+                  )}
+                  {commentTemplateDrafts.map((draft) => (
+                    <article key={draft.id} className="panel" style={{ padding: 12, display: 'grid', gap: 8 }}>
+                      <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={draft.selected}
+                          onChange={(e) => setCommentTemplateDrafts((current) => current.map((item) => item.id === draft.id ? { ...item, selected: e.target.checked } : item))}
+                        />
+                        <strong>Dùng mẫu này</strong>
+                      </label>
+                      <input
+                        className="field"
+                        aria-label="Tên mẫu"
+                        value={draft.name}
+                        onChange={(e) => setCommentTemplateDrafts((current) => current.map((item) => item.id === draft.id ? { ...item, name: e.target.value } : item))}
+                        placeholder="Tên mẫu"
+                      />
+                      <input
+                        className="field"
+                        aria-label="Từ khóa"
+                        value={draft.keywords}
+                        onChange={(e) => setCommentTemplateDrafts((current) => current.map((item) => item.id === draft.id ? { ...item, keywords: e.target.value } : item))}
+                        placeholder="Từ khóa, phân tách bằng dấu phẩy"
+                      />
+                      <textarea
+                        className="field"
+                        aria-label="Nội dung mẫu"
+                        rows={3}
+                        value={draft.content}
+                        onChange={(e) => setCommentTemplateDrafts((current) => current.map((item) => item.id === draft.id ? { ...item, content: e.target.value } : item))}
+                      />
+                      <select
+                        className="field"
+                        aria-label="Cách dùng mẫu"
+                        value={draft.mode}
+                        onChange={(e) => setCommentTemplateDrafts((current) => current.map((item) => item.id === draft.id ? { ...item, mode: e.target.value } : item))}
+                      >
+                        <option value="guided">AI viết lại theo mẫu (khi AI bật)</option>
+                        <option value="exact">Gửi nguyên văn mẫu</option>
+                      </select>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            )}
+
             {/* Template Panel */}
             {showTemplates && (
               <div className="ai-template-panel">
@@ -586,15 +828,26 @@ export default function AIStudioPage() {
                         <cat.icon size={14} /> {cat.category}
                       </div>
                       {cat.items.map((item) => (
-                        <button
-                          key={item.label}
-                          type="button"
-                          className="ai-template-item"
-                          onClick={() => handleUseTemplate(item.prompt)}
-                        >
-                          <span>{item.label}</span>
-                          <ArrowRight size={13} />
-                        </button>
+                        <div key={item.label} style={{ display: 'grid', gap: 6 }}>
+                          <button
+                            type="button"
+                            className="ai-template-item"
+                            onClick={() => handleUseTemplate(item.prompt)}
+                          >
+                            <span>{item.label}</span>
+                            <ArrowRight size={13} />
+                          </button>
+                          {item.label === 'Kịch bản trả lời comment' && (
+                            <button
+                              type="button"
+                              className="button button-secondary"
+                              onClick={handleOpenCommentTemplateGenerator}
+                              style={{ justifyContent: 'center' }}
+                            >
+                              <Sparkles size={13} /> Tạo mẫu cho Fanpage
+                            </button>
+                          )}
+                        </div>
                       ))}
                     </div>
                   ))}

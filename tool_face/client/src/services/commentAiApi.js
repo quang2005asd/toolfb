@@ -11,11 +11,13 @@ const q = (pageId, params = {}) => ({ params: { pageId, ...params } });
 
 export const commentAiApi = {
   getSettings: async (pageId) => (await api.get('/settings', q(pageId))).data,
+  getStudioTone: async (pageId) => (await api.get('/studio-tone', q(pageId))).data,
   saveSettings: async (pageId, body) => (await api.put('/settings', body, q(pageId))).data,
   subscribe: async (pageId) => (await api.post('/subscribe', {}, q(pageId))).data,
   preview: async (pageId, body) => (await api.post('/preview', body, q(pageId))).data,
 
   listTemplates: async (pageId) => (await api.get('/templates', q(pageId))).data,
+  generateTemplateDrafts: async (pageId, body) => (await api.post('/templates/generate', body, { ...q(pageId), timeout: 120000 })).data,
   createTemplate: async (pageId, body) => (await api.post('/templates', body, q(pageId))).data,
   updateTemplate: async (pageId, id, body) => (await api.put(`/templates/${id}`, body, q(pageId))).data,
   approveTemplate: async (pageId, id) => (await api.post(`/templates/${id}/approve`, {}, q(pageId))).data,

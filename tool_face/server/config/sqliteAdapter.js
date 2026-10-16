@@ -62,6 +62,14 @@ CREATE TABLE IF NOT EXISTS Posts (
   published_at TEXT
 );
 
+CREATE TABLE IF NOT EXISTS CommentAiPostCache (
+  page_id TEXT NOT NULL,
+  post_id TEXT NOT NULL,
+  message TEXT NOT NULL,
+  fetched_at TEXT NOT NULL,
+  PRIMARY KEY (page_id, post_id)
+);
+
 CREATE TABLE IF NOT EXISTS PostComments (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   post_id INTEGER NOT NULL,

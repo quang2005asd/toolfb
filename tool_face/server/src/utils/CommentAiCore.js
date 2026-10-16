@@ -104,6 +104,7 @@ function mapSettings(pageId, row) {
     requireApproval: Boolean(row?.require_approval),
     onlyTemplates: Boolean(row?.only_templates),
     tone: row?.tone ?? DEFAULT_TONE,
+    toneConfigured: Boolean(String(row?.tone || '').trim()),
     shop: row?.shop_info || '',
     vars: cleanVars(parseJson(row?.vars_json, {})),
     leadRules: normalizeRules(parseJson(row?.lead_rules_json, null)),
@@ -148,16 +149,18 @@ async function savePageSettings(pageId, patch, by) {
     ['by', sql.NVarChar(120), String(by || '')],
     ['now', sql.DateTime2, now]
   ]);
-  // Vừa bật AI: chỉ trả lời bình luận từ thời điểm này, không trả lời ngược các bình luận cũ
-  if (next.aiEnabled && !current.aiEnabled) {
+  const wasReplyEnabled = current.aiEnabled || current.onlyTemplates;
+  const isReplyEnabled = next.aiEnabled || next.onlyTemplates;
+  // Bật chế độ trả lời: chỉ xử lý bình luận từ thời điểm này, không trả lời ngược bình luận cũ.
+  if (isReplyEnabled && !wasReplyEnabled) {
     await exec('UPDATE dbo.CommentAiPageSettings SET poll_since=@now WHERE page_id=@pageId', [PAGE(pageId), ['now', sql.DateTime2, now]]);
   }
   return getPageSettings(pageId);
 }
 
 // ═══ GỌI AI (dùng cấu hình AI chung ở màn hình Cài đặt) ═══
-async function callAi(messages, { json = false, maxTokens = 500, temperature = 0.5, timeout = 30000 } = {}) {
-  const { apiKey, model, baseUrl } = await getAiConfig();
+async function callAi(messages, { json = false, maxTokens = 500, temperature = 0.5, timeout = 30000, config } = {}) {
+  const { apiKey, model, baseUrl } = config || await getAiConfig();
   if (!apiKey) throw new Error('AI chưa được cấu hình. Hãy vào Cài đặt để thêm AI API Key.');
   const body = { model, messages, temperature, max_tokens: maxTokens };
   const headers = { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' };
