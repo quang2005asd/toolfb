@@ -9,6 +9,7 @@ const express = require('express');
 const multer = require('multer');
 const { requireAuth } = require('../../middlewares/auth');
 const { getConnectedPages } = require('../../utils/FacebookPageConnections');
+const { getSettings } = require('../../utils/SettingsService');
 const core = require('../../utils/CommentAiCore');
 const service = require('../../utils/CommentAiService');
 const leads = require('../../utils/CommentAiLeadService');
@@ -65,12 +66,29 @@ router.get('/settings', handle('Settings', async (req, res) => {
   res.json({ success: true, settings, defaults: { tone: core.DEFAULT_TONE } });
 }));
 
+router.get('/studio-tone', handle('Studio Tone', async (req, res) => {
+  const settings = await getSettings();
+  res.json({
+    success: true,
+    tone: String(settings.ai_system_prompt || 'Bạn là trợ lý sáng tạo nội dung chuyên nghiệp cho Fanpage Facebook. Giọng văn tự nhiên, lôi cuốn, chuẩn phong cách viral mạng xã hội.').trim()
+  });
+}));
+
 router.put('/settings', handle('Settings Save', async (req, res) => {
   const b = req.body || {};
-  const wasEnabled = (await getPageSettings(req.pageId)).aiEnabled;
-  const s = await savePageSettings(req.pageId, { aiEnabled: b.aiEnabled, requireApproval: b.requireApproval, onlyTemplates: b.onlyTemplates, tone: b.tone, shop: b.shop, vars: b.vars }, actor(req).name);
+  const previous = await getPageSettings(req.pageId);
+  const wasEnabled = previous.aiEnabled || previous.onlyTemplates;
+  const canManageApproval = req.user.role === 'admin' || req.user.role === 'manager';
+  const s = await savePageSettings(req.pageId, {
+    aiEnabled: b.aiEnabled,
+    requireApproval: canManageApproval ? b.requireApproval : undefined,
+    onlyTemplates: b.onlyTemplates,
+    tone: b.tone,
+    shop: b.shop,
+    vars: b.vars
+  }, actor(req).name);
   let webhookNote = null;
-  if (s.aiEnabled && !wasEnabled) {
+  if ((s.aiEnabled || s.onlyTemplates) && !wasEnabled) {
     try {
       await service.subscribePage(req.pageId);
       webhookNote = 'Đã đăng ký webhook cho Fanpage.';
@@ -101,6 +119,20 @@ router.get('/templates', handle('Templates', async (req, res) => {
 
 router.post('/templates/suggest', handle('Templates Suggest', async (req, res) => {
   res.json({ success: true, ...(await service.suggestTemplates(req.pageId)) });
+}));
+
+router.post('/templates/generate', handle('Templates Generate', async (req, res) => {
+  const rawCount = req.body?.count;
+  const count = rawCount === undefined ? 5 : Number(rawCount);
+  if (!Number.isInteger(count) || count < 1) {
+    return res.status(400).json({ success: false, message: 'Số mẫu phải là số nguyên dương.' });
+  }
+  const drafts = await service.generateTemplateDrafts(req.pageId, {
+    topic: String(req.body?.topic || '').trim().slice(0, 2000),
+    postContent: String(req.body?.postContent || '').trim().slice(0, 8000),
+    count: Math.min(count, 10)
+  });
+  res.json({ success: true, drafts });
 }));
 
 router.post('/templates', handle('Templates Create', async (req, res) => {
@@ -230,7 +262,7 @@ router.get('/diagnostics', handle('Diagnostics', async (req, res) => {
 const webhookRouter = express.Router();
 
 webhookRouter.get('/', (req, res) => {
-  const expected = process.env.FB_VERIFY_TOKEN;
+  const expected = process.env.FB_VERIFY_TOKEN || process.env.MESSENGER_VERIFY_TOKEN;
   if (expected && req.query['hub.mode'] === 'subscribe' && req.query['hub.verify_token'] === expected) {
     return res.status(200).send(req.query['hub.challenge']);
   }
@@ -239,7 +271,8 @@ webhookRouter.get('/', (req, res) => {
 
 function signatureValid(req) {
   const secret = process.env.FACEBOOK_APP_SECRET;
-  if (!secret) return true; // chưa cấu hình thì không kiểm tra được
+  // Chưa có App Secret thì không xác thực được nguồn gửi → từ chối (tránh nhận sự kiện giả mạo)
+  if (!secret) return false;
   const provided = String(req.get('x-hub-signature-256') || '');
   if (!req.rawBody || !provided) return false;
   const expected = `sha256=${crypto.createHmac('sha256', secret).update(req.rawBody).digest('hex')}`;

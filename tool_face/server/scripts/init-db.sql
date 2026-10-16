@@ -79,6 +79,18 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID(N'dbo.CommentAiPostCache', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.CommentAiPostCache (
+        page_id     VARCHAR(64)   NOT NULL,
+        post_id     VARCHAR(100)  NOT NULL,
+        message     NVARCHAR(MAX) NOT NULL,
+        fetched_at  DATETIME2     NOT NULL,
+        CONSTRAINT PK_CommentAiPostCache PRIMARY KEY (page_id, post_id)
+    );
+END
+GO
+
 PRINT N'';
 PRINT N'🎉 Khởi tạo database hoàn tất!';
 GO

@@ -1,21 +1,18 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Bot, RefreshCw, Save, Send } from 'lucide-react';
+import { Bot, RefreshCw, Save, Send, Sparkles } from 'lucide-react';
 import CommentAiShell, { Notice, SENTIMENT_LABEL } from '../../components/comment-ai/CommentAiShell';
 import commentAiApi, { apiMessage } from '../../services/commentAiApi';
-
-const VARS = [
-  ['ten_page', 'Tên Fanpage'],
-  ['sdt_shop', 'SĐT / Zalo shop'],
-  ['dia_chi_shop', 'Địa chỉ shop'],
-  ['website', 'Website / link đặt hàng'],
-  ['gio_mo_cua', 'Giờ mở cửa']
-];
+import useAuth from '../../hooks/useAuth';
 
 function SettingsPanel({ pageId }) {
+  const { user } = useAuth();
+  const canManageApproval = user?.role === 'admin' || user?.role === 'manager';
   const [settings, setSettings] = useState(null);
+  const [defaultTone, setDefaultTone] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loadingStudioTone, setLoadingStudioTone] = useState(false);
   const [notice, setNotice] = useState(null);
   const [comment, setComment] = useState('');
   const [chat, setChat] = useState([]);
@@ -24,7 +21,12 @@ function SettingsPanel({ pageId }) {
   useEffect(() => {
     let cancelled = false;
     commentAiApi.getSettings(pageId)
-      .then((res) => { if (!cancelled) setSettings(res.settings); })
+      .then((res) => {
+        if (!cancelled) {
+          setSettings(res.settings);
+          setDefaultTone(res.defaults?.tone || '');
+        }
+      })
       .catch((err) => { if (!cancelled) setNotice({ type: 'error', text: apiMessage(err, 'Không tải được cấu hình.') }); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
@@ -56,6 +58,28 @@ function SettingsPanel({ pageId }) {
     }
   };
 
+  const importStudioTone = async () => {
+    if (settings.toneConfigured || (settings.tone?.trim() && settings.tone !== defaultTone)) {
+      setNotice({ type: 'error', text: 'Ô giọng văn đã có nội dung; không ghi đè dữ liệu hiện tại.' });
+      return;
+    }
+    setLoadingStudioTone(true);
+    setNotice(null);
+    try {
+      const res = await commentAiApi.getStudioTone(pageId);
+      if (!res.tone) {
+        setNotice({ type: 'error', text: 'AI Studio chưa có giọng văn để lấy.' });
+      } else {
+        update({ tone: res.tone });
+        setNotice({ type: 'success', text: 'Đã điền giọng văn từ AI Studio. Bạn có thể chỉnh sửa trước khi lưu.' });
+      }
+    } catch (err) {
+      setNotice({ type: 'error', text: apiMessage(err, 'Không lấy được giọng văn từ AI Studio.') });
+    } finally {
+      setLoadingStudioTone(false);
+    }
+  };
+
   const sendTest = async () => {
     const text = comment.trim();
     if (!text) return;
@@ -82,6 +106,9 @@ function SettingsPanel({ pageId }) {
   if (loading) return <section className="panel" style={{ padding: 24 }}><span className="muted">Đang tải...</span></section>;
   if (!settings) return <Notice notice={notice} />;
 
+  const commentReplyEnabled = settings.aiEnabled || settings.onlyTemplates;
+  const replyStatus = settings.aiEnabled ? 'Đang bật' : settings.onlyTemplates ? 'Chỉ theo mẫu' : 'Đang tắt';
+
   return (
     <>
       <Notice notice={notice} />
@@ -89,58 +116,63 @@ function SettingsPanel({ pageId }) {
       <section className="panel" style={{ marginBottom: 18 }}>
         <div className="panel-heading">
           <h2><Bot size={16} style={{ verticalAlign: 'middle', marginRight: 8 }} />Trạng thái AI của Fanpage này</h2>
-          <span className={`status-pill ${settings.aiEnabled ? 'published' : 'pending'}`}>{settings.aiEnabled ? 'Đang bật' : 'Đang tắt'}</span>
+          <span className={`status-pill ${commentReplyEnabled ? 'published' : 'pending'}`}>{replyStatus}</span>
         </div>
         <div className="panel-body" style={{ display: 'grid', gap: 12 }}>
-          <label style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <input type="checkbox" checked={settings.aiEnabled} onChange={(e) => update({ aiEnabled: e.target.checked })} />
-            <span><b>Tự động trả lời bình luận mới</b><small className="muted" style={{ display: 'block' }}>Mặc định tắt. Khi bật, AI chỉ trả lời các bình luận từ thời điểm bật trở đi.</small></span>
+          <label className={`ar-toggle${settings.aiEnabled ? ' is-on' : ''}`}>
+            <span>
+              <strong>Tự động trả lời bình luận mới</strong>
+              <small className="muted">Bật để AI tự soạn câu trả lời. Nếu chỉ bật chế độ mẫu bên dưới, AI chỉ trả lời bình luận khớp mẫu đã lưu.</small>
+            </span>
+            <input type="checkbox" role="switch" aria-label="Tự động trả lời bình luận mới" checked={settings.aiEnabled} onChange={(e) => update({ aiEnabled: e.target.checked })} />
+            <span className="ar-switch" aria-hidden="true" />
           </label>
-          <label style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <input type="checkbox" checked={settings.onlyTemplates} onChange={(e) => update({ onlyTemplates: e.target.checked })} />
-            <span>Chỉ trả lời khi có mẫu phù hợp (bỏ qua bình luận còn lại)</span>
+          <label className={`ar-toggle${settings.onlyTemplates ? ' is-on' : ''}`}>
+            <span>
+              <strong>Chỉ trả lời khi có mẫu phù hợp</strong>
+              <small className="muted">Khi bật, AI tự nhận diện mẫu khớp với bình luận và chỉ trả lời theo mẫu đó; bình luận không khớp sẽ được bỏ qua.</small>
+            </span>
+            <input type="checkbox" role="switch" aria-label="Chỉ trả lời khi có mẫu phù hợp" checked={settings.onlyTemplates} onChange={(e) => update({ onlyTemplates: e.target.checked })} />
+            <span className="ar-switch" aria-hidden="true" />
           </label>
-          <label style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <input type="checkbox" checked={settings.requireApproval} onChange={(e) => update({ requireApproval: e.target.checked })} />
-            <span>Mẫu do thành viên soạn phải được admin duyệt mới dùng được</span>
-          </label>
+          {canManageApproval && (
+            <label className={`ar-toggle${settings.requireApproval ? ' is-on' : ''}`}>
+              <span>
+                <strong>Yêu cầu admin duyệt mẫu</strong>
+                <small className="muted">Khi bật, mẫu do thành viên soạn chỉ được AI sử dụng sau khi admin duyệt.</small>
+              </span>
+              <input type="checkbox" role="switch" aria-label="Yêu cầu admin duyệt mẫu" checked={settings.requireApproval} onChange={(e) => update({ requireApproval: e.target.checked })} />
+              <span className="ar-switch" aria-hidden="true" />
+            </label>
+          )}
+          <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+            Các công tắc này chỉ áp dụng cho bình luận; không tắt trả lời tự động trong Inbox. Hướng dẫn AI và biến được cài riêng trong từng mẫu trả lời.
+          </p>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
+              <label className="field-label" htmlFor="comment-ai-tone" style={{ margin: 0 }}>Giọng văn AI cho bình luận</label>
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={importStudioTone}
+                disabled={loadingStudioTone || settings.toneConfigured || (Boolean(settings.tone?.trim()) && settings.tone !== defaultTone)}
+              >
+                <Sparkles size={14} /> {loadingStudioTone ? 'Đang lấy...' : 'Lấy giọng văn từ AI Studio'}
+              </button>
+            </div>
+            <textarea
+              id="comment-ai-tone"
+              className="field"
+              rows={3}
+              value={settings.tone || ''}
+              onChange={(e) => update({ tone: e.target.value })}
+              placeholder="Mô tả giọng điệu và quy tắc trả lời bình luận..."
+            />
+            <small className="muted">Chỉ điền từ AI Studio khi ô này chưa có nội dung tùy chỉnh; bạn vẫn có thể sửa trước khi lưu.</small>
+          </div>
           <p className="muted" style={{ margin: 0, fontSize: 13 }}>
             AI dùng nhà cung cấp, model và API Key đã cấu hình ở <Link href="/settings">Cài đặt</Link>.
           </p>
-        </div>
-      </section>
-
-      <section className="panel" style={{ marginBottom: 18 }}>
-        <div className="panel-heading"><h2>Hướng dẫn cho AI</h2></div>
-        <div className="panel-body" style={{ display: 'grid', gap: 14 }}>
-          <div>
-            <label className="field-label" htmlFor="ai-tone">Giọng điệu và quy tắc trả lời</label>
-            <textarea id="ai-tone" className="field" rows={3} value={settings.tone} onChange={(e) => update({ tone: e.target.value })} />
-          </div>
-          <div>
-            <label className="field-label" htmlFor="ai-shop">Thông tin cửa hàng (AI chỉ được dùng thông tin này, không tự bịa giá hay địa chỉ)</label>
-            <textarea id="ai-shop" className="field" rows={5} value={settings.shop} onChange={(e) => update({ shop: e.target.value })} placeholder="Ví dụ: Shop bán hoa tươi. Giao nội thành trong 2 giờ. Giá bó hoa từ 250.000đ..." />
-          </div>
-        </div>
-      </section>
-
-      <section className="panel" style={{ marginBottom: 18 }}>
-        <div className="panel-heading"><h2>Biến dùng trong mẫu</h2></div>
-        <div className="panel-body">
-          <p className="muted" style={{ marginTop: 0 }}>Nhập một lần, mọi mẫu tự cập nhật. Khi soạn mẫu, bấm nút chèn biến ở trang Mẫu trả lời. Mẫu dùng biến chưa nhập sẽ bị bỏ qua để không đăng chữ trống lên Facebook.</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
-            {VARS.map(([key, label]) => (
-              <div key={key}>
-                <label className="field-label" htmlFor={`var-${key}`}>{label}</label>
-                <input
-                  id={`var-${key}`}
-                  className="field"
-                  value={settings.vars?.[key] || ''}
-                  onChange={(e) => update({ vars: { ...settings.vars, [key]: e.target.value } })}
-                />
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 

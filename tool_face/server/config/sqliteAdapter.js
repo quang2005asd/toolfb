@@ -62,6 +62,14 @@ CREATE TABLE IF NOT EXISTS Posts (
   published_at TEXT
 );
 
+CREATE TABLE IF NOT EXISTS CommentAiPostCache (
+  page_id TEXT NOT NULL,
+  post_id TEXT NOT NULL,
+  message TEXT NOT NULL,
+  fetched_at TEXT NOT NULL,
+  PRIMARY KEY (page_id, post_id)
+);
+
 CREATE TABLE IF NOT EXISTS PostComments (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   post_id INTEGER NOT NULL,
@@ -246,6 +254,21 @@ CREATE TABLE IF NOT EXISTS InstagramAccounts (
   updated_at TEXT DEFAULT (datetime('now', 'localtime'))
 );
 
+CREATE TABLE IF NOT EXISTS TikTokAccounts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT,
+  username TEXT NOT NULL,
+  nickname TEXT,
+  avatar_url TEXT,
+  session_id TEXT,
+  cookies_json TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
+  error_message TEXT,
+  created_at TEXT DEFAULT (datetime('now', 'localtime')),
+  updated_at TEXT DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE INDEX IF NOT EXISTS IX_TikTokAccounts_username ON TikTokAccounts(username);
 CREATE INDEX IF NOT EXISTS IX_MessengerAutoReplyLog_page_created ON MessengerAutoReplyLog(page_id, created_at);
 CREATE INDEX IF NOT EXISTS IX_InstagramAccounts_page ON InstagramAccounts(page_id);
 CREATE INDEX IF NOT EXISTS IX_MessengerConversations_page_updated ON MessengerConversations(page_id, updated_time DESC);
@@ -262,7 +285,10 @@ CREATE INDEX IF NOT EXISTS IX_AiDrafts_user_status ON AiGeneratedDrafts(user_id,
 // Bổ sung cột mới cho các CSDL đã được tạo từ phiên bản cũ (CREATE TABLE IF NOT EXISTS không tự thêm cột)
 const COLUMN_MIGRATIONS = {
   Posts: {
-    published_at: 'TEXT'
+    published_at: 'TEXT',
+    platform: "TEXT NOT NULL DEFAULT 'facebook'",
+    tiktok_account_id: 'TEXT',
+    tiktok_publish_id: 'TEXT'
   },
   AppUsers: {
     email: 'TEXT',
@@ -594,7 +620,28 @@ class SqliteRequest {
       });
     }
 
-    const sqlStr = translated.sql;
+    // db.run / db.all của sqlite3 chỉ chạy câu lệnh ĐẦU TIÊN: query có nhiều câu (DELETE ...; DELETE ...; hoặc
+    // UPDATE ...; SELECT ...) phải chạy lần lượt, giống mssql trả recordset của câu SELECT và rowsAffected từng câu
+    // Tách trên câu T-SQL gốc rồi chuyển đổi từng câu (TOP → LIMIT, OUTPUT → RETURNING áp dụng đúng câu của nó)
+    const parts = splitSqlStatements(command);
+    const statements = parts.length > 1
+      ? parts.map((part) => translateQuery(part)).filter((item) => !item.isNoOp && item.sql).map((item) => item.sql)
+      : [translated.sql];
+    if (statements.length > 1) {
+      let recordset = [];
+      const rowsAffected = [];
+      for (const statement of statements) {
+        const result = await this.runStatement(statement);
+        rowsAffected.push(result.rowsAffected[0]);
+        if (result.isSelect) recordset = result.recordset;
+      }
+      return { recordset, rowsAffected };
+    }
+    const { isSelect, ...result } = await this.runStatement(statements[0] || translated.sql);
+    return result;
+  }
+
+  runStatement(sqlStr) {
     const isSelectOrReturning = /^\s*SELECT\b/i.test(sqlStr) || /\bRETURNING\b/i.test(sqlStr);
     const execParams = filterParamsForSql(sqlStr, this.parameters);
 
@@ -620,7 +667,8 @@ class SqliteRequest {
           }
           resolve({
             recordset,
-            rowsAffected: [recordset.length]
+            rowsAffected: [recordset.length],
+            isSelect: true
           });
         });
       } else {
@@ -631,12 +679,49 @@ class SqliteRequest {
           }
           resolve({
             recordset: [],
-            rowsAffected: [this.changes || 0]
+            rowsAffected: [this.changes || 0],
+            isSelect: false
           });
         });
       }
     });
   }
+}
+
+// Tách các câu lệnh theo dấu ; nằm ngoài chuỗi '...' / "..." và ngoài chú thích --
+function splitSqlStatements(sqlText) {
+  const statements = [];
+  let current = '';
+  let quote = null;
+  for (let i = 0; i < sqlText.length; i += 1) {
+    const ch = sqlText[i];
+    if (quote) {
+      current += ch;
+      if (ch === quote) {
+        if (sqlText[i + 1] === quote) { current += sqlText[i + 1]; i += 1; } else { quote = null; }
+      }
+      continue;
+    }
+    if (ch === '-' && sqlText[i + 1] === '-') {
+      const end = sqlText.indexOf('\n', i);
+      i = end === -1 ? sqlText.length : end;
+      current += '\n';
+      continue;
+    }
+    if (ch === "'" || ch === '"') {
+      quote = ch;
+      current += ch;
+      continue;
+    }
+    if (ch === ';') {
+      if (current.trim()) statements.push(current.trim());
+      current = '';
+      continue;
+    }
+    current += ch;
+  }
+  if (current.trim()) statements.push(current.trim());
+  return statements;
 }
 
 class SqlitePool {
