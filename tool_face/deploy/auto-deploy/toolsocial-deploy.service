@@ -1,0 +1,13 @@
+[Unit]
+Description=Tool Social - tu dong deploy tu GitHub (nhanh main)
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/toolsocial/bin/auto-deploy.sh
+# Ưu tiên thấp để không tranh tài nguyên với site khác (build còn bị giới hạn CPU/RAM trong builder)
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+TimeoutStartSec=45min

@@ -1,0 +1,4 @@
+# Script / unit systemd chạy trên Linux: luôn dùng LF (ký tự \r của Windows làm script lỗi trên VPS)
+*.sh text eol=lf
+*.service text eol=lf
+*.timer text eol=lf

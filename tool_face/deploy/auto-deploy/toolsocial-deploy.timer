@@ -1,0 +1,10 @@
+[Unit]
+Description=Tool Social - kiem tra commit moi tren GitHub moi 3 phut
+
+[Timer]
+OnBootSec=3min
+OnUnitInactiveSec=3min
+RandomizedDelaySec=20
+
+[Install]
+WantedBy=timers.target

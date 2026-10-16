@@ -117,6 +117,26 @@ cd /opt/tool_face && docker compose -f docker-compose.prod.yml up -d --build
 
 Dữ liệu nằm trong Docker volume nên không mất khi cập nhật. **Không chạy** `docker compose down -v` (lệnh này xóa toàn bộ dữ liệu).
 
+### 9b. Tự động deploy khi push lên GitHub (VPS dùng chung, `docker-compose.shared.yml`)
+
+VPS tự kiểm tra nhánh `main` mỗi 3 phút; có commit mới thì: kiểm tra dấu xung đột → build (giới hạn 2 CPU / 3 GB) → kiểm tra cú pháp → sao lưu CSDL → chạy bản mới → kiểm tra tool và các site khác. Lỗi ở bất kỳ bước nào thì **giữ / quay về bản trước** và không thử lại commit đó. File trong `deploy/auto-deploy/`:
+
+| File | Đặt tại VPS |
+|---|---|
+| `auto-deploy.sh` | `/opt/toolsocial/bin/auto-deploy.sh` (không tự cập nhật theo repo) |
+| `toolsocial-deploy.service`, `toolsocial-deploy.timer` | `/etc/systemd/system/` |
+| `deploy.conf.example` | `/opt/toolsocial/.deploy.conf` (điền tên miền + site khác cần bảo vệ) |
+
+Công cụ build (`docker-buildx`) cài riêng trong `/opt/toolsocial/.docker/cli-plugins/` và builder `toolsocial-builder` có giới hạn CPU/RAM, nên không đổi cách build của dự án khác trên máy chủ.
+
+```bash
+tail -f /var/log/toolsocial-deploy.log                 # xem nhật ký deploy
+systemctl list-timers toolsocial-deploy.timer          # lần kiểm tra kế tiếp
+/opt/toolsocial/bin/auto-deploy.sh --build-only        # build thử commit mới nhất, không deploy
+systemctl stop toolsocial-deploy.timer                 # tạm dừng tự động deploy (start để bật lại)
+rm /opt/toolsocial/.failed-commit                      # cho phép thử lại commit từng bị đánh dấu lỗi
+```
+
 ## 10. (Tùy chọn) Chuyển dữ liệu từ máy hiện tại
 
 Trên Windows (Docker local đang chạy):

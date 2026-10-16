@@ -1,0 +1,10 @@
+# Sao chép thành /opt/toolsocial/.deploy.conf trên VPS (KHÔNG đưa file thật lên Git)
+
+# Địa chỉ công khai của tool — kiểm tra /api/health, /privacy/, /login/ sau mỗi lần deploy
+PUBLIC_URL=https://ten-mien-cua-ban.com
+
+# Các site KHÁC chạy chung máy chủ: "URL mã-HTTP-mong-đợi", mỗi dòng một site.
+# Trước deploy: site nào khác mã → hoãn deploy. Sau deploy: site nào khác mã → tự quay về bản trước.
+GUARD_URLS="https://site-khac-1.example 200
+https://www.site-khac-1.example 301
+https://site-khac-2.example 200"
