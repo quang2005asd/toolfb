@@ -56,12 +56,14 @@ function authConfiguration() {
   return { configured: missing.length === 0, missing };
 }
 
+// Mặc định đi qua domain của tool (nginx / Caddy chuyển /api sang server): https://ten-mien/api/auth/facebook/callback
 function facebookRedirectUri() {
-  return process.env.FACEBOOK_REDIRECT_URI || 'http://localhost:5000/api/auth/facebook/callback';
+  return process.env.FACEBOOK_REDIRECT_URI || `${clientOrigin()}/api/auth/facebook/callback`;
 }
 
+// CLIENT_ORIGIN có thể chứa nhiều domain cách nhau dấu phẩy: domain đầu tiên là domain chính
 function clientOrigin() {
-  return (process.env.CLIENT_ORIGIN || 'http://localhost:3000').replace(/\/$/, '');
+  return (process.env.CLIENT_ORIGIN || 'http://localhost:3000').split(',')[0].trim().replace(/\/$/, '');
 }
 
 function signSession(user) {

@@ -1,28 +1,31 @@
 # ========================================================
 # Dockerfile for Tool FB Backend Server & Worker
+# Chromium dùng cho đăng bài TikTok tự động (Puppeteer). Không cần TikTok thì build với:
+#   docker build --build-arg INSTALL_CHROMIUM=false ./server
 # ========================================================
 # trixie: sqlite3 prebuilt binary requires glibc >= 2.38 (bookworm ships 2.36)
 FROM node:20-trixie-slim
 
 WORKDIR /app
 
-# Install basic network utilities
-RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && rm -rf /var/lib/apt/lists/*
+# Network utilities (+ Chromium cho Puppeteer)
+ARG INSTALL_CHROMIUM=true
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends curl ca-certificates \
+  && if [ "$INSTALL_CHROMIUM" = "true" ]; then apt-get install -y --no-install-recommends chromium fonts-liberation; fi \
+  && rm -rf /var/lib/apt/lists/*
 
-# Copy package descriptors first for Docker cache optimization
+# Dùng Chromium của hệ điều hành, không để Puppeteer tải thêm trình duyệt khi npm install
+ENV PUPPETEER_SKIP_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+
 COPY package*.json ./
-# msnodesqlv8 is Windows-only (Linux uses mssql/tedious), so skip native install scripts
-# and rebuild only sqlite3, which is needed at runtime
 RUN npm install --omit=dev --ignore-scripts && npm rebuild sqlite3
 
-# Copy application source code
 COPY . .
-
-# Ensure storage directories exist
 RUN mkdir -p /app/data /app/uploads
 
 EXPOSE 5000
-
 ENV PORT=5000
 ENV NODE_ENV=production
 

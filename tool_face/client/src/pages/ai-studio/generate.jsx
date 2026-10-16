@@ -245,7 +245,7 @@ export default function AIGeneratePage() {
       if (postType === 'reel') {
         const file = files[0];
         if (!file.type.startsWith('video/')) throw new Error('Facebook Reels chỉ hỗ trợ Video (tỷ lệ 9:16), không hỗ trợ ảnh tĩnh.');
-        if (file.size > 50 * 1024 * 1024) throw new Error(`Video vượt quá dung lượng tối đa 50MB.`);
+        if (file.size > 100 * 1024 * 1024) throw new Error(`Video vượt quá dung lượng tối đa 100MB.`);
         
         const formData = new FormData();
         formData.append('file', file);
@@ -254,7 +254,7 @@ export default function AIGeneratePage() {
       } else if (postType === 'story') {
         const file = files[0];
         if (file.type.startsWith('image/') && file.size > 1024 * 1024) throw new Error(`Ảnh Story vượt quá dung lượng tối đa 1MB.`);
-        if (file.type.startsWith('video/') && file.size > 50 * 1024 * 1024) throw new Error(`Video Story vượt quá dung lượng tối đa 50MB.`);
+        if (file.type.startsWith('video/') && file.size > 100 * 1024 * 1024) throw new Error(`Video Story vượt quá dung lượng tối đa 100MB.`);
         
         const formData = new FormData();
         formData.append('file', file);
@@ -264,7 +264,7 @@ export default function AIGeneratePage() {
         const hasVideo = files.some(f => f.type.startsWith('video/'));
         if (hasVideo) {
           const videoFile = files.find(f => f.type.startsWith('video/'));
-          if (videoFile.size > 50 * 1024 * 1024) throw new Error(`Video vượt quá dung lượng tối đa 50MB.`);
+          if (videoFile.size > 100 * 1024 * 1024) throw new Error(`Video vượt quá dung lượng tối đa 100MB.`);
           const formData = new FormData();
           formData.append('file', videoFile);
           const uploaded = await postApi.uploadMedia(formData);

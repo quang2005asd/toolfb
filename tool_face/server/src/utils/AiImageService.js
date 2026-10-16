@@ -177,7 +177,8 @@ async function generateImage({ prompt, style = 'photorealistic', ratio = '1:1', 
   // Ghi tệp vào thư mục uploads
   await fs.promises.writeFile(filePath, imageBuffer);
 
-  const serverOrigin = process.env.BACKEND_URL || 'http://localhost:5000';
+  // Mặc định link tương đối /api/media/... (client gọi cùng domain); BACKEND_URL chỉ cần khi API ở domain khác
+  const serverOrigin = (process.env.BACKEND_URL || '').replace(/\/$/, '');
 
   return {
     success: true,

@@ -88,6 +88,29 @@ export const channelApi = {
   syncInstagram: async () => {
     const response = await api.post('/channels/instagram/sync');
     return response.data;
+  },
+  // Kiểm tra từng bước đọc tin nhắn Instagram của một Fanpage
+  diagnoseInstagram: async (pageId) => {
+    const response = await api.get(`/channels/instagram/${encodeURIComponent(pageId)}/diagnose`);
+    return response.data;
+  },
+
+  // TikTok Accounts (Cookie / Puppeteer)
+  tiktokAccounts: async () => {
+    const response = await api.get('/channels/tiktok');
+    return response.data;
+  },
+  addTikTokAccount: async (cookies, nickname) => {
+    const response = await api.post('/channels/tiktok', { cookies, nickname });
+    return response.data;
+  },
+  checkTikTokAccount: async (id) => {
+    const response = await api.post(`/channels/tiktok/${id}/check`);
+    return response.data;
+  },
+  deleteTikTokAccount: async (id) => {
+    const response = await api.delete(`/channels/tiktok/${id}`);
+    return response.data;
   }
 };
 

@@ -139,7 +139,91 @@ async function getInstagramAccountForPage(pageId) {
   return account;
 }
 
+// ═══ CHẨN ĐOÁN ĐỌC TIN NHẮN INSTAGRAM ═══
+const REQUIRED_SCOPES = ['instagram_basic', 'instagram_manage_messages', 'pages_manage_metadata', 'pages_messaging'];
+const ACCESS_HINT = 'Instagram: Cài đặt → Tin nhắn và lượt phản hồi tin → Công cụ đã kết nối → bật "Cho phép truy cập tin nhắn".';
+const STANDARD_ACCESS_HINT = [
+  'Quyền đã đủ nhưng Meta không trả về hội thoại nào: app Meta chưa được duyệt (Standard Access) chỉ thấy tin của người có vai trò trong app / Fanpage, tin của người lạ bị ẩn.',
+  '• Để thử: thêm người nhắn làm Tester (developers.facebook.com → Vai trò trong ứng dụng) và liên kết Instagram của họ với Facebook đó, hoặc nhắn từ tài khoản của admin app.',
+  '• Để nhận tin mọi khách: xác minh doanh nghiệp + App Review xin Advanced Access cho instagram_manage_messages.',
+  `• Kiểm tra ${ACCESS_HINT}`
+].join('\n');
+
+function graphError(error) {
+  const fb = error.response?.data?.error;
+  return fb ? { code: fb.code, message: fb.message } : { code: null, message: error.message };
+}
+
+// Kiểm tra từng bước cần có để tool đọc được Instagram Direct; mỗi bước: ok | warn | error
+async function diagnoseMessaging(pageId, tokenProvider = getFacebookPageAccessToken) {
+  const key = String(pageId);
+  const checks = [];
+  const add = (id, status, label, detail = null) => checks.push({ id, status, label, detail });
+  const result = (extra = {}) => ({ pageId: key, checks, ok: checks.every((check) => check.status === 'ok'), ...extra });
+
+  let token;
+  try {
+    token = await tokenProvider(key);
+  } catch (error) {
+    add('token', 'error', 'Token Fanpage', `Không lấy được token: ${graphError(error).message}. Hãy kết nối lại Facebook ở tab Facebook.`);
+    return result();
+  }
+
+  try {
+    const { data } = await axios.get(`${GRAPH}/debug_token`, { params: { input_token: token, access_token: token }, timeout: 15000 });
+    const info = data.data || {};
+    const scopes = info.scopes || [];
+    const missing = REQUIRED_SCOPES.filter((scope) => !scopes.includes(scope));
+    add('token', info.is_valid === false ? 'error' : 'ok', 'Token Fanpage còn hiệu lực',
+      info.is_valid === false ? 'Token đã hết hạn — kết nối lại Facebook ở tab Facebook.' : null);
+    add('scopes', missing.length ? 'error' : 'ok', 'Đủ quyền đọc / gửi tin nhắn Instagram',
+      missing.length ? `Thiếu quyền: ${missing.join(', ')}. Đăng nhập lại Facebook và tích đủ các quyền này.` : REQUIRED_SCOPES.join(', '));
+  } catch (error) {
+    add('token', 'error', 'Token Fanpage còn hiệu lực', graphError(error).message);
+    return result();
+  }
+
+  const pool = await getPool();
+  const pageRow = (await pool.request().input('pageId', sql.VarChar(64), key)
+    .query('SELECT TOP 1 tasks_json FROM dbo.FacebookPages WHERE page_id=@pageId')).recordset[0];
+  let tasks = [];
+  try { tasks = JSON.parse(pageRow?.tasks_json || '[]'); } catch {}
+  add('task', tasks.includes('MESSAGING') ? 'ok' : 'error', 'Nick Facebook có quyền nhắn tin trên Fanpage',
+    tasks.includes('MESSAGING') ? null : 'Nick Facebook đã kết nối chưa có quyền MESSAGING trên Fanpage này (cần vai trò Quản trị viên hoặc có quyền Tin nhắn).');
+
+  let igAccount = null;
+  try {
+    const { data } = await axios.get(`${GRAPH}/${key}`, { params: { fields: 'instagram_business_account{id,username}', access_token: token }, timeout: 15000 });
+    igAccount = data.instagram_business_account || null;
+    add('linked', igAccount ? 'ok' : 'error', 'Fanpage đã liên kết Instagram chuyên nghiệp',
+      igAccount ? `@${igAccount.username}` : 'Chưa liên kết: chuyển Instagram sang tài khoản chuyên nghiệp rồi liên kết với Fanpage trong Meta Business Suite.');
+  } catch (error) {
+    add('linked', 'error', 'Fanpage đã liên kết Instagram chuyên nghiệp', graphError(error).message);
+  }
+  if (!igAccount) return result();
+
+  let conversationCount = null;
+  try {
+    const { data } = await axios.get(`${GRAPH}/${key}/conversations`, {
+      params: { platform: 'instagram', fields: 'id', limit: 25, access_token: token },
+      timeout: 15000
+    });
+    conversationCount = (data.data || []).length;
+    add('read', 'ok', 'Đọc được hộp thư Instagram qua API', null);
+  } catch (error) {
+    const fb = graphError(error);
+    const accessDisabled = [3, 10, 100, 200, 230].includes(fb.code);
+    add('read', 'error', 'Đọc được hộp thư Instagram qua API', accessDisabled ? `${ACCESS_HINT} (Facebook báo: ${fb.message})` : fb.message);
+    return result({ instagram: igAccount });
+  }
+
+  add('visible', conversationCount > 0 ? 'ok' : 'warn', 'Meta trả về hội thoại Instagram',
+    conversationCount > 0 ? `${conversationCount}${conversationCount >= 25 ? '+' : ''} hội thoại.` : STANDARD_ACCESS_HINT);
+  return result({ instagram: igAccount, conversationCount });
+}
+
 module.exports = {
+  diagnoseMessaging,
   ensureInstagramSchema,
   getInstagramAccountForPage,
   listInstagramAccounts,

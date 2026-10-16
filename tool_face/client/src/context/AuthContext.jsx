@@ -8,6 +8,8 @@ import { resetMessengerUnread } from '../hooks/useMessengerUnread';
 
 const AuthContext = createContext(null);
 
+const PUBLIC_PATHS = new Set(['/', '/login', '/privacy', '/terms', '/data-deletion']);
+
 // Cache dữ liệu theo tài khoản phải xóa khi đổi tài khoản để không lộ dữ liệu của người trước
 function resetAccountCaches() {
   postApi.invalidateStatsCache();
@@ -24,8 +26,8 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!router.isReady) return;
     
-    // On login page or root, do not force redirect
-    if (router.pathname === '/login' || router.pathname === '/') {
+    // Trang công khai (đăng nhập, trang chủ, trang pháp lý Meta yêu cầu): không bắt đăng nhập
+    if (PUBLIC_PATHS.has(router.pathname)) {
       setLoading(false);
       return;
     }

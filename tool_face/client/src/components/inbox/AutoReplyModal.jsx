@@ -10,7 +10,6 @@ const VARIABLES = [
   { token: '{ten_page}', label: 'Tên Fanpage' }
 ];
 const MAX_TEMPLATE = 1000;
-const MAX_INSTRUCTION = 1500;
 
 function errorText(err, fallback) {
   return err.response?.data?.message || err.message || fallback;
@@ -221,24 +220,12 @@ export default function AutoReplyModal({ onClose, onSaved }) {
                       Quản trị viên có thể thêm key tại <Link href="/settings">Cài đặt → Cấu hình AI Studio</Link>.
                     </div>
                   )}
+                  {form.mode === 'ai' && (
+                    <small className="muted">Hướng dẫn AI và biến dùng chung được cấu hình trong từng mẫu tại trang Mẫu trả lời.</small>
+                  )}
                 </div>
 
-                {form.mode === 'ai' && (
                   <div>
-                    <label className="field-label" htmlFor="ar-instruction">Hướng dẫn cho AI (không bắt buộc)</label>
-                    <textarea
-                      id="ar-instruction"
-                      className="field"
-                      rows={3}
-                      maxLength={MAX_INSTRUCTION}
-                      placeholder="VD: Bạn là nhân viên shop thời trang ABC. Mở cửa 8h–22h, hotline 09xx xxx xxx, freeship đơn từ 300k."
-                      value={form.aiInstruction}
-                      onChange={(e) => update({ aiInstruction: e.target.value })}
-                    />
-                  </div>
-                )}
-
-                <div>
                   <div className="ar-label-row">
                     <label className="field-label" htmlFor="ar-template">{form.mode === 'ai' ? 'Mẫu dự phòng (dùng khi AI lỗi)' : 'Nội dung trả lời'}</label>
                     <span className="ar-vars">

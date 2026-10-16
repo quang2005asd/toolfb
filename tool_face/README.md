@@ -1,18 +1,79 @@
-# 🚀 Tool Face — Facebook Fanpage Automation Suite
+# 🚀 Tool Face — Facebook & TikTok Automation Suite
 
-Hệ thống quản lý, lập lịch bài đăng và tự động hoá Fanpage Facebook chuyên nghiệp. Tích hợp AI Studio sáng tạo nội dung, tải lên hàng loạt từ file Excel, kịch bản seeding bình luận tự động, quản lý đa tài khoản và giao diện **Apple Frosted Glass** hiện đại hỗ trợ cả **Tone Trắng (Light Mode)** và **Giao diện Tối (Dark Mode)**.
+Hệ thống quản lý, lập lịch bài đăng và tự động hoá Fanpage Facebook & **TikTok** chuyên nghiệp. Tích hợp AI Studio sáng tạo nội dung, tải lên hàng loạt từ file Excel, kịch bản seeding bình luận tự động, quản lý đa tài khoản và giao diện **Apple Frosted Glass** hiện đại hỗ trợ cả **Tone Trắng (Light Mode)** và **Giao diện Tối (Dark Mode)**.
 
 ---
 
 ## 🌟 Tính Năng Nổi Bật
 
-- 📅 **Lập lịch đăng bài thông minh:** Hỗ trợ bài viết đơn lẻ hoặc hàng loạt với kiểm duyệt nội dung trước khi xuất bản.
+- 📅 **Lập lịch đăng bài thông minh:** Hỗ trợ bài viết đơn lẻ hoặc hàng loạt với kiểm duyệt nội dung trước khi xuất bản — cả **Facebook lẫn TikTok**.
 - 📊 **Tải lên hàng loạt từ Excel (Bulk Upload):** Kiểm tra tính hợp lệ của từng dòng dữ liệu, xem trước nội dung và ảnh media trực quan.
 - 💬 **Seeding bình luận tự động:** Tự động trả lời, gắn thẻ và seeding tương tác theo chu kỳ định sẵn.
 - 🎨 **AI Studio & Sáng tạo ảnh:** Tích hợp mô hình AI tạo bài viết theo nhiều giọng văn, gắn hashtag và emoji tự động.
-- 👥 **Quản lý đa Fanpage & Nick Facebook:** Phân quyền token riêng lẻ hoặc đồng bộ theo tài khoản cá nhân.
+- 👥 **Quản lý đa Fanpage, Nick Facebook & Tài khoản TikTok:** Phân quyền token riêng lẻ hoặc đồng bộ theo tài khoản cá nhân.
+- 🎵 **Đăng video lên TikTok tự động:** Kết nối tài khoản TikTok qua Puppeteer (không cần API chính thức), lên lịch đăng video với caption & hashtag.
 - 🌗 **Giao diện Apple Frosted Glass:** Tinh chỉnh chuẩn mực với hiệu ứng kính mờ cao cấp, mượt mà ở cả Tone Trắng kem và Dark Mode bóng đêm.
 - 🐳 **Đóng gói Docker Compose toàn diện:** Triển khai cả hệ thống (Frontend, Backend, Worker, Redis, SQLite) chỉ với **1 lệnh duy nhất**.
+
+---
+
+## 🎵 Tích Hợp TikTok
+
+Hệ thống hỗ trợ đăng video lên TikTok thông qua Puppeteer (tự động hoá trình duyệt), không phụ thuộc vào TikTok API chính thức.
+
+### Kiến Trúc TikTok
+
+```
+[Frontend Compose]
+    └─> Chọn nền tảng "TikTok" + tài khoản TikTok
+    └─> Upload video lên server (/api/upload)
+    └─> Tạo bài đăng (/api/posts) với platform="tiktok"
+            │
+[BullMQ Worker / Scheduler]
+    └─> Phát hiện bài đăng TikTok đến giờ đăng
+    └─> Gọi TikTokPuppeteerService.executePublishTikTokPost()
+            │
+[Puppeteer / Chromium]
+    └─> Mở trình duyệt ẩn → đăng nhập TikTok bằng cookie đã lưu
+    └─> Upload video → điền caption + hashtag → Xuất bản
+```
+
+### Cách Kết Nối Tài Khoản TikTok
+
+1. Vào trang **Kênh → Tab TikTok**.
+2. Bấm nút **"Kết nối TikTok"** — trình duyệt Chromium sẽ mở ra trang đăng nhập TikTok.
+3. Đăng nhập TikTok bằng tài khoản của bạn (hỗ trợ cả đăng nhập bằng điện thoại / email / QR Code).
+4. Sau khi đăng nhập thành công, hệ thống tự động lưu cookie phiên đăng nhập.
+5. Tài khoản sẽ xuất hiện trong danh sách với trạng thái **"Đã kết nối"**.
+
+> **Lưu ý:** Cookie TikTok được mã hóa và lưu trữ an toàn trong database. Tuy nhiên, TikTok có thể vô hiệu hóa phiên bất kỳ lúc nào — hãy kết nối lại nếu tài khoản báo "Mất kết nối".
+
+### Cách Đăng Bài Lên TikTok
+
+1. Vào trang **Lên Lịch → Soạn Bài**.
+2. Chọn **nền tảng "TikTok"** ở bộ chọn Platform.
+3. Chọn **tài khoản TikTok** từ danh sách tài khoản đã kết nối.
+4. Upload **file video** (định dạng MP4/MOV, tối đa theo giới hạn TikTok).
+5. Nhập **caption** và **hashtag** (không bắt buộc).
+6. Chọn thời gian đăng → Bấm **Lên Lịch**.
+
+Hệ thống sẽ tự động đăng video vào đúng giờ đã đặt thông qua BullMQ Worker.
+
+### Yêu Cầu Hệ Thống Cho TikTok (Puppeteer)
+
+| Thành phần | Yêu cầu |
+|---|---|
+| **Chromium** | Tự động tải về khi `npm install` (gói `puppeteer`) |
+| **RAM** | Khuyến nghị tối thiểu **2 GB** (Chromium chạy ngầm) |
+| **VPS** | Cần cài thêm thư viện hệ thống cho Chromium headless trên Linux |
+| **Docker** | Dockerfile đã tích hợp sẵn các thư viện Chromium headless |
+
+> **Trên VPS Linux (không dùng Docker):** Chạy lệnh sau để cài thư viện hệ thống cần thiết:
+> ```bash
+> apt-get install -y libx11-xcb1 libxcomposite1 libxdamage1 libxrandr2 \
+>   libgbm1 libpango-1.0-0 libcairo2 libasound2 libatk1.0-0 libnss3 \
+>   libxss1 libgtk-3-0 fonts-liberation
+> ```
 
 ---
 
@@ -59,6 +120,15 @@ Hệ thống sẽ tự động khởi tạo 4 dịch vụ:
 | **Khởi động lại** | `docker compose restart` |
 | **Tắt và dọn dẹp container** | `docker compose down` |
 | **Dọn dẹp sạch cả database volume** | `docker compose down -v` |
+
+---
+
+## 🌍 Chạy Thật Cho Người Dùng (VPS + Tên Miền + HTTPS)
+
+Bản `docker-compose.yml` ở trên chỉ dành cho chạy thử trên máy. Khi đưa lên Internet dùng `docker-compose.prod.yml` (Caddy tự cấp HTTPS, bắt buộc đặt mật khẩu admin, khóa bí mật riêng, trang Chính sách / Điều khoản / Xóa dữ liệu cho Meta):
+
+- Hướng dẫn từng bước: [deploy/HUONG-DAN-VPS.md](deploy/HUONG-DAN-VPS.md)
+- Cấu hình Meta App, xác minh doanh nghiệp, App Review: [deploy/META-APP-REVIEW.md](deploy/META-APP-REVIEW.md)
 
 ---
 
@@ -124,6 +194,7 @@ npm run worker
 
 # Terminal 3: Chạy Client Frontend (Port 3000)
 cd client
+# npm run dev tự gọi API ở http://localhost:5000 (đổi địa chỉ khác: đặt NEXT_PUBLIC_API_ORIGIN)
 npm run dev
 ```
 
@@ -225,3 +296,27 @@ Từ đó tool tự đổi sang **token dài hạn (~60 ngày)**; token Fanpage 
 
 ### 9. Đăng nhập Facebook báo lỗi App ID?
 → Facebook không dùng để đăng nhập vào tool (tool dùng tài khoản riêng). Facebook Login chỉ dùng để kết nối / lấy lại token Fanpage và cần App ID & App Secret như mục 8.
+
+### 10. TikTok báo "Mất kết nối" / cookie hết hạn?
+TikTok sử dụng cookie phiên đăng nhập. Cookie có thể hết hạn vì các lý do:
+- **TikTok đăng xuất từ xa** (bảo mật tài khoản, đổi mật khẩu, đăng nhập thiết bị khác).
+- **Cookie hết thời hạn sống** (thường sau vài tuần nếu không hoạt động).
+
+→ Vào **Kênh → TikTok**, bấm **"Kết nối lại"** và đăng nhập lại để làm mới cookie.
+
+### 11. Chromium không khởi động được khi chạy TikTok trên VPS?
+Nguyên nhân thường gặp trên VPS Linux:
+- Thiếu thư viện hệ thống cho Chromium headless.
+- Không đủ RAM (Chromium cần ít nhất 512 MB mỗi phiên).
+- Môi trường không có màn hình ảo (`DISPLAY`).
+
+→ **Giải pháp:**
+1. Đảm bảo đã cài thư viện hệ thống (xem mục **Tích Hợp TikTok** bên trên).
+2. Nếu dùng Docker, kiểm tra trong Dockerfile đã có `--no-sandbox` và `--disable-dev-shm-usage`.
+3. Tăng RAM cho VPS hoặc thêm swap file:
+```bash
+# Tạo 2 GB swap
+fallocate -l 2G /swapfile && chmod 600 /swapfile
+mkswap /swapfile && swapon /swapfile
+echo '/swapfile none swap sw 0 0' >> /etc/fstab
+```

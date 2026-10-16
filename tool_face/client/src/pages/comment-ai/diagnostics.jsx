@@ -34,7 +34,7 @@ function DiagnosticsPanel({ pageId }) {
     <>
       <Notice notice={notice} />
       <section className="panel">
-        <div className="panel-heading"><h2>Chẩn đoán Fanpage đang chọn</h2></div>
+        <div className="panel-heading"><h2>Kiểm tra hệ thống của Fanpage đang chọn</h2></div>
         <div className="panel-body">
           <p className="muted" style={{ marginTop: 0 }}>Tạo báo cáo tình trạng để gửi cho người hỗ trợ thay cho ảnh chụp màn hình. Token và khóa bí mật đã được che tự động. Chế độ đầy đủ sẽ gọi Facebook và AI để kiểm tra token, quyền, webhook và bình luận.</p>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
@@ -62,7 +62,7 @@ function DiagnosticsPanel({ pageId }) {
 
 export default function CommentAiDiagnosticsPage() {
   return (
-    <CommentAiShell title="Chẩn đoán">
+    <CommentAiShell title="Kiểm tra hệ thống">
       {(pageId) => <DiagnosticsPanel key={pageId} pageId={pageId} />}
     </CommentAiShell>
   );

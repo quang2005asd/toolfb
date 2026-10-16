@@ -29,6 +29,7 @@ import {
 import MainLayout from '../../components/layout/MainLayout';
 import AiImageStudioModal, { resolveMediaUrl } from '../../components/AiImageStudioModal';
 import aiApi from '../../services/aiApi';
+import AiStudioSwitch from '../../components/comment-ai/AiStudioSwitch';
 import channelApi from '../../services/channelApi';
 import commentAiApi, { apiMessage } from '../../services/commentAiApi';
 
@@ -379,6 +380,7 @@ export default function AIStudioPage() {
 
   return (
     <MainLayout title="AI Studio">
+      <AiStudioSwitch current="write" />
       <div className={`ai-studio-shell ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
         {/* ── Left History Sidebar ── */}
         <aside className="ai-sidebar">

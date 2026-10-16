@@ -39,8 +39,9 @@ const channelGroupService = require('./utils/ChannelGroupService');
 const messengerService = require('./utils/MessengerService');
 const autoReplyService = require('./utils/MessengerAutoReplyService');
 const instagramService = require('./utils/InstagramService');
+const tiktokService = require('./utils/TikTokService');
 const commentAiService = require('./utils/CommentAiService');
-const { commentAiRouter } = require('./modules/comment-ai/comment-ai.routes');
+const { commentAiRouter, facebookWebhookRouter } = require('./modules/comment-ai/comment-ai.routes');
 
 const tokenService = require('./utils/FacebookTokenService');
 
@@ -85,15 +86,15 @@ const {
 } = require('./middlewares/auth');
 
 const app = express();
-const frontendOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:3000';
+// Chỉ domain của tool (CLIENT_ORIGIN, có thể nhiều domain cách nhau dấu phẩy) và localhost được gọi API kèm cookie.
+// Trình duyệt gọi cùng domain qua /api nên không cần CORS; website lạ bị chặn đọc dữ liệu đăng nhập.
+const allowedOrigins = new Set((process.env.CLIENT_ORIGIN || 'http://localhost:3000')
+  .split(',').map((item) => item.trim().replace(/\/$/, '')).filter(Boolean));
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
     const clean = origin.replace(/\/$/, '');
-    if (clean === frontendOrigin || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(clean)) {
-      return callback(null, true);
-    }
-    return callback(null, true);
+    callback(null, allowedOrigins.has(clean) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(clean));
   },
   credentials: true
 }));
@@ -106,6 +107,7 @@ app.use(express.json({
 }));
 app.use('/api', loadSession);
 app.use('/api/comment-ai', commentAiRouter);
+app.use('/api/webhooks/facebook', facebookWebhookRouter);
 
 const mediaDirectory = process.env.APP_DATA_DIR
   ? path.join(process.env.APP_DATA_DIR, 'uploads')
@@ -429,11 +431,13 @@ app.use('/uploads', express.static(mediaDirectory));
 
 app.post('/api/media', requireAuth, handleMediaUpload, (req, res) => {
   if (!req.file) return res.status(400).json({ success: false, message: 'Vui lòng chọn ảnh hoặc video.' });
+  const isVideo = req.file.mimetype.startsWith('video/') || /\.(mp4|mov|avi|wmv|flv|webm|mkv)$/i.test(req.file.originalname);
   return res.status(201).json({
     success: true,
     mediaLink: `local://${req.file.filename}`,
     previewUrl: `/api/media/${req.file.filename}`,
     fileName: req.file.originalname,
+    mediaType: isVideo ? 'video' : 'image',
     size: req.file.size
   });
 });
@@ -1114,6 +1118,7 @@ app.get('/api/channels/accounts', requireAuth, async (req, res) => {
 app.delete('/api/channels/accounts/:fbAccountId', requireAuth, async (req, res) => {
   try {
     await disconnectFbAccount(req.user.sub, req.params.fbAccountId);
+    await messengerService.purgeDisconnectedPageData().catch((error) => console.warn('[Purge Page Data]', error.message));
     return res.json({ success: true, message: 'Đã xóa tài khoản Facebook và toàn bộ Fanpage trực thuộc.' });
   } catch (error) {
     return sendApiError(res, 'Delete Account Error', error, 'Không thể xóa tài khoản Facebook.');
@@ -1291,6 +1296,7 @@ app.post('/api/channels/token-renew', requireAuth, async (req, res) => {
 app.delete('/api/channels/:pageId', requireAuth, async (req, res) => {
   try {
     await disconnectFacebookPage(req.user.sub, req.params.pageId);
+    await messengerService.purgeDisconnectedPageData().catch((error) => console.warn('[Purge Page Data]', error.message));
     return res.json({ success: true, message: 'Đã hủy kết nối Fanpage.' });
   } catch (error) {
     return sendApiError(res, 'Disconnect Error', error, 'Không thể hủy kết nối Page.');
@@ -1382,9 +1388,27 @@ async function getMessengerPages(userId) {
   return [...unique.values()];
 }
 
+// Số hội thoại Instagram đã đồng bộ theo Fanpage: "đã liên kết" nhưng 0 hội thoại thường do Meta ẩn tin (Standard Access)
+async function countInstagramConversations(pageIds) {
+  const counts = new Map();
+  if (!pageIds.length) return counts;
+  try {
+    await messengerService.ensureMessengerSchema();
+    const pool = await getPool();
+    const request = pool.request();
+    pageIds.forEach((id, index) => request.input(`pg${index}`, sql.VarChar(64), String(id)));
+    const rows = await request.query(`SELECT page_id, COUNT(*) AS total FROM dbo.MessengerConversations WHERE platform='instagram' AND page_id IN (${pageIds.map((_, index) => `@pg${index}`).join(', ')}) GROUP BY page_id`);
+    rows.recordset.forEach((row) => counts.set(String(row.page_id), Number(row.total) || 0));
+  } catch (error) {
+    console.warn('[Instagram] Không đếm được hội thoại Instagram:', error.message);
+  }
+  return counts;
+}
+
 async function describeMessengerPages(pages) {
   const accounts = await instagramService.listInstagramAccounts(pages.map((page) => String(page.id))).catch(() => []);
   const byPage = new Map(accounts.map((account) => [String(account.pageId), account]));
+  const igCounts = await countInstagramConversations([...byPage.keys()]);
   return pages.map((page) => {
     const supportsMessaging = Array.isArray(page.tasks) && page.tasks.includes('MESSAGING');
     let status = messengerService.getPageStatus(page.id, 'messenger');
@@ -1407,7 +1431,8 @@ async function describeMessengerPages(pages) {
         username: instagram.username,
         profilePictureUrl: instagram.profilePictureUrl,
         status: instagramStatus.state,
-        statusMessage: instagramStatus.message
+        statusMessage: instagramStatus.message,
+        conversationCount: igCounts.get(String(page.id)) || 0
       } : null
     };
   });
@@ -1633,6 +1658,7 @@ app.post('/api/messenger/auto-reply/preview', requireAuth, async (req, res) => {
     const { mode, templateText, aiInstruction, sampleText } = req.body || {};
     const preview = await autoReplyService.previewReply({
       settings: { mode: mode === 'ai' ? 'ai' : 'template', templateText, aiInstruction },
+      pageId: page?.id,
       pageName: page?.name || 'Shop',
       sampleText
     });
@@ -1647,6 +1673,7 @@ async function instagramChannelsPayload(pages) {
   const pageIds = pages.map((page) => String(page.id));
   const accounts = await instagramService.listInstagramAccounts(pageIds);
   const byPage = new Map(accounts.map((account) => [String(account.pageId), account]));
+  const counts = await countInstagramConversations(pageIds);
   return {
     accounts: accounts.map((account) => {
       const status = messengerService.getPageStatus(account.pageId, 'instagram');
@@ -1654,7 +1681,8 @@ async function instagramChannelsPayload(pages) {
         ...account,
         pageName: pages.find((page) => String(page.id) === String(account.pageId))?.name || null,
         messagingStatus: status.state,
-        messagingMessage: status.message
+        messagingMessage: status.message,
+        conversationCount: counts.get(String(account.pageId)) || 0
       };
     }),
     pagesWithoutInstagram: pages.filter((page) => !byPage.has(String(page.id))).map((page) => ({ id: String(page.id), name: page.name }))
@@ -1688,6 +1716,128 @@ app.post('/api/channels/instagram/sync', requireAuth, async (req, res) => {
   }
 });
 
+// signed_request của Meta: "<chữ ký base64url>.<payload base64url>", ký HMAC-SHA256 bằng App Secret
+function parseSignedRequest(signedRequest, appSecret) {
+  if (typeof signedRequest !== 'string' || !appSecret) return null;
+  const [encodedSignature, payload] = signedRequest.split('.', 2);
+  if (!encodedSignature || !payload) return null;
+  const expected = crypto.createHmac('sha256', appSecret).update(payload).digest();
+  const provided = Buffer.from(encodedSignature, 'base64url');
+  if (provided.length !== expected.length || !crypto.timingSafeEqual(provided, expected)) return null;
+  try {
+    const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    return String(data.algorithm || '').toUpperCase() === 'HMAC-SHA256' ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+// Data Deletion Request Callback: Meta gọi khi người dùng gỡ app trong cài đặt Facebook và yêu cầu xóa dữ liệu
+app.post('/api/meta/data-deletion', express.urlencoded({ extended: false }), async (req, res) => {
+  const { appSecret } = await tokenService.getMetaAppCredentials().catch(() => ({}));
+  const data = parseSignedRequest(req.body?.signed_request, appSecret || process.env.FACEBOOK_APP_SECRET);
+  if (!data?.user_id) return res.status(400).json({ error: 'invalid_signed_request' });
+
+  const fbUserId = String(data.user_id);
+  const code = crypto.randomBytes(8).toString('hex');
+  try {
+    const pool = await getPool();
+    const owners = await pool.request()
+      .input('fbUserId', sql.VarChar(64), fbUserId)
+      .query('SELECT app_user_id FROM dbo.ConnectedFbAccounts WHERE fb_user_id=@fbUserId');
+    for (const row of owners.recordset) {
+      await disconnectFbAccount(row.app_user_id, fbUserId);
+      const remaining = await pool.request()
+        .input('appUserId', sql.VarChar(64), String(row.app_user_id))
+        .query('SELECT COUNT(*) AS total FROM dbo.ConnectedFbAccounts WHERE app_user_id=@appUserId');
+      // Token người dùng cũ lưu theo tài khoản tool: xóa khi tài khoản tool không còn nick Facebook nào
+      if (!Number(remaining.recordset[0]?.total)) {
+        await pool.request()
+          .input('appUserId', sql.VarChar(64), String(row.app_user_id))
+          .query('DELETE FROM dbo.FacebookUsers WHERE facebook_user_id=@appUserId');
+      }
+    }
+    await messengerService.purgeDisconnectedPageData();
+    console.log(`[Data Deletion] Đã xóa dữ liệu Facebook theo yêu cầu của Meta (mã ${code}, ${owners.recordset.length} liên kết).`);
+  } catch (error) {
+    console.error('[Data Deletion Error]', error.message);
+  }
+  return res.json({ url: `${clientOrigin()}/data-deletion?code=${code}`, confirmation_code: code });
+});
+
+// Thông tin công khai cho trang Chính sách quyền riêng tư / Điều khoản / Xóa dữ liệu (Meta yêu cầu khi duyệt app)
+app.get('/api/public/site-info', (_req, res) => {
+  return res.json({
+    appName: process.env.PUBLIC_APP_NAME || 'Tool Face',
+    operatorName: process.env.PUBLIC_OPERATOR_NAME || null,
+    contactEmail: process.env.PUBLIC_CONTACT_EMAIL || null,
+    siteUrl: clientOrigin(),
+    policyUpdatedAt: process.env.PUBLIC_POLICY_UPDATED_AT || null
+  });
+});
+
+// Kiểm tra từng bước đọc tin nhắn Instagram của một Fanpage (chỉ đọc, không gửi tin)
+app.get('/api/channels/instagram/:pageId/diagnose', requireAuth, async (req, res) => {
+  try {
+    const pages = await getMessengerPages(req.user.sub);
+    const pageId = String(req.params.pageId);
+    if (!pages.some((page) => String(page.id) === pageId)) {
+      return res.status(404).json({ success: false, message: 'Fanpage không thuộc tài khoản của bạn.' });
+    }
+    const diagnosis = await instagramService.diagnoseMessaging(pageId, messengerService.getPageToken);
+    return res.json({ success: true, ...diagnosis });
+  } catch (error) {
+    return sendApiError(res, 'Instagram Diagnose Error', error, 'Không thể kiểm tra kết nối tin nhắn Instagram.');
+  }
+});
+
+// ════════════════════════════════════════════════════════════════
+// TIKTOK CHANNELS API (Cookie / Puppeteer Automation)
+// ════════════════════════════════════════════════════════════════
+app.get('/api/channels/tiktok', requireAuth, async (req, res) => {
+  try {
+    const accounts = await tiktokService.listTikTokAccounts(req.user.sub);
+    return res.json({ success: true, accounts });
+  } catch (error) {
+    return sendApiError(res, 'TikTok List Accounts Error', error, 'Không thể tải danh sách tài khoản TikTok.');
+  }
+});
+
+app.post('/api/channels/tiktok', requireAuth, async (req, res) => {
+  try {
+    const { cookies, nickname } = req.body;
+    if (!cookies) {
+      return res.status(400).json({ success: false, message: 'Vui lòng nhập Cookie hoặc Session ID của tài khoản TikTok.' });
+    }
+    const result = await tiktokService.addOrUpdateTikTokAccount({
+      userId: req.user.sub,
+      cookiesRaw: cookies,
+      nicknameOverride: nickname
+    });
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    return sendApiError(res, 'TikTok Add Account Error', error, error.message || 'Không thể liên kết tài khoản TikTok.');
+  }
+});
+
+app.post('/api/channels/tiktok/:id/check', requireAuth, async (req, res) => {
+  try {
+    const result = await tiktokService.checkTikTokAccountHealth(Number(req.params.id));
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    return sendApiError(res, 'TikTok Check Account Error', error, error.message || 'Không thể kiểm tra tài khoản TikTok.');
+  }
+});
+
+app.delete('/api/channels/tiktok/:id', requireAuth, async (req, res) => {
+  try {
+    await tiktokService.deleteTikTokAccount(Number(req.params.id));
+    return res.json({ success: true, message: 'Đã xóa liên kết tài khoản TikTok thành công.' });
+  } catch (error) {
+    return sendApiError(res, 'TikTok Delete Account Error', error, 'Không thể xóa tài khoản TikTok.');
+  }
+});
+
 // Webhook Messenger / Instagram: cấu hình Callback URL https://<domain>/api/webhooks/messenger trong Meta App
 app.get('/api/webhooks/messenger', (req, res) => {
   const verifyToken = process.env.MESSENGER_VERIFY_TOKEN;
@@ -1698,7 +1848,8 @@ app.get('/api/webhooks/messenger', (req, res) => {
 });
 
 app.post('/api/webhooks/messenger', async (req, res) => {
-  if (!messengerService.verifyWebhookSignature(req.rawBody, req.get('x-hub-signature-256'))) {
+  const { appSecret } = await tokenService.getMetaAppCredentials().catch(() => ({}));
+  if (!messengerService.verifyWebhookSignature(req.rawBody, req.get('x-hub-signature-256'), appSecret || process.env.FACEBOOK_APP_SECRET)) {
     return res.sendStatus(403);
   }
   res.status(200).send('EVENT_RECEIVED');
@@ -1706,7 +1857,13 @@ app.post('/api/webhooks/messenger', async (req, res) => {
   try {
     const pool = await getPool();
     const result = await pool.request().query('SELECT page_id FROM dbo.FacebookPages');
-    messengerService.handleWebhookPayload(req.body, new Set(result.recordset.map((row) => String(row.page_id))));
+    const pageIds = result.recordset.map((row) => String(row.page_id));
+    const igAccounts = await instagramService.listInstagramAccounts(pageIds).catch(() => []);
+    messengerService.handleWebhookPayload(
+      req.body,
+      new Set(pageIds),
+      new Map(igAccounts.map((account) => [String(account.id), String(account.pageId)]))
+    );
   } catch (error) {
     console.warn('[Messenger Webhook]', error.message);
   }
@@ -1768,8 +1925,82 @@ app.post('/api/posts', requireAuth, async (req, res) => {
   const mediaType = String(req.body.mediaType || 'text').toLowerCase();
   const mediaLinks = Array.isArray(req.body.mediaLinks) ? req.body.mediaLinks : [];
   const scheduledAt = new Date(req.body.scheduledAt || Date.now());
+  const platform = String(req.body.platform || 'facebook').toLowerCase();
 
   if (!content) return res.status(400).json({ success: false, message: 'Nội dung bài đăng không được để trống.' });
+  if (Number.isNaN(scheduledAt.getTime())) return res.status(400).json({ success: false, message: 'Thời gian đăng không hợp lệ.' });
+
+  // ── XỬ LÝ ĐĂNG BÀI TIKTOK ──
+  if (platform === 'tiktok') {
+    const rawTiktokIds = Array.isArray(req.body.tiktokAccountIds) && req.body.tiktokAccountIds.length > 0
+      ? req.body.tiktokAccountIds
+      : (req.body.tiktokAccountId ? [req.body.tiktokAccountId] : (Array.isArray(req.body.pageIds) ? req.body.pageIds : []));
+    const targetTiktokIds = [...new Set(rawTiktokIds.map((id) => String(id || '').trim()))].filter(Boolean);
+
+    if (targetTiktokIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'Vui lòng chọn ít nhất một tài khoản TikTok để đăng bài.' });
+    }
+    if (mediaType !== 'video' && mediaType !== 'reel') {
+      return res.status(400).json({ success: false, message: 'TikTok chỉ hỗ trợ đăng dạng Video hoặc Reels. Vui lòng chọn tệp video.' });
+    }
+    if (mediaLinks.length === 0) {
+      return res.status(400).json({ success: false, message: 'Bài đăng TikTok bắt buộc phải đính kèm video.' });
+    }
+
+    try {
+      await ensurePostOwnershipSchema();
+      const pool = await getPool();
+      const createdPosts = [];
+
+      for (const ttId of targetTiktokIds) {
+        try {
+          const result = await pool.request()
+            .input('pageId', sql.VarChar, String(ttId))
+            .input('ownerId', sql.VarChar(64), req.user.sub)
+            .input('content', sql.NVarChar, content)
+            .input('mediaType', sql.VarChar, 'video')
+            .input('mediaLinks', sql.NVarChar, JSON.stringify(mediaLinks))
+            .input('scheduledAt', sql.DateTime2, scheduledAt)
+            .input('status', sql.VarChar, 'pending')
+            .input('platform', sql.VarChar(50), 'tiktok')
+            .input('tiktokAccountId', sql.VarChar(50), String(ttId))
+            .query(`
+              INSERT INTO Posts (page_id, content, media_type, media_links, scheduled_at, status, created_by_user_id, platform, tiktok_account_id)
+              OUTPUT INSERTED.id
+              VALUES (@pageId, @content, @mediaType, @mediaLinks, @scheduledAt, @status, @ownerId, @platform, @tiktokAccountId);
+            `);
+          const postId = result.recordset[0].id;
+          createdPosts.push({ postId, pageId: ttId });
+          await standaloneScheduler.schedulePost(postId, scheduledAt);
+        } catch (err) {
+          console.error(`[TikTok Create Post Error for account ${ttId}]`, err.message);
+        }
+      }
+
+      if (createdPosts.length === 0) {
+        return res.status(500).json({ success: false, message: 'Không thể tạo bài đăng TikTok.' });
+      }
+
+      const createdPostIds = createdPosts.map((p) => p.postId);
+      const isNow = Math.abs(scheduledAt.getTime() - Date.now()) < 5 * 60 * 1000;
+      return res.status(202).json({
+        success: true,
+        postId: createdPostIds[0],
+        postIds: createdPostIds,
+        count: createdPostIds.length,
+        status: 'pending',
+        scheduledAt,
+        message: isNow
+          ? `⚡ Đã đưa vào hàng đợi đăng ngay lên ${createdPostIds.length} tài khoản TikTok!`
+          : `Đã lên lịch đăng video cho ${createdPostIds.length} tài khoản TikTok.`
+      });
+    } catch (ttErr) {
+      console.error('[TikTok Create Post Fatal Error]', ttErr);
+      return res.status(500).json({ success: false, message: 'Lỗi hệ thống khi tạo bài đăng TikTok: ' + ttErr.message });
+    }
+  }
+
+  // ── XỬ LÝ ĐĂNG BÀI FACEBOOK (MẶC ĐỊNH) ──
   if (targetPageIds.length === 0) return res.status(400).json({ success: false, message: 'Vui lòng chọn ít nhất một Fanpage hợp lệ.' });
   if (!['text', 'image', 'video', 'reel', 'story'].includes(mediaType)) return res.status(400).json({ success: false, message: 'Loại bài đăng phải là text, image, video, reel hoặc story.' });
   if (mediaType === 'reel' && mediaLinks.length === 0) return res.status(400).json({ success: false, message: 'Bài đăng Reels bắt buộc phải đính kèm video.' });
@@ -1777,7 +2008,6 @@ app.post('/api/posts', requireAuth, async (req, res) => {
     if (localMediaFilename(link)) return false;
     try { return new URL(link).protocol !== 'https:'; } catch { return true; }
   }))) return res.status(400).json({ success: false, message: 'Media cần URL HTTPS công khai hoặc media đã tải lên.' });
-  if (Number.isNaN(scheduledAt.getTime())) return res.status(400).json({ success: false, message: 'Thời gian đăng không hợp lệ.' });
 
   const comments = Array.isArray(req.body.comments) ? req.body.comments.slice(0, 5) : [];
   try {
@@ -1907,6 +2137,7 @@ app.get('/api/posts', requireAuth, async (req, res) => {
     const limit = Number.isInteger(limitValue) && limitValue > 0 ? Math.min(limitValue, 100) : 10;
     const status = String(req.query.status || 'all');
     const pageId = String(req.query.pageId || 'all');
+    const platform = String(req.query.platform || 'all').toLowerCase();
     const filters = [];
     const countRequest = pool.request();
     const postsRequest = pool.request();
@@ -1919,6 +2150,11 @@ app.get('/api/posts', requireAuth, async (req, res) => {
       filters.push('page_id = @pageId');
       countRequest.input('pageId', sql.VarChar, pageId);
       postsRequest.input('pageId', sql.VarChar, pageId);
+    }
+    if (platform !== 'all') {
+      filters.push('platform = @platform');
+      countRequest.input('platform', sql.VarChar, platform);
+      postsRequest.input('platform', sql.VarChar, platform);
     }
     filters.push(applyPostScope(req, countRequest));
     applyPostScope(req, postsRequest);
@@ -2683,8 +2919,12 @@ app.use((error, _req, res, _next) => {
 });
 
 const PORT = process.env.PORT || 5000;
+const KNOWN_DEFAULT_SESSION_SECRETS = new Set(['toolfb_super_secure_jwt_secret_key_2025']);
 const server = app.listen(PORT, () => {
   console.log(`Server listening on ${PORT}`);
+  if (process.env.NODE_ENV === 'production' && KNOWN_DEFAULT_SESSION_SECRETS.has(process.env.SESSION_SECRET)) {
+    console.warn('[Security] CẢNH BÁO: SESSION_SECRET đang là giá trị mặc định công khai. Khi đưa lên Internet hãy đặt chuỗi ngẫu nhiên riêng (openssl rand -hex 32).');
+  }
   // Khởi tạo bảng tài khoản và tạo sẵn tài khoản Admin mặc định
   ensureAppUserSchema().catch((error) => console.error('[AppUsers Init Error]', error.message));
   // Hộp thư Messenger + Instagram: tạo bảng và tự động đồng bộ (mặc định 5 giây, đặt 0 để tắt)
@@ -2705,8 +2945,10 @@ const server = app.listen(PORT, () => {
   // Khởi động bộ đếm giờ độc lập cho bài đăng & comment seeding (hoạt động kể cả không có Redis)
   standaloneScheduler.startStandaloneScheduler(10000);
 
+  // Khởi tạo schema TikTok (bảng TikTokAccounts + cột Posts.platform, Posts.tiktok_account_id)
+  tiktokService.ensureTikTokSchema().catch((error) => console.error('[TikTok Schema Init Error]', error.message));
   // AI Bình luận: quét bình luận mới mỗi 2 phút (webhook feed vẫn là đường chính khi đã đăng ký)
-  if (process.env.POLL_COMMENTS !== 'off') commentAiService.startPolling(120000);
+  if (process.env.POLL_COMMENTS !== 'off') commentAiService.startPolling();
 
   // Tùy chọn gộp Worker chạy chung một tiến trình (Dành cho Render / Cloud Free không tốn thêm $7/tháng)
   if (process.env.RUN_WORKER_IN_PROCESS === 'true') {

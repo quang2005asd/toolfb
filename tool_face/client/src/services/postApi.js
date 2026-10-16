@@ -52,9 +52,11 @@ export const postApi = {
   },
 
   // 1. Lấy danh sách bài đăng có bộ lọc & phân trang
-  getPostsList: async ({ page = 1, limit = 10, status = 'all', pageId = 'all' } = {}) => {
+  getPostsList: async ({ page = 1, limit = 10, status = 'all', pageId = 'all', platform = 'all' } = {}) => {
+    const params = { page, limit, status, pageId };
+    if (platform && platform !== 'all') params.platform = platform;
     const response = await api.get('/posts', {
-      params: { page, limit, status, pageId }
+      params
     });
     return response.data;
   },

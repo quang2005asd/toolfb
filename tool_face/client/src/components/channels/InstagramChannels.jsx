@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, CheckCircle2, ExternalLink, Loader2, MessageCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CheckCircle2, ExternalLink, Loader2, MessageCircle, RefreshCw, ShieldCheck } from 'lucide-react';
 import channelApi from '../../services/channelApi';
 import PlatformIcon from '../PlatformIcon';
 
@@ -13,6 +13,18 @@ const MESSAGING_STATUS = {
   error: { tone: 'error', label: 'Tin nhắn: lỗi đồng bộ' },
   unknown: { tone: 'idle', label: 'Tin nhắn: đang kiểm tra' }
 };
+
+const CHECK_ICONS = { ok: CheckCircle2, warn: AlertTriangle, error: AlertCircle };
+
+// "Đã liên kết" nhưng chưa có hội thoại nào → thường do Meta ẩn tin của người lạ (app chưa duyệt)
+function messagingStatusOf(account) {
+  if (account.messagingStatus === 'linked') {
+    return account.conversationCount > 0
+      ? { tone: 'ok', label: `Tin nhắn: đã liên kết · ${numberFormat.format(account.conversationCount)} hội thoại` }
+      : { tone: 'warn', label: 'Tin nhắn: đã kết nối, chưa thấy hội thoại' };
+  }
+  return MESSAGING_STATUS[account.messagingStatus] || MESSAGING_STATUS.unknown;
+}
 
 const numberFormat = new Intl.NumberFormat('vi-VN');
 
@@ -29,6 +41,7 @@ export default function InstagramChannels({ onCountChange }) {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [notice, setNotice] = useState(null);
+  const [diagnoses, setDiagnoses] = useState({}); // pageId -> { loading, result, error }
   const countCallbackRef = useRef(onCountChange);
   countCallbackRef.current = onCountChange;
 
@@ -64,6 +77,16 @@ export default function InstagramChannels({ onCountChange }) {
       .finally(() => active && setLoading(false));
     return () => { active = false; };
   }, [apply, handleSync]);
+
+  const runDiagnose = useCallback(async (pageId) => {
+    setDiagnoses((prev) => ({ ...prev, [pageId]: { loading: true } }));
+    try {
+      const res = await channelApi.diagnoseInstagram(pageId);
+      setDiagnoses((prev) => ({ ...prev, [pageId]: { result: res } }));
+    } catch (err) {
+      setDiagnoses((prev) => ({ ...prev, [pageId]: { error: errorText(err, 'Không thể kiểm tra kết nối tin nhắn Instagram.') } }));
+    }
+  }, []);
 
   const { accounts, pagesWithoutInstagram } = data;
   const needsMessagingAccess = accounts.some((account) => account.messagingStatus === 'ig_access_disabled');
@@ -101,7 +124,9 @@ export default function InstagramChannels({ onCountChange }) {
       ) : (
         <div className="ig-grid">
           {accounts.map((account) => {
-            const status = MESSAGING_STATUS[account.messagingStatus] || MESSAGING_STATUS.unknown;
+            const status = messagingStatusOf(account);
+            const diagnosis = diagnoses[account.pageId];
+            const noConversations = account.messagingStatus === 'linked' && !account.conversationCount;
             return (
               <article className="panel ig-card" key={account.id}>
                 <header className="ig-card-head">
@@ -130,14 +155,43 @@ export default function InstagramChannels({ onCountChange }) {
                 {account.messagingStatus === 'ig_access_disabled' && account.messagingMessage && (
                   <p className="ig-card-warning">{account.messagingMessage}</p>
                 )}
+                {noConversations && !diagnosis && (
+                  <p className="ig-card-warning">Meta chưa trả về hội thoại Instagram nào. Bấm “Kiểm tra tin nhắn” để xem nguyên nhân.</p>
+                )}
                 <div className="ig-card-actions">
+                  <button
+                    type="button"
+                    className="button button-primary"
+                    onClick={() => runDiagnose(account.pageId)}
+                    disabled={diagnosis?.loading}
+                  >
+                    {diagnosis?.loading ? <Loader2 size={14} className="spin" /> : <ShieldCheck size={14} />}
+                    {diagnosis?.loading ? 'Đang kiểm tra…' : 'Kiểm tra tin nhắn'}
+                  </button>
                   {account.profileUrl && (
                     <a className="button button-secondary" href={account.profileUrl} target="_blank" rel="noopener noreferrer">
                       Mở Instagram <ExternalLink size={13} />
                     </a>
                   )}
-                  <Link className="button button-quiet" href="/inbox">Xem tin nhắn</Link>
+                  <Link className="button button-secondary" href="/inbox">Xem tin nhắn</Link>
                 </div>
+                {diagnosis?.error && <p className="ig-card-warning">{diagnosis.error}</p>}
+                {diagnosis?.result && (
+                  <ol className="ig-diagnosis" aria-label="Kết quả kiểm tra tin nhắn Instagram">
+                    {diagnosis.result.checks.map((check) => {
+                      const Icon = CHECK_ICONS[check.status] || AlertCircle;
+                      return (
+                        <li key={check.id} className={`ig-check is-${check.status}`}>
+                          <Icon size={15} aria-hidden="true" />
+                          <div>
+                            <strong>{check.label}</strong>
+                            {check.detail && <span>{check.detail}</span>}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                )}
               </article>
             );
           })}
@@ -166,6 +220,12 @@ export default function InstagramChannels({ onCountChange }) {
             Trong ứng dụng Instagram: <strong>Cài đặt → Tin nhắn và lượt phản hồi tin → Công cụ đã kết nối</strong> → bật <strong>“Cho phép truy cập tin nhắn”</strong>.
           </li>
           <li>Bấm <strong>“Đồng bộ từ Facebook”</strong>. Tin nhắn Instagram sẽ tự về trang Tin nhắn và dùng chung cài đặt trả lời tự động của Fanpage.</li>
+          <li className={accounts.some((account) => account.messagingStatus === 'linked' && !account.conversationCount) ? 'is-attention' : ''}>
+            App Meta <strong>chưa được duyệt</strong> (Standard Access) chỉ đọc được tin nhắn của người có vai trò trong app / Fanpage.
+            Để test, thêm người nhắn làm <strong>Tester</strong> trong{' '}
+            <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener noreferrer">Meta for Developers → Vai trò trong ứng dụng</a>.
+            Để nhận tin của mọi khách: xác minh doanh nghiệp và gửi <strong>App Review</strong> xin Advanced Access cho <code>instagram_manage_messages</code>.
+          </li>
         </ol>
       </section>
     </div>

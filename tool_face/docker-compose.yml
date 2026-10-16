@@ -9,7 +9,8 @@ services:
     container_name: tool-face-redis
     restart: unless-stopped
     ports:
-      - "127.0.0.1:6379:6379"
+      # Chỉ mở trong máy; cổng 6380 để không trùng Redis khác đang chạy trên máy
+      - "127.0.0.1:6380:6379"
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes
@@ -70,6 +71,8 @@ services:
       - POLL_COMMENTS=${POLL_COMMENTS:-on}
       - REPLY_MIN_GAP_MS=${REPLY_MIN_GAP_MS:-6000}
     volumes:
+      - ./server/src:/app/src
+      - ./server/config:/app/config
       - server_data:/app/data
       - server_uploads:/app/uploads
     depends_on:
@@ -99,7 +102,13 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      # Worker đăng bài hẹn giờ: phải dùng cùng SESSION_SECRET với server để giải mã token Fanpage
+      - SESSION_SECRET=${SESSION_SECRET:?Hay dat SESSION_SECRET trong file .env}
+      - FACEBOOK_APP_ID=${FACEBOOK_APP_ID:-}
+      - FACEBOOK_APP_SECRET=${FACEBOOK_APP_SECRET:-}
     volumes:
+      - ./server/src:/app/src
+      - ./server/config:/app/config
       - server_data:/app/data
       - server_uploads:/app/uploads
     depends_on:

@@ -13,7 +13,8 @@ const VARS = [
   ['gio_mo_cua', 'Giờ mở cửa']
 ];
 
-const EMPTY_FORM = { name: '', keywords: '', content: '', mode: 'guided' };
+const TEMPLATE_VARS = VARS.filter(([key]) => key !== 'ten');
+const EMPTY_FORM = { name: '', keywords: '', content: '', mode: 'guided', aiInstruction: '', vars: {} };
 const PREFILL_KEY = 'commentAiPrefill';
 
 function TemplatesPanel({ pageId }) {
@@ -21,6 +22,8 @@ function TemplatesPanel({ pageId }) {
   const isAdmin = user?.role === 'admin';
   const [templates, setTemplates] = useState([]);
   const [requireApproval, setRequireApproval] = useState(false);
+  const [legacyVars, setLegacyVars] = useState({});
+  const [legacyInstruction, setLegacyInstruction] = useState('');
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -28,12 +31,33 @@ function TemplatesPanel({ pageId }) {
   const [saving, setSaving] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
   const [suggestions, setSuggestions] = useState(null);
+  const [tryText, setTryText] = useState('');
+  const [tryResult, setTryResult] = useState(null);
+  const [trying, setTrying] = useState(false);
+
+  const tryComment = async () => {
+    const text = tryText.trim();
+    if (!text) return;
+    setTrying(true);
+    try {
+      setTryResult(await commentAiApi.preview(pageId, { comment: text }));
+    } catch (err) {
+      setTryResult({ error: apiMessage(err, 'Không thử được.') });
+    } finally {
+      setTrying(false);
+    }
+  };
 
   const load = useCallback(async () => {
     try {
       const [list, settings] = await Promise.all([commentAiApi.listTemplates(pageId), commentAiApi.getSettings(pageId)]);
       setTemplates(list.templates || []);
       setRequireApproval(Boolean(settings.settings?.requireApproval));
+      setLegacyVars(settings.settings?.vars || {});
+      setLegacyInstruction([
+        settings.settings?.tone,
+        settings.settings?.shop ? `Thông tin cửa hàng:\n${settings.settings.shop}` : ''
+      ].filter(Boolean).join('\n'));
     } catch (err) {
       setNotice({ type: 'error', text: apiMessage(err, 'Không tải được danh sách mẫu.') });
     } finally {
@@ -90,7 +114,15 @@ function TemplatesPanel({ pageId }) {
 
   const startEdit = (t) => {
     setEditingId(t.id);
-    setForm({ name: t.name, keywords: t.keywords || '', content: t.content, mode: t.mode });
+    setForm({
+      ...EMPTY_FORM,
+      name: t.name,
+      keywords: t.keywords || '',
+      content: t.content,
+      mode: t.mode,
+      aiInstruction: t.aiInstruction || legacyInstruction,
+      vars: t.vars || legacyVars
+    });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -119,7 +151,7 @@ function TemplatesPanel({ pageId }) {
 
   const useSuggestion = (s) => {
     setEditingId(null);
-    setForm({ name: s.name, keywords: s.keywords, content: s.content, mode: 'guided' });
+    setForm({ ...EMPTY_FORM, name: s.name, keywords: s.keywords, content: s.content, mode: 'guided' });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -129,6 +161,22 @@ function TemplatesPanel({ pageId }) {
   return (
     <>
       <Notice notice={notice} />
+
+      <section className="panel" style={{ marginBottom: 18 }}>
+        <div className="panel-heading"><h2>Thử một bình luận</h2></div>
+        <div className="panel-body">
+          <div style={{ display: 'flex', gap: 10 }}>
+            <input className="field" value={tryText} placeholder="Ví dụ: . hoặc giá bao nhiêu shop?" aria-label="Bình luận thử" onChange={(e) => setTryText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') tryComment(); }} />
+            <button type="button" className="button button-primary" onClick={tryComment} disabled={trying}>{trying ? 'Đang thử...' : 'Thử'}</button>
+          </div>
+          {tryResult && (
+            <div className="notice" style={{ marginTop: 10, whiteSpace: 'pre-wrap' }}>
+              {tryResult.error || (tryResult.skipped ? `Sẽ bỏ qua: ${tryResult.reason}` : `${tryResult.template ? `Mẫu “${tryResult.template.name}” trả lời:` : 'AI trả lời:'}\n${tryResult.reply}`)}
+            </div>
+          )}
+          <small className="muted">Chỉ xem thử, không đăng lên Facebook.</small>
+        </div>
+      </section>
 
       <section className="panel" style={{ marginBottom: 18 }}>
         <div className="panel-heading">
@@ -153,6 +201,35 @@ function TemplatesPanel({ pageId }) {
               <small className="muted">Chèn biến:</small>
               {VARS.map(([key, label]) => (
                 <button key={key} type="button" className="button button-quiet" style={{ minHeight: 28, fontSize: 12 }} onClick={() => insertVar(key)}>{label}</button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="field-label" htmlFor="tpl-instruction">Hướng dẫn riêng cho AI (không bắt buộc)</label>
+            <textarea
+              id="tpl-instruction"
+              className="field"
+              rows={3}
+              maxLength={2000}
+              value={form.aiInstruction}
+              onChange={(e) => setForm({ ...form, aiInstruction: e.target.value })}
+              placeholder="Ví dụ: Báo giá theo mẫu, hỏi khách muốn màu nào; không tự thêm khuyến mãi."
+            />
+          </div>
+          <div>
+            <span className="field-label">Giá trị biến cho mẫu này</span>
+            <p className="muted" style={{ margin: '0 0 10px', fontSize: 13 }}>Các giá trị này được dùng chung khi AI trả lời bình luận và tin nhắn Inbox bằng mẫu.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+              {TEMPLATE_VARS.map(([key, label]) => (
+                <div key={key}>
+                  <label className="field-label" htmlFor={`tpl-var-${key}`}>{label}</label>
+                  <input
+                    id={`tpl-var-${key}`}
+                    className="field"
+                    value={form.vars?.[key] || ''}
+                    onChange={(e) => setForm({ ...form, vars: { ...form.vars, [key]: e.target.value } })}
+                  />
+                </div>
               ))}
             </div>
           </div>
