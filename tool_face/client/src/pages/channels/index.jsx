@@ -1,8 +1,10 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import {
   Check,
+  ChevronDown,
+  LogIn,
   Globe2,
   Plus,
   RefreshCw,
@@ -72,6 +74,13 @@ export default function ChannelsPage() {
   // Token health check state
   const [tokenStatuses, setTokenStatuses] = useState({});
   const [checkingTokens, setCheckingTokens] = useState(false);
+
+  // Thanh nút: menu "Thêm qua token" + đồng bộ (bấm tay hoặc tự động 10 giây/lần)
+  const [tokenMenuOpen, setTokenMenuOpen] = useState(false);
+  const tokenMenuRef = useRef(null);
+  const [syncing, setSyncing] = useState(false);
+  const [lastAutoSync, setLastAutoSync] = useState(null);
+  const syncBusyRef = useRef(false);
 
   // Manual Page Token Modal
   const [showManualModal, setShowManualModal] = useState(false);
@@ -204,19 +213,80 @@ export default function ChannelsPage() {
     return Object.values(map);
   }, [accounts, channels]);
 
+  const applySyncResult = (res) => {
+    if (Array.isArray(res.channels)) setChannels(res.channels);
+    if (Array.isArray(res.accounts)) setAccounts(res.accounts);
+    setLastAutoSync(new Date());
+  };
+
+  // Nút "Đồng bộ": làm mới bộ nhớ đệm, đồng bộ lại ngay với Facebook, tải lại nhóm kênh và trạng thái token
   const handleSyncAll = async () => {
-    setLoading(true);
+    if (syncBusyRef.current) return;
+    syncBusyRef.current = true;
+    setSyncing(true);
     setError('');
     setNotice('');
     try {
-      const res = await channelApi.syncAll();
-      setNotice(res.message || 'Đã đồng bộ toàn bộ Fanpage từ các tài khoản Facebook!');
+      const res = await channelApi.syncAll('force');
+      applySyncResult(res);
       await loadData();
+      await handleCheckTokens({ quiet: true });
+      setNotice(res.message || 'Đã đồng bộ toàn bộ Fanpage từ các tài khoản Facebook!');
     } catch (err) {
       setError(err.response?.data?.message || 'Không thể đồng bộ Fanpage.');
     } finally {
-      setLoading(false);
+      syncBusyRef.current = false;
+      setSyncing(false);
     }
+  };
+
+  // Tự động đồng bộ mỗi 10 giây khi đang mở tab Facebook (server chỉ gọi Facebook tối đa 2 phút/lần)
+  useEffect(() => {
+    if (platform !== 'facebook') return undefined;
+    const timer = setInterval(async () => {
+      if (syncBusyRef.current || document.visibilityState !== 'visible') return;
+      syncBusyRef.current = true;
+      try {
+        applySyncResult(await channelApi.syncAll('auto'));
+      } catch {
+        // lỗi mạng tạm thời: bỏ qua, lần sau thử lại
+      } finally {
+        syncBusyRef.current = false;
+      }
+    }, 10000);
+    return () => clearInterval(timer);
+  }, [platform]);
+
+  // Menu "Thêm qua token": đóng khi bấm ra ngoài hoặc nhấn Esc
+  useEffect(() => {
+    if (!tokenMenuOpen) return undefined;
+    const onPointer = (event) => {
+      if (tokenMenuRef.current && !tokenMenuRef.current.contains(event.target)) setTokenMenuOpen(false);
+    };
+    const onKey = (event) => {
+      if (event.key === 'Escape') {
+        setTokenMenuOpen(false);
+        tokenMenuRef.current?.querySelector('button')?.focus();
+      }
+    };
+    document.addEventListener('mousedown', onPointer);
+    document.addEventListener('keydown', onKey);
+    tokenMenuRef.current?.querySelector('[role="menuitem"]')?.focus();
+    return () => {
+      document.removeEventListener('mousedown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [tokenMenuOpen]);
+
+  const openTokenForm = (kind) => {
+    setTokenMenuOpen(false);
+    setShowFbAccountModal(kind === 'account');
+    setShowManualModal(kind === 'page');
+    if (kind === 'page') {
+      setManualPageId('');
+      setManualPageToken('');
+    }
+    setTimeout(() => document.getElementById(kind === 'account' ? 'fb-account-token' : 'manual-page-id')?.focus(), 50);
   };
 
   const handleDisconnectAccount = async (accId, accName) => {
@@ -409,22 +479,75 @@ export default function ChannelsPage() {
     <MainLayout
       title="Quản lý Kênh"
       actions={platform !== 'facebook' ? null : (
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button className="button button-primary" type="button" onClick={() => setShowFbAccountModal(!showFbAccountModal)}>
-            <Plus size={15} /> Kết nối Facebook Token
+        <div className="channel-actions">
+          <button className="button button-primary" type="button" onClick={reconnectFacebook}>
+            <LogIn size={15} /> Đăng nhập Facebook
           </button>
-          <button className="button button-quiet" type="button" onClick={handleCheckTokens} disabled={checkingTokens}>
-            <ShieldCheck size={15} style={{ color: '#10b981' }} /> {checkingTokens ? 'Đang quét Token…' : 'Kiểm tra Token'}
+
+          <div className="token-menu" ref={tokenMenuRef}>
+            <button
+              className="button button-secondary"
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={tokenMenuOpen}
+              aria-controls="token-menu-list"
+              onClick={() => setTokenMenuOpen((open) => !open)}
+            >
+              <KeyRound size={15} /> Thêm qua token <ChevronDown size={14} className={`token-menu-caret${tokenMenuOpen ? ' is-open' : ''}`} />
+            </button>
+            {tokenMenuOpen && (
+              <div
+                id="token-menu-list"
+                className="token-menu-list"
+                role="menu"
+                aria-label="Thêm kênh bằng token"
+                onKeyDown={(event) => {
+                  if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+                  event.preventDefault();
+                  const items = [...event.currentTarget.querySelectorAll('[role="menuitem"]')];
+                  const index = items.indexOf(document.activeElement);
+                  items[(index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length]?.focus();
+                }}
+              >
+                <button type="button" role="menuitem" className="token-menu-item" onClick={() => openTokenForm('account')}>
+                  <Globe2 size={16} aria-hidden="true" />
+                  <span>
+                    <strong>Token tài khoản Facebook</strong>
+                    <span className="token-menu-hint">Tự nạp toàn bộ Fanpage của nick Facebook</span>
+                  </span>
+                </button>
+                <button type="button" role="menuitem" className="token-menu-item" onClick={() => openTokenForm('page')}>
+                  <KeyRound size={16} aria-hidden="true" />
+                  <span>
+                    <strong>Token Page</strong>
+                    <span className="token-menu-hint">Thêm 1 Fanpage bằng Page ID + Page Token</span>
+                  </span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          <button
+            className="button button-secondary"
+            type="button"
+            onClick={handleSyncAll}
+            disabled={syncing}
+            title="Làm mới và đồng bộ lại ngay toàn bộ kênh từ Facebook"
+          >
+            <RefreshCw size={15} className={syncing ? 'spin' : ''} /> {syncing ? 'Đang đồng bộ…' : 'Đồng bộ'}
           </button>
-          <button className="button button-quiet" type="button" onClick={() => setShowManualModal(!showManualModal)}>
-            <KeyRound size={15} /> Thêm qua Page Token
+
+          <button className="button button-secondary" type="button" onClick={openCreateGroupModal}>
+            <FolderPlus size={15} /> Tạo nhóm kênh
           </button>
-          <button className="button button-quiet" type="button" onClick={openCreateGroupModal}>
-            <FolderPlus size={15} style={{ color: '#38bdf8' }} /> Tạo nhóm kênh
-          </button>
-          <button className="button button-secondary" type="button" onClick={handleSyncAll} disabled={loading}>
-            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} /> Đồng bộ từ Facebook
-          </button>
+
+          <span
+            className="inbox-live is-on channel-autosync"
+            title={lastAutoSync ? `Cập nhật lần cuối lúc ${lastAutoSync.toLocaleTimeString('vi-VN')}` : 'Đang chờ lần đồng bộ đầu tiên'}
+          >
+            <span className="inbox-live-dot" aria-hidden="true" />
+            Tự đồng bộ 10 giây/lần{lastAutoSync ? ` · ${lastAutoSync.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : ''}
+          </span>
         </div>
       )}
     >

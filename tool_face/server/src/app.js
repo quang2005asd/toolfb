@@ -1088,17 +1088,39 @@ app.get('/api/channels', requireAuth, async (req, res) => {
   }
 });
 
+// Đồng bộ Fanpage với Facebook. Nút "Đồng bộ" gửi mode=force (đồng bộ lại ngay); trang Kênh tự gọi mode=auto
+// mỗi 10 giây — khi đó chỉ thật sự gọi Facebook tối đa CHANNEL_AUTO_SYNC_MIN_SECONDS/lần cho mỗi tài khoản
+// (mặc định 120 giây) để không vượt giới hạn ~200 lời gọi/giờ/người dùng của Graph API.
+const CHANNEL_AUTO_SYNC_MIN_MS = Number(process.env.CHANNEL_AUTO_SYNC_MIN_SECONDS || 120) * 1000;
+const channelSyncState = new Map(); // app user id -> { lastAt, running }
+
 app.post('/api/channels/sync', requireAuth, async (req, res) => {
   try {
-    const results = await syncAllConnectedFbAccounts(req.user.sub);
-    const channels = await getConnectedPages(req.user.sub);
-    const accounts = await getConnectedFbAccounts(req.user.sub);
+    const userId = String(req.user.sub);
+    const force = req.body?.mode !== 'auto';
+    const state = channelSyncState.get(userId) || { lastAt: 0, running: null };
+    channelSyncState.set(userId, state);
+    let results = null;
+    if (state.running) {
+      // Đang có một lần đồng bộ: bấm tay thì chờ lần đó xong, tự động thì trả dữ liệu hiện có
+      if (force) results = await state.running;
+    } else if (force || Date.now() - state.lastAt >= CHANNEL_AUTO_SYNC_MIN_MS) {
+      state.running = syncAllConnectedFbAccounts(userId).finally(() => {
+        state.lastAt = Date.now();
+        state.running = null;
+      });
+      results = await state.running;
+    }
+    const channels = await getConnectedPages(userId);
+    const accounts = await getConnectedFbAccounts(userId);
     return res.json({
       success: true,
       channels,
       accounts,
       results,
-      message: 'Đã hoàn tất đồng bộ tất cả Fanpage từ các tài khoản Facebook!'
+      facebookSynced: Boolean(results),
+      facebookSyncedAt: state.lastAt ? new Date(state.lastAt).toISOString() : null,
+      message: results ? 'Đã đồng bộ lại toàn bộ Fanpage từ các tài khoản Facebook!' : 'Đã cập nhật dữ liệu kênh.'
     });
   } catch (error) {
     return sendApiError(res, 'Channels Sync Error', error, 'Không thể đồng bộ Fanpage.');

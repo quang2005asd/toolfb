@@ -8505,3 +8505,38 @@ a.profile-avatar { text-decoration: none; }
 [data-theme="dark"] .legal-nav a.is-active, body.dark-mode .legal-nav a.is-active { border-color: #3987e5; color: #93c5fd; }
 [data-theme="dark"] .legal-main a, body.dark-mode .legal-main a, [data-theme="dark"] .legal-footer a, body.dark-mode .legal-footer a { color: #93c5fd; }
 [data-theme="dark"] .legal-confirm, body.dark-mode .legal-confirm { background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.35); color: #6ee7b7; }
+
+/* ═══ TRANG KÊNH: THANH NÚT (Đăng nhập Facebook · Thêm qua token · Đồng bộ · Tạo nhóm kênh) ═══ */
+.channel-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; }
+.token-menu { position: relative; }
+.token-menu-caret { transition: transform var(--trans-fast); }
+.token-menu-caret.is-open { transform: rotate(180deg); }
+.token-menu-list {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 60;
+  display: grid; gap: 2px; width: max-content; min-width: 280px; max-width: min(340px, calc(100vw - 32px));
+  padding: 6px; border: 1px solid var(--line); border-radius: 12px;
+  background: var(--panel); box-shadow: var(--shadow-lg);
+}
+.token-menu-item {
+  display: flex; align-items: flex-start; gap: 10px; width: 100%; padding: 10px 12px;
+  border: 0; border-radius: 8px; background: transparent; color: var(--ink);
+  font: inherit; font-size: 13px; text-align: left; cursor: pointer;
+}
+.token-menu-item > svg { flex: none; margin-top: 2px; color: var(--blue); }
+.token-menu-item strong { display: block; font-weight: 600; }
+.token-menu-hint { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; line-height: 1.4; }
+.token-menu-item:hover, .token-menu-item:focus-visible { background: var(--blue-bg); outline: none; }
+.token-menu-item:focus-visible { box-shadow: inset 0 0 0 2px var(--blue); }
+.channel-autosync { flex-basis: 100%; justify-content: flex-end; font-weight: 500; }
+@media (max-width: 760px) {
+  .channel-actions { justify-content: flex-start; }
+  .channel-actions > .button, .channel-actions > .token-menu { flex: 1 1 calc(50% - 5px); }
+  .channel-actions > .token-menu > .button { width: 100%; }
+  .channel-actions .button { justify-content: center; }
+  .token-menu-list { width: calc(100vw - 90px); min-width: 0; }
+  .channel-autosync { display: inline-flex; justify-content: flex-start; }
+}
+[data-theme="dark"] .token-menu-list, body.dark-mode .token-menu-list { background: var(--panel-elevated); border-color: rgba(255, 255, 255, 0.12); }
+[data-theme="dark"] .token-menu-item:hover, [data-theme="dark"] .token-menu-item:focus-visible,
+body.dark-mode .token-menu-item:hover, body.dark-mode .token-menu-item:focus-visible { background: rgba(57, 135, 229, 0.16); }
+[data-theme="dark"] .token-menu-item > svg, body.dark-mode .token-menu-item > svg { color: #93c5fd; }

@@ -45,9 +45,10 @@ export const channelApi = {
     return response.data;
   },
 
-  syncAll: async () => {
+  // mode 'force': đồng bộ lại ngay với Facebook; 'auto': server chỉ gọi Facebook tối đa 2 phút/lần
+  syncAll: async (mode = 'force') => {
     channelApi.invalidateCache();
-    const response = await api.post('/channels/sync');
+    const response = await api.post('/channels/sync', { mode });
     return response.data;
   },
 
