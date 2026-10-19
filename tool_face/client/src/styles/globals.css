@@ -8540,3 +8540,13 @@ a.profile-avatar { text-decoration: none; }
 [data-theme="dark"] .token-menu-item:hover, [data-theme="dark"] .token-menu-item:focus-visible,
 body.dark-mode .token-menu-item:hover, body.dark-mode .token-menu-item:focus-visible { background: rgba(57, 135, 229, 0.16); }
 [data-theme="dark"] .token-menu-item > svg, body.dark-mode .token-menu-item > svg { color: #93c5fd; }
+
+/* ═══ VIẾT BÀI · BƯỚC CHỌN KÊNH: 2 cột (cột Fanpage đủ rộng, không bỏ trống cột thứ 3 của bố cục compose-grid) ═══ */
+.compose-grid.is-two-col { grid-template-columns: minmax(320px, 400px) minmax(0, 1fr); }
+.compose-grid.is-two-col .panel-heading { gap: 10px; flex-wrap: wrap; }
+@media (max-width: 1080px) {
+  .compose-grid.is-two-col { grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .compose-grid.is-two-col { grid-template-columns: minmax(0, 1fr); }
+}

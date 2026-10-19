@@ -1907,13 +1907,13 @@ export default function ComposePage() {
 
       {/* BƯỚC 2: CHỌN KÊNH ĐĂNG (HỖ TRỢ ĐĂNG NHIỀU FANPAGE CÙNG LÚC & THEO NHÓM KÊNH) */}
       {step === 1 && (
-        <div className="compose-grid">
+        <div className="compose-grid is-two-col">
           {/* Cột chọn kênh */}
           <section className="panel compose-panel">
             <div className="panel-heading">
               <h2>{targetPlatform === 'tiktok' ? 'Chọn tài khoản TikTok đăng video' : 'Chọn Fanpage đăng bài'}</h2>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span className="muted" style={{ fontSize: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                <span className="muted" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
                   Đã chọn: <strong style={{ color: targetPlatform === 'tiktok' ? '#FE2C55' : '#00f2fe' }}>
                     {targetPlatform === 'tiktok' ? selectedTiktokIds.length : selectedPageIds.length}
                   </strong>/
@@ -1994,7 +1994,7 @@ export default function ComposePage() {
                             <div style={{ fontWeight: 600, fontSize: 13.5 }}>{acc.nickname || acc.username}</div>
                             <div className="muted" style={{ fontSize: 12 }}>@{acc.username}</div>
                           </div>
-                          <span style={{ fontSize: 11.5, padding: '3px 8px', borderRadius: 6, background: acc.status === 'active' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: acc.status === 'active' ? '#10b981' : '#ef4444' }}>
+                          <span style={{ flexShrink: 0, whiteSpace: 'nowrap', fontSize: 11.5, padding: '3px 8px', borderRadius: 6, background: acc.status === 'active' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: acc.status === 'active' ? '#10b981' : '#ef4444' }}>
                             {acc.status === 'active' ? 'Cookie hoạt động' : 'Hết hạn'}
                           </span>
                         </div>
@@ -2141,36 +2141,42 @@ export default function ComposePage() {
                           <div style={{ color: isChecked ? '#00f2fe' : 'var(--muted)', display: 'flex', alignItems: 'center' }}>
                             {isChecked ? <CheckSquare size={18} /> : <Square size={18} />}
                           </div>
-                          <span className="fb-mark">f</span>
+                          <span className="fb-mark" style={{ flexShrink: 0 }}>f</span>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                              <span style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 13.5 }}>{channel.name}</span>
-                              {channel.fbAccountName && (
-                                <span style={{
-                                  fontSize: 10.5,
-                                  color: '#93c5fd',
-                                  background: 'rgba(59, 130, 246, 0.15)',
-                                  border: '1px solid rgba(59, 130, 246, 0.3)',
-                                  borderRadius: 10,
-                                  padding: '1px 7px',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: 4
-                                }}>
-                                  {channel.fbAccountAvatar && (
-                                    <img src={channel.fbAccountAvatar} alt="" style={{ width: 12, height: 12, borderRadius: '50%' }} />
-                                  )}
-                                  Nick: {channel.fbAccountName}
+                            {/* Tên + nhãn "Sẵn sàng đăng": cùng hàng khi đủ chỗ, thiếu chỗ thì nhãn xuống dòng — không đè chữ, không cắt tên */}
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '4px 8px', flexWrap: 'wrap' }}>
+                              <span style={{ flex: '1 1 auto', minWidth: 0, fontWeight: 700, color: 'var(--ink)', fontSize: 13.5, lineHeight: 1.35, overflowWrap: 'break-word' }}>{channel.name}</span>
+                              {isChecked && (
+                                <span style={{ flexShrink: 0, whiteSpace: 'nowrap', fontSize: 11, color: '#00f2fe', background: 'rgba(0, 242, 254, 0.15)', padding: '2px 8px', borderRadius: 10 }}>
+                                  Sẵn sàng đăng
                                 </span>
                               )}
                             </div>
-                            <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>Facebook · {channel.category || 'Fanpage'} · ID: {channel.id}</div>
+                            {channel.fbAccountName && (
+                              <span style={{
+                                fontSize: 10.5,
+                                color: '#93c5fd',
+                                background: 'rgba(59, 130, 246, 0.15)',
+                                border: '1px solid rgba(59, 130, 246, 0.3)',
+                                borderRadius: 10,
+                                padding: '1px 7px',
+                                marginTop: 4,
+                                maxWidth: '100%',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}>
+                                {channel.fbAccountAvatar && (
+                                  <img src={channel.fbAccountAvatar} alt="" style={{ width: 12, height: 12, borderRadius: '50%', flexShrink: 0 }} />
+                                )}
+                                Nick: {channel.fbAccountName}
+                              </span>
+                            )}
+                            <div className="muted" style={{ fontSize: 11, marginTop: 3, lineHeight: 1.45, overflowWrap: 'anywhere' }}>Facebook · {channel.category || 'Fanpage'} · ID: {channel.id}</div>
                           </div>
-                          {isChecked && (
-                            <span style={{ fontSize: 11, color: '#00f2fe', background: 'rgba(0, 242, 254, 0.15)', padding: '2px 8px', borderRadius: 10 }}>
-                              Sẵn sàng đăng
-                            </span>
-                          )}
                         </div>
                       );
                     })}
