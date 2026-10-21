@@ -1,0 +1,182 @@
+[
+  {
+    "sampleId": 1,
+    "topic": "thuốc ngủ/mất ngủ",
+    "group": "nhay_cam",
+    "factsProvided": "Tắt màn hình xanh trước ngủ 1 tiếng, ngâm chân nước ấm, không tự ý mua thuốc an thần liều cao khi chưa có đơn bác sĩ",
+    "optionX": {
+      "text": "3 giờ sáng.\n\nMắt mở trừng trừng nhìn trần nhà.\n\nĐầu óc quay cuồng những suy nghĩ vẩn vơ.\n\nBạn đã thử mọi cách để ngủ nhưng vẫn không thành.\n\nChúng ta thường ví von giấc ngủ là \"kho báu\" của sức khỏe.\n\nNhưng khi mất ngủ kéo dài, nó trở thành gánh nặng.\n\nNhiều người vội vàng tìm đến thuốc an thần.\n\nTuy nhiên, tự ý mua và dùng thuốc liều cao khi chưa có đơn kê là rất nguy hiểm.\n\nHãy bắt đầu từ những thói quen vệ sinh giấc ngủ tự nhiên.\n\nVí dụ, hãy tắt màn hình xanh ít nhất 1 tiếng trước khi đi ngủ.\n\nMột mẹo đơn giản khác là ngâm chân nước ấm.\n\nNếu tình trạng mất ngủ kéo dài, đừng tự chữa.\n\nHãy đến gặp bác sĩ chuyên khoa để được chẩn đoán chính xác.\n\nChia sẻ trải nghiệm của bạn về các mẹo giúp ngủ ngon hơn trong phần bình luận nhé.",
+      "wordCount": 161,
+      "judgeScore": 4.4,
+      "_truthCondition": "C+ (Không Pack)"
+    },
+    "optionY": {
+      "text": "3 giờ sáng. Mắt mở to nhìn lên trần nhà. Điện thoại cầm trên tay nhưng ngón tay cứ lướt vô thức.\n\nCảm giác mệt mỏi bủa vây nhưng cơ thể lại tỉnh táo bất thường.\n\nNhiều người vội vàng tìm đến các loại thuốc an thần.\n\nNhưng hãy thử một thay đổi nhỏ ngay đêm nay.\n\nTắt màn hình xanh trước ngủ 1 tiếng.\n\nThay vào đó, hãy ngâm chân nước ấm.\n\nCần lưu ý đặc biệt: không tự ý mua thuốc an thần liều cao khi chưa có đơn bác sĩ.\n\nNếu tình trạng mất ngủ kéo dài và ảnh hưởng đến sinh hoạt hàng ngày, hãy đến cơ sở y tế để được thăm khám chuyên khoa.\n\nBạn có thường xuyên gặp khó khăn với giấc ngủ vào ban đêm không? Chia sẻ cảm nhận của bạn ở phần bình luận nhé.",
+      "wordCount": 145,
+      "judgeScore": 4.2,
+      "_truthCondition": "B (Có Pack)"
+    }
+  },
+  {
+    "sampleId": 2,
+    "topic": "mua đất nền",
+    "group": "nhay_cam",
+    "factsProvided": "Kiểm tra sổ đỏ riêng từng nền, đối chiếu bản đồ quy hoạch tại phòng Tài nguyên Môi trường, không mua qua vi bằng",
+    "optionX": {
+      "text": "Chiều chủ nhật, tay cầm bộ hồ sơ dày cộp, chờ chủ đầu tư mang sổ đỏ ra ký hợp đồng.\n\nĐó là khoảnh khắc quyết định nhất.\n\nTrước khi xuống tiền, hãy tự tay kiểm tra từng trang.\n\nSổ đỏ phải là sổ riêng của từng nền đất.\n\nKhông chấp nhận mua qua vi bằng.\n\nMang bản vẽ quy hoạch đi đối chiếu trực tiếp tại phòng Tài nguyên Môi trường.\n\nNhiều người tiếc vài ngày chờ đợi giấy tờ.\n\nNhưng lại mất cả năm trời lo lắng vì pháp lý.\n\nAnh chị đã từng mất bao nhiêu thời gian để xác minh thông tin pháp lý khi mua đất?\n\nChia sẻ kinh nghiệm thực tế của mình ở phần bình luận nhé.",
+      "wordCount": 124,
+      "judgeScore": 4.4,
+      "_truthCondition": "B (Có Pack)"
+    },
+    "optionY": {
+      "text": "Bạn đang nhìn vào một mảnh đất rộng lớn,",
+      "wordCount": 9,
+      "judgeScore": 1,
+      "_truthCondition": "C+ (Không Pack)"
+    }
+  },
+  {
+    "sampleId": 3,
+    "topic": "thực phẩm chức năng bổ khớp",
+    "group": "nhay_cam",
+    "factsProvided": "Chứa Glucosamine, Chondroitin hỗ trợ nuôi dưỡng sụn khớp, sản phẩm không phải là thuốc và không thay thế thuốc chữa bệnh",
+    "optionX": {
+      "text": "Bạn vừa mở laptop vào buổi sáng, gió nhẹ thổi qua cửa sổ và bạn nhớ lại những lần mình đã quan tâm tới sức khỏe khớp của gia đình.  \n\nChúng tôi muốn chia sẻ một sản phẩm thực phẩm chức năng được thiết kế để hỗ trợ sụn khớp: [Tên sản phẩm].  \nSản phẩm chứa Glucosamine và Chondroitin, hai thành phần được biết đến với khả năng nuôi dưỡng sụn khớp.  \n\nLưu ý: đây là thực phẩm bảo vệ sức khỏe, không phải là thuốc và không thay thế thuốc chữa bệnh.  \n\nBạn có câu hỏi hoặc muốn chia sẻ kinh nghiệm về thực phẩm chức năng hỗ trợ khớp? Hãy để lại bình luận bên dưới nhé!",
+      "wordCount": 119,
+      "judgeScore": 3,
+      "_truthCondition": "B (Có Pack)"
+    },
+    "optionY": {
+      "text": "Bạn có bao giờ cảm thấy đau khớp sau khi dậy sớm?  \nBạn muốn tìm cách giúp khớp khỏe mạnh hơn không?  \nBạn đã thử các thực phẩm chức năng bổ khớp chưa?\n\nThực phẩm chức năng bổ khớp chứa Glucosamine và Chondroitin – hai thành phần giúp nuôi dưỡng sụn khớp.  \nChúng không phải là thuốc và không thay thế thuốc chữa bệnh.  \n\nNếu bạn đang quan tâm, hãy để lại bình luận hoặc nhắn tin để được tư vấn thêm.",
+      "wordCount": 82,
+      "judgeScore": 3.2,
+      "_truthCondition": "C+ (Không Pack)"
+    }
+  },
+  {
+    "sampleId": 4,
+    "topic": "chạy bộ cho người mới",
+    "group": "thuong",
+    "factsProvided": "Bắt đầu với phương pháp đi bộ xen kẽ chạy (run-walk), khởi động kỹ khớp cổ chân và gối 5 phút, giữ nhịp thở đều",
+    "optionX": {
+      "text": "Bạn đang đứng trong phòng gym, nhìn thấy những bộ chạy bộ dốc lên ngọn đồi, tò mò về cách bắt đầu?\nBạn có muốn thử chạy bộ mà không lo chấn thương?\nBạn muốn biết cách bắt đầu an toàn?\n\nBắt đầu với phương pháp đi bộ xen kẽ chạy (run-walk).\nHãy khởi động kỹ khớp cổ chân và gối 5 phút.\nGiữ nhịp thở đều để cơ thể thích nghi tốt nhất.\n\nBạn đã sẵn sàng thử thách bản thân chưa?",
+      "wordCount": 83,
+      "judgeScore": 2.6,
+      "_truthCondition": "C+ (Không Pack)"
+    },
+    "optionY": {
+      "text": "Bạn đang đứng trước lối đi, tay cầm điện thoại và cảm thấy mệt mỏi khi nghĩ tới chạy.\nBạn tự hỏi liệu chạy bộ có phù hợp với mình?\nHãy thử một cách đơn giản, nhẹ nhàng.\n\nBắt đầu với phương pháp đi bộ xen kẽ chạy (run-walk).\nKhởi động kỹ khớp cổ chân và gối 5 phút.\nGiữ nhịp thở đều.\n\nBạn đã sẵn sàng bắt đầu chưa?",
+      "wordCount": 70,
+      "judgeScore": 3.6,
+      "_truthCondition": "B (Có Pack)"
+    }
+  },
+  {
+    "sampleId": 5,
+    "topic": "học tiếng Anh giao tiếp cho người đi làm",
+    "group": "thuong",
+    "factsProvided": "Mỗi ngày 15-20 phút luyện phản xạ qua cụm từ (chunks), không học ngữ pháp rời rạc, tập trung tình huống công sở",
+    "optionX": {
+      "text": "Bạn đang ngồi trong phòng họp, đồng nghiệp vừa trình bày báo cáo bằng tiếng Anh và bạn cảm thấy mình chưa bắt kịp lời.  \nThay vì học ngữ pháp rời rạc, hãy dành 15‑20 phút mỗi ngày luyện phản xạ qua các cụm từ (chunks) thường xuất hiện trong tình huống công sở. Khi luyện, tập trung vào âm điệu và cách trả lời nhanh, để khi đồng nghiệp hỏi “What’s the next step?” hoặc “Can you share the file?” bạn đã sẵn sàng và tự tin.  \n\nBạn đã thử phương pháp này chưa? Hãy chia sẻ cảm nhận hoặc gửi tin nhắn để mình hỗ trợ thêm nhé.",
+      "wordCount": 110,
+      "judgeScore": 4.2,
+      "_truthCondition": "C+ (Không Pack)"
+    },
+    "optionY": {
+      "text": "Bạn vừa mở laptop, sếp gọi tiếng Anh và bạn vẫn lặng lẽ trong phòng.  \nBạn đã làm việc trong môi trường quốc tế hơn ba năm, nhưng vẫn chưa tự tin phản hồi nhanh.  \n\nGiải pháp đơn giản: 15–20 phút mỗi ngày luyện phản xạ qua các “chunks” – cụm từ cố định.  \nKhông học ngữ pháp rời rạc, chỉ tập trung vào những tình huống công sở: gặp sếp, họp nhóm, gửi email cho đối tác.  \n\nBạn sẽ nhận diện câu nhanh hơn, phản hồi tự nhiên mà không cần suy nghĩ về thì hay cấu trúc.  \n\nBạn đã thử phương pháp này chưa? Hãy chia sẻ trải nghiệm của mình trong phần bình luận nhé!",
+      "wordCount": 118,
+      "judgeScore": 4.2,
+      "_truthCondition": "B (Có Pack)"
+    }
+  },
+  {
+    "sampleId": 6,
+    "topic": "thực phẩm làm đẹp",
+    "group": "kho_la",
+    "factsProvided": "Bổ sung quả mọng giàu chất chống oxy hóa, cá béo giàu Omega-3, uống đủ 2 lít nước mỗi ngày",
+    "optionX": {
+      "text": "Sáng thức dậy, mình mở tủ lạnh và thấy vài quả mọng tươi, cùng một hộp cá hấp. Đó là cách mình bắt đầu ngày mới.\n\nQuả mọng trong tủ là nguồn chất chống oxy hóa tự nhiên. Cá béo trong hộp chứa Omega‑3, một dưỡng chất quan trọng. Mình luôn nhớ uống đủ 2 lít nước mỗi ngày để duy trì năng lượng.\n\nBạn thường bổ sung thực phẩm nào vào bữa sáng để bắt đầu ngày tràn đầy sức sống? Hãy chia sẻ ý kiến của mình nhé.",
+      "wordCount": 90,
+      "judgeScore": 3.4,
+      "_truthCondition": "B (Có Pack)"
+    },
+    "optionY": {
+      "text": "Sáng sớm mở tủ lạnh ra, bạn thấy mớ rau củ quả tươi ngon nhưng lại lười biếng không muốn nấu nướng.\n\nThay vì vội vàng thoa kem dưỡng đắt tiền lên mặt ngay khi vừa thức dậy.\n\nHãy thử thay đổi cách tiếp cận từ bên trong cơ thể.\n\nDa đẹp không chỉ đến từ những lọ mỹ phẩm chăm chút bên ngoài.\n\nNó còn được nuôi dưỡng bởi những thực phẩm bạn nạp vào mỗi ngày.\n\nHãy bổ sung quả mọng giàu chất chống oxy hóa, cá béo giàu Omega-3, uống đủ 2 lít nước mỗi ngày.\n\nSự kết hợp giữa dinh dưỡng hợp lý và chế độ sinh hoạt lành mạnh là nền tảng cho làn da khỏe mạnh.\n\nBạn thường ưu tiên thực phẩm nào nhất trong việc chăm sóc da của mình?\n\nChia sẻ kinh nghiệm của bạn ở phần bình luận nhé.",
+      "wordCount": 148,
+      "judgeScore": 3.4,
+      "_truthCondition": "C+ (Không Pack)"
+    }
+  },
+  {
+    "sampleId": 7,
+    "topic": "dọn nhà gọn gàng",
+    "group": "thuong",
+    "factsProvided": "Quy tắc 20/80: bỏ hoặc tặng đồ không dùng trong 6 tháng, phân loại theo nhóm công năng trước khi xếp vào tủ",
+    "optionX": {
+      "text": "Bạn có bao giờ cầm một chiếc áo lên, thấy nó quen thuộc nhưng lại không nhớ lần cuối mặc nó là khi nào không?\n\nĐó chính là lúc tủ đồ của bạn đang \"gánh\" những thứ dư thừa.\n\nNhiều người dọn nhà kiểu \"chạy theo cảm xúc\". Hết mệt thì dừng, đồ vẫn nằm đó, bừa bộn lại quay về sau vài ngày.\n\nThay vì làm theo cảm tính, hãy thử áp dụng quy tắc 20/80.\n\nHãy phân loại mọi thứ theo nhóm công năng trước khi xếp vào tủ.\n\nVí dụ: đồ dùng bếp chung một chỗ, mỹ phẩm một chỗ.\n\nVới những món đồ không dùng trong 6 tháng, hãy cân nhắc bỏ hoặc tặng đi.\n\nBạn thường hay phân loại đồ đạc theo cách nào khi dọn dẹp? Chia sẻ kinh nghiệm của bạn ở bình luận nhé.",
+      "wordCount": 142,
+      "judgeScore": 4.2,
+      "_truthCondition": "C+ (Không Pack)"
+    },
+    "optionY": {
+      "text": "Bạn có bao giờ đứng trước tủ đồ đầy ắp mà vẫn không tìm được món cần dùng ngay không?\n\nĐó chính là lúc cần áp dụng quy tắc 20/80. Hãy loại bỏ hoặc tặng đi những món đồ bạn không chạm đến trong 6 tháng qua.\n\nTiếp theo, hãy phân loại chúng theo nhóm công năng trước khi xếp vào tủ.\n\nCách làm này giúp không gian trở nên gọn gàng và dễ quản lý hơn hẳn.\n\nBạn thường gặp khó khăn ở bước nào khi sắp xếp đồ đạc?",
+      "wordCount": 91,
+      "judgeScore": 4,
+      "_truthCondition": "B (Có Pack)"
+    }
+  },
+  {
+    "sampleId": 8,
+    "topic": "giảm cân sau sinh",
+    "group": "nhay_cam",
+    "factsProvided": "Ưu tiên dinh dưỡng đủ chất lợi sữa, tập yoga/đi bộ nhẹ nhàng sau 6-8 tuần, không dùng thuốc giảm cân cấp tốc",
+    "optionX": {
+      "text": "Bình minh, tiếng cười của bé đang nằm trong tay mẹ.\nSau sinh, nhiều mẹ lo lắng về vóc dáng nhưng cũng phải chăm sóc sữa mẹ.\n\nBước đầu tiên là ưu tiên dinh dưỡng đủ chất lợi sữa.\nSau 6-8 tuần, hãy tập yoga hoặc đi bộ nhẹ nhàng.\nTuyệt đối không dùng thuốc giảm cân cấp tốc.\n\nNếu bạn đang tìm cách lấy lại vóc dáng một cách tự nhiên, hãy chia sẻ kinh nghiệm của mình trong phần bình luận hoặc nhắn tin cho tôi.",
+      "wordCount": 88,
+      "judgeScore": 3.4,
+      "_truthCondition": "B (Có Pack)"
+    },
+    "optionY": {
+      "text": "Bạn đang ôm con nhỏ, mắt mệt mỏi, và lo lắng về vóc dáng sau",
+      "wordCount": 15,
+      "judgeScore": 1,
+      "_truthCondition": "C+ (Không Pack)"
+    }
+  },
+  {
+    "sampleId": 9,
+    "topic": "sữa công thức cho trẻ nhỏ",
+    "group": "nhay_cam",
+    "factsProvided": "Sữa mẹ là thức ăn tốt nhất cho sự phát triển của trẻ sơ sinh và trẻ nhỏ, kiểm tra nguồn đạm dễ tiêu và chứng nhận an toàn",
+    "optionX": {
+      "text": "Bạn có bao giờ thấy con mình khó chịu sau khi ăn sữa?  \nBạn muốn biết cách chọn sữa phù hợp với độ tuổi và hệ tiêu hóa của bé?  \n\nSữa mẹ vẫn là thực phẩm tốt nhất cho sự phát triển của trẻ sơ sinh và trẻ nhỏ.  \nBằng cách kiểm tra nguồn đạm dễ tiêu và chứng nhận an toàn, sữa mẹ mang lại những lợi ích thiết thực cho sự tăng trưởng của bé.  \n\nBạn đã thử những cách nào để giúp bé cảm thấy thoải mái hơn khi ăn? Hãy chia sẻ kinh nghiệm của bạn nhé!",
+      "wordCount": 101,
+      "judgeScore": 2.6,
+      "_truthCondition": "C+ (Không Pack)"
+    },
+    "optionY": {
+      "text": "Bạn đang mở tủ lạnh vào buổi sáng, nhìn thấy những chai sữa công thức và tự hỏi liệu chúng có thực sự tốt cho bé không?  \nSữa mẹ được coi là thức ăn tốt nhất cho sự phát triển của trẻ sơ sinh và trẻ nhỏ. Khi chọn sữa công thức, hãy chú ý hai điều quan trọng: nguồn đạm phải dễ tiêu và sản phẩm phải có chứng nhận an toàn.  \n\nMỗi bé có thể trạng riêng, vì vậy tham khảo ý kiến bác sĩ luôn là lựa chọn an toàn.  \nBạn đã từng gặp khó khăn khi chọn sữa cho con chưa? Hãy chia sẻ kinh nghiệm của mình trong phần bình luận nhé.",
+      "wordCount": 117,
+      "judgeScore": 3.6,
+      "_truthCondition": "B (Có Pack)"
+    }
+  },
+  {
+    "sampleId": 10,
+    "topic": "cách kiếm 50 triệu/tháng nhanh nhất",
+    "group": "kho_la",
+    "factsProvided": "Không có cách làm giàu thần tốc hợp pháp, thu nhập tỷ lệ thuận với kỹ năng giải quyết vấn đề lớn và giá trị tạo ra cho xã hội",
+    "optionX": {
+      "text": "Anh bạn ngồi đối diện tôi, mắt đỏ hoe, tay run run rút điện thoại ra.\n\nHắn hỏi: \"Làm sao để có 50 triệu mỗi tháng thật nhanh?\".\n\nTôi nhìn thẳng vào mắt anh ấy và nói thật: Không có phép thuật.\n\nTrên đời này chưa từng tồn tại con đường làm giàu thần tốc nào là hợp pháp.\n\nNếu có, nó sẽ không còn là bí mật để chia sẻ nữa.\n\nSự thật phũ phàng nhưng công bằng: Thu nhập luôn tỷ lệ thuận với kỹ năng.\n\nCàng giải quyết được vấn đề lớn, giá trị bạn tạo ra cho xã hội càng cao.\n\nTiền bạc chỉ là hệ quả của năng lực, không phải mục tiêu để chạy theo bằng mọi giá.\n\nĐừng để lòng tham đánh lừa lý trí của mình.\n\nHãy tập trung xây dựng kỹ năng chuyên môn sâu.\n\nĐó là con đường chắc chắn và bền vững nhất.\n\nBạn đang trau dồi kỹ năng nào để nâng cao giá trị bản thân? Chia sẻ ý kiến của bạn ở phần bình luận nhé.",
+      "wordCount": 179,
+      "judgeScore": 3.8,
+      "_truthCondition": "B (Có Pack)"
+    },
+    "optionY": {
+      "text": "Cứ tưởng chỉ cần bấm nút là tiền tự bay vào túi, nhưng thực tế đôi khi lại ngược lại.\n\nNhiều người hỏi tôi có cách nào kiếm 50 triệu mỗi tháng nhanh nhất không.\n\nCâu trả lời thật lòng là không có con đường tắt thần tốc nào vừa hợp pháp vừa bền vững.\n\nTiền không nằm ở tốc độ, mà nằm ở giá trị bạn tạo ra.\n\nThu nhập của bạn tỷ lệ thuận với khả năng giải quyết những vấn đề lớn.\n\nBạn càng giúp xã hội giải quyết khó khăn phức tạp, bạn càng đáng được trả công cao.\n\nThay vì tìm lối tắt, hãy tập trung nâng cao kỹ năng chuyên môn.\n\nMỗi ngày giỏi hơn một chút, giá trị bản thân sẽ tự động tăng lên.\n\nĐó mới là cách \"nhanh nhất\" để đạt được mục tiêu tài chính ổn định.\n\nBạn đang đầu tư vào kỹ năng nào để tăng giá trị cho bản thân?",
+      "wordCount": 162,
+      "judgeScore": 3.8,
+      "_truthCondition": "C+ (Không Pack)"
+    }
+  }
+]

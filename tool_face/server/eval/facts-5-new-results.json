@@ -1,0 +1,323 @@
+[
+  {
+    "id": 21,
+    "topic": "Quán cà phê “Test Coffee”",
+    "facts": "Dữ liệu test giả định: Quán cà phê “Test Coffee” giảm 20% đến hết tuần, áp dụng chương trình mua 2 tặng 1 vào mỗi thứ Tư",
+    "conditionC": {
+      "content": "Sáng sớm, hơi nước bốc lên từ ly cà phê nóng hổi trên bàn gỗ.\nÁnh nắng chiếu qua khung cửa sổ, tạo nên góc check-in nhẹ nhàng.\n\nĐúng lúc bạn cần một nơi để làm việc hay gặp gỡ bạn bè.\nQuán cà phê Test Coffee vừa mở cửa đón khách.\n\nTuần khai trương, toàn bộ hóa đơn được giảm 20%.\nƯu đãi này áp dụng đến hết tuần này.\n\nĐặc biệt, mỗi thứ Tư có chương trình mua 2 tặng 1.\nĐây là cơ hội để tụ tập đông người mà vẫn tiết kiệm.\n\nKhông gian yên tĩnh, phù hợp cho những buổi chiều thư giãn.\nBạn đã chọn được quán quen thuộc nào cho tuần mới chưa?\nĐừng ngại chia sẻ địa điểm yêu thích của bạn ở phần bình luận nhé.",
+      "claimsCount": 3,
+      "claims": [
+        "hơi nước bốc lên từ ly cà phê nóng hổi trên bàn gỗ",
+        "Ánh nắng chiếu qua khung cửa sổ, tạo nên góc check-in nhẹ nhàng",
+        "Không gian yên tĩnh, phù hợp cho những buổi chiều thư giãn"
+      ],
+      "scores": {
+        "hook": 3,
+        "gia_tri": 4,
+        "giong_van": 4,
+        "nhip_va_do_dai": 4,
+        "cta": 3,
+        "sach_sao_rong": 5,
+        "trung_thuc": 5,
+        "nhan_xet": "Bài viết có giọng văn nhẹ nhàng, đúng chuẩn phong cách quán cà phê và truyền tải đầy đủ các thông tin ưu đãi (giảm 20%, mua 2 tặng 1 thứ Tư) một cách trung thực, không bịa đặt. Tuy nhiên, phần hook (mở đầu) hơi chậm và thiếu sức hút để giữ chân người dùng lướt nhanh trên Facebook; nó thiên về mô tả cảnh hơn là tạo sự tò mò hoặc kích thích hành động ngay lập tức. CTA (kêu gọi hành động) cũng khá yếu khi chỉ mời gọi bình luận chia sẻ địa điểm thay vì thúc đẩy khách hàng ghé quán hoặc đặt chỗ, chưa tối ưu cho mục tiêu 'thu hút khách ghé quán'. Cấu trúc nhịp điệu ổn định, dễ đọc."
+      },
+      "wordCount": 135,
+      "charLength": 605
+    },
+    "conditionCPlus": {
+      "content": "Bạn vừa mở laptop, nhìn đồng hồ và nhận ra buổi sáng còn dài, nhưng chỗ ngồi yên tĩnh để tập trung lại khó tìm. Nếu đang muốn tìm một địa điểm vừa thoải mái vừa tiết kiệm, Test Coffee có tin vui dành cho bạn.  \n\nTrong tuần khai trương, mọi hóa đơn tại Test Coffee được giảm ngay 20% đến cuối tuần. Thêm vào đó, mỗi thứ Tư sẽ có chương trình mua 2 tặng 1, giúp bạn thưởng thức thêm một ly mà không tốn thêm chi phí.  \n\nBạn đã có kế hoạch ghé thăm Test Coffee chưa? Hãy chia sẻ cảm nhận và địa điểm yêu thích của bạn trong phần bình luận nhé.",
+      "corrected": true,
+      "claimsCount": 1,
+      "claims": [
+        "Trong tuần khai trương"
+      ],
+      "scores": {
+        "hook": 4,
+        "gia_tri": 4,
+        "giong_van": 4,
+        "nhip_va_do_dai": 4,
+        "cta": 3,
+        "sach_sao_rong": 5,
+        "trung_thuc": 5,
+        "nhan_xet": "Bài viết bám sát các thông tin sự thật (facts) đã cung cấp, đảm bảo tính trung thực và sạch sao. Hook mở đầu bằng tình huống thực tế (cần chỗ yên tĩnh làm việc) khá hiệu quả để thu hút nhóm khách hàng mục tiêu là dân văn phòng hoặc sinh viên. Tuy nhiên, CTA (kêu gọi hành động) còn yếu và thiếu tính chuyển đổi (conversion) rõ ràng. Thay vì kêu gọi khách hàng 'ghé quán' hoặc 'đặt bàn' để tận dụng ưu đãi khai trương, bài viết lại mời gọi bình luận về cảm nhận và địa điểm yêu thích, điều này không trực tiếp thúc đẩy hành vi mua hàng hoặc ghé thăm quán như mục tiêu đề ra. Nhịp điệu và giọng văn ổn, dễ đọc, nhưng cần điều chỉnh CTA để tập trung vào việc kích thích hành động cụ thể (ví dụ: 'Ghé ngay hôm nay để nhận ưu đãi' hoặc 'Tag bạn bè cùng đi thứ Tư')."
+      },
+      "wordCount": 117,
+      "charLength": 540
+    },
+    "conditionB": {
+      "rawContent": "Ly cà phê nóng vừa rót ra, hơi nước bay lên trong góc quán yên tĩnh.\n\nĐó là không gian ấm cúng tại Test Coffee, nơi bạn có thể làm việc hoặc gặp gỡ bạn bè.\n\nQuán đang khai trương với ưu đãi giảm 20% áp dụng đến hết tuần này.\n\nNgoài ra, vào mỗi thứ Tư, chương trình mua 2 tặng 1 sẽ được kích hoạt.\n\nĐây là thời điểm hợp lý để trải nghiệm menu và hương vị mới lạ của quán.\n\nBạn từng ghé qua nơi nào có không gian tương tự để làm việc chưa?",
+      "content": "Sáng sớm, khi bạn vừa mở laptop và cần một chút năng lượng để bắt đầu ngày mới, một ly cà phê thơm ngon luôn là lựa chọn hoàn hảo.\n\nTại Test Coffee, chúng tôi đang mang đến ưu đãi giảm 20% cho tất cả khách hàng đến hết tuần này.\n\nĐặc biệt, vào mỗi thứ Tư, chương trình mua 2 tặng 1 sẽ được kích hoạt, giúp bạn tiết kiệm hơn khi thưởng thức.\n\nBạn đã sẵn sàng ghé qua để tận hưởng những ưu đãi hấp dẫn này chưa?",
+      "corrected": true,
+      "claimsFlaggedBefore": [],
+      "claimsCount": 0,
+      "claims": [],
+      "scores": {
+        "hook": 3,
+        "gia_tri": 4,
+        "giong_van": 3,
+        "nhip_va_do_dai": 4,
+        "cta": 3,
+        "sach_sao_rong": 5,
+        "trung_thuc": 5,
+        "nhan_xet": "Bài viết tuân thủ tuyệt đối các thông tin sự thật (facts) về ưu đãi giảm 20% và mua 2 tặng 1 vào thứ Tư, đảm bảo tính trung thực và sạch sao. Tuy nhiên, phần hook (mở đầu) khá nhạt nhòa và mang tính mô tả chung chung ('Sáng sớm...'), không đủ sức hút để giữ chân người dùng lướt Facebook. Giọng văn hơi khô khan, thiếu sự gần gũi hoặc cảm xúc đặc trưng của ngành F&B. CTA (kêu gọi hành động) ở dạng câu hỏi tu từ ('Bạn đã sẵn sàng...') là yếu, thiếu sự khẩn cấp hoặc chỉ dẫn cụ thể (như 'Ghé ngay', 'Inbox', 'Đặt bàn'). Để cải thiện, cần một hook gây tò mò hoặc đánh trúng nỗi đau (ví dụ: 'Mệt mỏi vì deadline?'), giọng văn ấm áp hơn và CTA mạnh mẽ, rõ ràng hơn."
+      },
+      "wordCount": 91,
+      "charLength": 409
+    }
+  },
+  {
+    "id": 22,
+    "topic": "Máy lọc nước X",
+    "facts": "Dữ liệu test giả định: Giá niêm yết 4.990.000đ, bảo hành 24 tháng chính hãng, miễn phí lắp đặt tại nhà",
+    "conditionC": {
+      "content": "Hình ảnh vòi nước chảy ra dòng trong vắt mà bạn có thể uống ngay mà không cần đun sôi.\n\nĐây là trải nghiệm thực tế với máy lọc nước X.\n\nSản phẩm chính hãng với giá niêm yết 4.990.000đ.\n\nĐội ngũ kỹ thuật sẽ đến tận nơi để lắp đặt cho gia đình bạn.\n\nChi phí lắp đặt hoàn toàn miễn phí.\n\nMáy được bảo hành 24 tháng chính hãng.\n\nQuy trình hậu mãi được thực hiện đúng cam kết.\n\nBạn đã từng sử dụng loại máy lọc nước nào tại nhà chưa?\n\nChia sẻ kinh nghiệm của bạn ở phần bình luận nhé.",
+      "claimsCount": 2,
+      "claims": [
+        "nước trong vắt mà bạn có thể uống ngay mà không cần đun sôi",
+        "trải nghiệm thực tế"
+      ],
+      "scores": {
+        "hook": 3,
+        "gia_tri": 4,
+        "giong_van": 3,
+        "nhip_va_do_dai": 3,
+        "cta": 4,
+        "sach_sao_rong": 5,
+        "trung_thuc": 5,
+        "nhan_xet": "Bài viết tuân thủ tuyệt đối các thông tin sự thật (giá, bảo hành, lắp đặt) và không có dấu hiệu lừa đảo hay phóng đại (sạch sao rỗng, trung thực đạt điểm cao). Tuy nhiên, về mặt kỹ thuật viết content Facebook, bài viết khá khô khan và thiếu sức hút. Hook mở đầu tuy hình ảnh hóa nhưng chưa đủ 'gây sốc' hoặc tạo sự tò mò mạnh mẽ để giữ chân người dùng lướt nhanh. Giọng văn hơi cứng nhắc, giống như một bản liệt kê thông số kỹ thuật hơn là một bài chia sẻ tự nhiên. Nhịp điệu bị ngắt quãng do các câu quá ngắn và rời rạc, thiếu sự liên kết mạch lạc. CTA cuối bài là câu hỏi mở hợp lý nhưng có thể mạnh mẽ hơn nếu kết hợp với ưu đãi cụ thể. Tổng thể, bài viết an toàn nhưng thiếu hiệu quả chuyển đổi do thiếu cảm xúc và sự hấp dẫn."
+      },
+      "wordCount": 105,
+      "charLength": 479
+    },
+    "conditionCPlus": {
+      "content": "Bạn vừa mở cửa sổ, hít vào hơi lạnh của buổi sáng, và đang chuẩn bị ly cà phê. Bạn có bao giờ tự hỏi nguồn nước trong ly có thật sự sạch sẽ không? Máy lọc nước X sẽ mang đến giải pháp đơn giản cho ngôi nhà của bạn.\n\nSản phẩm chính hãng được bán với giá niêm yết 4.990.000đ. Đội ngũ kỹ thuật chuyên nghiệp sẽ đến tận nơi để lắp đặt, hoàn toàn miễn phí. Máy được bảo hành 24 tháng chính hãng, đảm bảo bạn yên tâm sử dụng trong thời gian dài.\n\nBạn đã từng dùng máy lọc nước nào trong gia đình chưa? Hãy chia sẻ cảm nhận của bạn trong phần bình luận nhé.",
+      "corrected": true,
+      "claimsCount": 3,
+      "claims": [
+        "nguồn nước trong ly có thật sự sạch sẽ không?",
+        "mang đến giải pháp đơn giản cho ngôi nhà của bạn",
+        "Đội ngũ kỹ thuật chuyên nghiệp"
+      ],
+      "scores": {
+        "hook": 4,
+        "gia_tri": 4,
+        "giong_van": 4,
+        "nhip_va_do_dai": 4,
+        "cta": 4,
+        "sach_sao_rong": 5,
+        "trung_thuc": 5,
+        "nhan_xet": "Bài viết bám sát các thông tin sự thật (facts) đã cung cấp về giá, bảo hành và lắp đặt, đảm bảo tính trung thực tuyệt đối. Hook mở đầu bằng hình ảnh đời thường (uống cà phê) tạo sự gần gũi và gợi mở vấn đề an toàn nguồn nước một cách tự nhiên. Giọng văn nhẹ nhàng, phù hợp với sản phẩm gia đình. CTA khuyến khích tương tác bằng cách hỏi về trải nghiệm của người dùng, tuy nhiên có thể mạnh mẽ hơn nếu kết hợp thêm lời kêu gọi hành động mua hàng trực tiếp. Tổng thể bài viết sạch sẽ, không có thông tin sai lệch hoặc quảng cáo quá đà."
+      },
+      "wordCount": 122,
+      "charLength": 550
+    },
+    "conditionB": {
+      "rawContent": "Chiếc vòi nước nhỏ giọt từng ngày trong bếp, khiến nhiều gia đình lo lắng về chất lượng nguồn nước sinh hoạt.\n\nMáy lọc nước X chính hãng đang có giá niêm yết 4.990.000đ.\n\nSản phẩm được bảo hành 24 tháng chính hãng.\n\nĐặc biệt, chính sách hậu mãi bao gồm miễn phí lắp đặt tại nhà.\n\nBạn đã sử dụng máy lọc nước chính hãng được bao lâu rồi? Chia sẻ kinh nghiệm ở phần bình luận nhé.",
+      "content": "Sáng sớm thức dậy, bạn thường làm gì trước tiên?\nCó lẽ là pha một ly nước mát lạnh để bắt đầu ngày mới.\n\nMáy lọc nước X chính hãng hiện có giá niêm yết 4.990.000đ.\nSản phẩm đi kèm chế độ bảo hành 24 tháng chính hãng.\n\nĐặc biệt, bạn sẽ được miễn phí lắp đặt tại nhà.\nQuy trình này giúp việc sử dụng trở nên tiện lợi hơn.\n\nBạn đã dùng máy lọc nước được bao lâu rồi?\nChia sẻ kinh nghiệm của mình ở phần bình luận nhé.",
+      "corrected": true,
+      "claimsFlaggedBefore": [],
+      "claimsCount": 0,
+      "claims": [],
+      "scores": {
+        "hook": 3,
+        "gia_tri": 4,
+        "giong_van": 3,
+        "nhip_va_do_dai": 3,
+        "cta": 3,
+        "sach_sao_rong": 5,
+        "trung_thuc": 5,
+        "nhan_xet": "Bài viết tuân thủ tuyệt đối các thông tin sự thật (giá, bảo hành, lắp đặt) và không có dấu hiệu spam hay sai lệch. Tuy nhiên, về mặt kỹ thuật viết content Facebook, bài viết khá yếu: Hook mở đầu bằng câu hỏi chung chung, thiếu sức hút và không tạo được sự tò mò đặc thù cho sản phẩm. Giọng văn khô khan, mang tính liệt kê thông tin hơn là kể chuyện hoặc giải quyết nỗi đau của khách hàng. CTA cuối bài chỉ mời gọi bình luận chung chung, không thúc đẩy hành động mua hàng hoặc tư vấn cụ thể, làm giảm hiệu quả chuyển đổi."
+      },
+      "wordCount": 92,
+      "charLength": 414
+    }
+  },
+  {
+    "id": 23,
+    "topic": "Khóa học Excel",
+    "facts": "Dữ liệu test giả định: Khóa học gồm 6 buổi thực hành, học phí 1.200.000đ, cấp chứng nhận nội bộ sau khi hoàn thành bài test cuối khóa",
+    "conditionC": {
+      "content": "Bàn phím gõ lách cách nhưng con số trên bảng tính vẫn nhảy múa loạn xạ.\n\nMất cả buổi chiều chỉ để xử lý một file báo cáo.\n\nĐó là lý do bạn cần kỹ năng thực chiến thay vì lý thuyết suông.\n\nKhóa học Excel thực hành gồm 6 buổi.\n\nNội dung tập trung hoàn toàn vào tình huống văn phòng thật.\n\nHọc phí trọn gói là 1.200.000đ.\n\nSau khi hoàn thành bài test cuối khóa, bạn sẽ nhận chứng nhận nội bộ.\n\nBạn đang gặp khó khăn ở bước nào trong quy trình làm việc?\n\nChia sẻ trong phần bình luận để cùng trao đổi nhé.",
+      "claimsCount": 1,
+      "claims": [
+        "Nội dung tập trung hoàn toàn vào tình huống văn phòng thật."
+      ],
+      "scores": {
+        "hook": 4,
+        "gia_tri": 4,
+        "giong_van": 4,
+        "nhip_va_do_dai": 5,
+        "cta": 4,
+        "sach_sao_rong": 5,
+        "trung_thuc": 5,
+        "nhan_xet": "Bài viết bám sát các thông tin sự thật (facts) đã cung cấp, đảm bảo tính trung thực tuyệt đối. Cấu trúc ngắn gọn, nhịp điệu nhanh phù hợp với nền tảng Facebook, giúp người đọc dễ tiếp nhận thông tin. Hook tạo sự đồng cảm với nỗi đau thực tế của dân văn phòng. Điểm trừ nhỏ ở CTA khi chỉ kêu gọi bình luận thay vì hành động chuyển đổi trực tiếp (đăng ký), tuy nhiên vẫn chấp nhận được trong chiến lược xây dựng cộng đồng. Tổng thể là một bài viết sạch, rõ ràng và hiệu quả."
+      },
+      "wordCount": 108,
+      "charLength": 501
+    },
+    "conditionCPlus": {
+      "content": "Bạn mở laptop vào buổi chiều, nhìn vào hàng loạt cột số và cảm thấy thời gian trôi nhanh hơn bao giờ hết. Một lỗi nhỏ trong công thức khiến cả báo cáo phải dừng lại, và bạn lại phải dành cả buổi tối để sửa lại. Nếu muốn giảm bớt những giây phút căng thẳng ấy, hãy thử một cách học thực tế.  \n\nKhóa học Excel thực hành gồm 6 buổi, mỗi buổi tập trung vào những tình huống văn phòng thực tế mà bạn gặp hàng ngày. Bạn sẽ được thực hành ngay trên máy, áp dụng các công cụ ngay lập tức. Học phí trọn gói 1.200.000đ, và sau khi hoàn thành bài test cuối khóa, bạn sẽ nhận được chứng nhận nội bộ.  \n\nBạn gặp khó khăn nào nhất khi làm việc với Excel? Hãy chia sẻ trong bình luận, cùng nhau tìm giải pháp!",
+      "corrected": true,
+      "claimsCount": 3,
+      "claims": [
+        "tập trung vào những tình huống văn phòng thực tế",
+        "thực hành ngay trên máy",
+        "áp dụng các công cụ ngay lập tức"
+      ],
+      "scores": {
+        "hook": 4,
+        "gia_tri": 4,
+        "giong_van": 4,
+        "nhip_va_do_dai": 5,
+        "cta": 4,
+        "sach_sao_rong": 5,
+        "trung_thuc": 5,
+        "nhan_xet": "Bài viết bám sát các thông tin sự thật (facts) đã cung cấp về số buổi, học phí và chứng nhận, đảm bảo tính trung thực tuyệt đối. Hook mở đầu bằng tình huống cụ thể (lỗi công thức, mất thời gian) tạo sự đồng cảm tốt cho đối tượng mục tiêu. Giọng văn tự nhiên, không quá quảng cáo, phù hợp với nền tảng Facebook. CTA khuyến khích tương tác nhẹ nhàng. Điểm trừ nhỏ ở phần giá trị (gia_tri) là chưa liệt kê cụ thể các kỹ năng sẽ học (ví dụ: VLOOKUP, Pivot Table...), khiến lợi ích cụ thể hơi chung chung, nhưng tổng thể bài viết vẫn hiệu quả và an toàn."
+      },
+      "wordCount": 149,
+      "charLength": 694
+    },
+    "conditionB": {
+      "rawContent": "Bạn đang đối mặt với bảng tính hàng nghìn dòng dữ liệu, con trỏ chuột di chuyển liên tục mà vẫn loay hoay tìm công thức đúng.\n\nĐó là tình cảnh quen thuộc của nhiều người làm văn phòng khi thiếu kỹ năng xử lý dữ liệu hiệu quả.\n\nLớp học thực hành Excel này tập trung hoàn toàn vào kỹ năng áp dụng ngay vào công việc.\n\nToàn bộ khóa học bao gồm 6 buổi thực hành trực tiếp, không lý thuyết suông.\n\nHọc phí trọn gói là 1.200.000đ.\n\nSau khi hoàn thành bài test cuối khóa, bạn sẽ được cấp chứng nhận nội bộ.\n\nNội dung đi từ cơ bản đến nâng cao, tối ưu quy trình làm việc hàng ngày.\n\nBạn đang gặp khó khăn với thao tác nào trên Excel?\n\nChia sẻ thêm để mọi người cùng trao đổi kinh nghiệm nhé.",
+      "content": "Bạn đang đối mặt với bảng tính hàng nghìn dòng dữ liệu, con trỏ chuột di chuyển liên tục mà vẫn loay hoay tìm công thức đúng.\n\nĐó là tình cảnh quen thuộc của nhiều người làm văn phòng khi thiếu kỹ năng xử lý dữ liệu hiệu quả.\n\nToàn bộ khóa học bao gồm 6 buổi thực hành trực tiếp, không lý thuyết suông.\n\nHọc phí trọn gói là 1.200.000đ.\n\nSau khi hoàn thành bài test cuối khóa, bạn sẽ được cấp chứng nhận nội bộ.\n\nBạn đang gặp khó khăn với thao tác nào trên Excel?\n\nChia sẻ thêm để mọi người cùng trao đổi kinh nghiệm nhé.",
+      "corrected": true,
+      "claimsFlaggedBefore": [],
+      "claimsCount": 1,
+      "claims": [
+        "không lý thuyết suông"
+      ],
+      "scores": {
+        "hook": 4,
+        "gia_tri": 4,
+        "giong_van": 4,
+        "nhip_va_do_dai": 5,
+        "cta": 3,
+        "sach_sao_rong": 5,
+        "trung_thuc": 5,
+        "nhan_xet": "Bài viết bám sát các thông tin sự thật (facts) đã cung cấp, đảm bảo tính trung thực tuyệt đối. Cấu trúc ngắn gọn, nhịp điệu nhanh, phù hợp với nền tảng Facebook. Tuy nhiên, CTA (kêu gọi hành động) còn yếu vì chỉ dừng lại ở việc mời trao đổi kinh nghiệm chung chung mà không có nút bấm hoặc hướng dẫn cụ thể để đăng ký khóa học, làm giảm hiệu quả chuyển đổi cho mục tiêu tuyển sinh."
+      },
+      "wordCount": 110,
+      "charLength": 520
+    }
+  },
+  {
+    "id": 24,
+    "topic": "Shop quần áo thời trang",
+    "facts": "Dữ liệu test giả định: Miễn phí vận chuyển (freeship) cho đơn hàng từ 299k, hỗ trợ đổi trả trong vòng 7 ngày",
+    "conditionC": {
+      "content": "Đứng trước gương xoay người mà thấy bộ đồ cũ đã lỗi mốt, bạn bắt đầu muốn thay đổi phong cách.\n\nCảm giác ngại ngùng khi phải ra cửa hàng thử đồ hết size này đến size kia.\n\nLướt điện thoại và chọn ngay một set quần áo ưng ý tại shop.\n\nQuy trình mua sắm online trở nên nhẹ nhàng hơn bao giờ hết.\n\nĐơn hàng từ 299k được miễn phí hoàn toàn chi phí vận chuyển.\n\nKhông thích hay không vừa, bạn có thể đổi trả trong vòng 7 ngày.\n\nChính sách rõ ràng giúp bạn an tâm chọn lựa mà không lo rủi ro.\n\nBạn thường ưu tiên yếu tố nào khi mua sắm online: kiểu dáng hay chính sách bảo hành?",
+      "claimsCount": 0,
+      "claims": [],
+      "scores": {
+        "hook": 3,
+        "gia_tri": 4,
+        "giong_van": 4,
+        "nhip_va_do_dai": 4,
+        "cta": 3,
+        "sach_sao_rong": 5,
+        "trung_thuc": 5,
+        "nhan_xet": "Bài viết bám sát các dữ liệu thực tế (freeship 299k, đổi trả 7 ngày) và truyền tải thông điệp rõ ràng, giọng văn tự nhiên, phù hợp với đối tượng mua sắm online. Tuy nhiên, hook (mở đầu) còn khá chung chung và thiếu sức hút mạnh mẽ để giữ chân người dùng ngay từ dòng đầu tiên. CTA (kêu gọi hành động) ở cuối bài là một câu hỏi mở, tuy tạo tương tác nhưng không thúc đẩy hành động mua hàng (chốt đơn) một cách trực tiếp và khẩn cấp, chưa tối ưu cho mục tiêu tăng tỷ lệ chuyển đổi."
+      },
+      "wordCount": 125,
+      "charLength": 572
+    },
+    "conditionCPlus": {
+      "content": "Đứng trước gương xoay người mà thấy bộ đồ cũ đã lỗi mốt, bạn bắt đầu muốn thay đổi phong cách.\n\nCảm giác ngại ngùng khi phải ra cửa hàng thử đồ hết size này đến size kia.\n\nLướt điện thoại và chọn ngay một set quần áo ưng ý tại shop.\n\nQuy trình mua sắm online trở nên nhẹ nhàng hơn bao giờ hết.\n\nĐơn hàng từ 299k được miễn phí hoàn toàn chi phí vận chuyển.\n\nKhông thích hay không vừa, bạn có thể đổi trả trong vòng 7 ngày.\n\nChính sách rõ ràng giúp bạn an tâm chọn lựa mà không lo rủi ro.\n\nBạn thường ưu tiên yếu tố nào khi mua sắm online: kiểu dáng hay chính sách bảo hành?",
+      "corrected": false,
+      "claimsCount": 0,
+      "claims": [],
+      "scores": {
+        "hook": 3,
+        "gia_tri": 4,
+        "giong_van": 4,
+        "nhip_va_do_dai": 4,
+        "cta": 3,
+        "sach_sao_rong": 5,
+        "trung_thuc": 5,
+        "nhan_xet": "Bài viết bám sát các dữ liệu thực tế (freeship 299k, đổi trả 7 ngày) và truyền tải thông điệp rõ ràng, giọng văn tự nhiên, phù hợp với đối tượng mua sắm online. Tuy nhiên, phần hook (mở đầu) hơi dài dòng và thiếu sức hút mạnh mẽ để giữ chân người dùng ngay từ dòng đầu tiên trên Facebook. CTA (kêu gọi hành động) ở cuối bài là một câu hỏi mở, tuy tạo tương tác nhưng không thúc đẩy hành động mua hàng (chốt đơn) một cách trực tiếp và khẩn cấp, chưa tối ưu cho mục tiêu tăng tỷ lệ chuyển đổi."
+      },
+      "wordCount": 125,
+      "charLength": 572
+    },
+    "conditionB": {
+      "rawContent": "Bạn đang chọn bộ đồ cho buổi hẹn cuối tuần nhưng chưa chắc về size?\n\nĐừng lo lắng. Shop quần áo thời trang của chúng tôi hỗ trợ đổi trả trong vòng 7 ngày.\n\nBạn có thể ghé thử thoải mái mà không cần suy nghĩ quá nhiều.\n\nNếu tổng đơn hàng của bạn từ 299k trở lên, phí vận chuyển đã được miễn phí hoàn toàn.\n\nChính sách này giúp bạn mua sắm online an tâm hơn.\n\nBạn thường ưu tiên yếu tố nào khi chọn đồ online?",
+      "content": "Bạn đang chọn bộ đồ cho buổi hẹn cuối tuần nhưng chưa chắc về size?\n\nĐừng lo lắng. Shop quần áo thời trang của chúng tôi hỗ trợ đổi trả trong vòng 7 ngày.\n\nBạn có thể ghé thử thoải mái mà không cần suy nghĩ quá nhiều.\n\nNếu tổng đơn hàng của bạn từ 299k trở lên, phí vận chuyển đã được miễn phí hoàn toàn.\n\nChính sách này giúp bạn mua sắm online an tâm hơn.\n\nBạn thường ưu tiên yếu tố nào khi chọn đồ online?",
+      "corrected": false,
+      "claimsFlaggedBefore": [],
+      "claimsCount": 0,
+      "claims": [],
+      "scores": {
+        "hook": 3,
+        "gia_tri": 4,
+        "giong_van": 4,
+        "nhip_va_do_dai": 4,
+        "cta": 3,
+        "sach_sao_rong": 5,
+        "trung_thuc": 5,
+        "nhan_xet": "Bài viết bám sát các dữ liệu thực tế (facts) về freeship từ 299k và đổi trả 7 ngày, đảm bảo tính trung thực tuyệt đối. Tuy nhiên, hook mở đầu khá yếu và thiếu sức hút, chỉ nêu vấn đề chung chung mà không tạo được sự tò mò hay nỗi đau cụ thể để giữ chân người đọc. CTA cuối bài là câu hỏi mở, tuy thân thiện nhưng thiếu tính hành động (actionable) rõ ràng để thúc đẩy chốt đơn ngay lập tức. Giọng văn và nhịp độ ổn, dễ đọc, phù hợp với nền tảng Facebook."
+      },
+      "wordCount": 89,
+      "charLength": 407
+    }
+  },
+  {
+    "id": 25,
+    "topic": "Căn hộ mẫu Y",
+    "facts": "Dữ liệu test giả định: Thiết kế 2 phòng ngủ (2PN), diện tích 65m², mở bán đợt 1, không có cam kết lợi nhuận",
+    "conditionC": {
+      "content": "Bạn đang đứng trước một căn hộ mới mở bán, diện tích 65m², 2 phòng ngủ.  \nBạn đã từng mơ về không gian sống lý tưởng cho gia đình?  \nBạn muốn biết chi tiết về căn hộ mẫu Y ngay hôm nay?  \n\nCăn hộ mẫu Y được thiết kế với 2 phòng ngủ, tổng diện tích 65m².  \nMẫu này đang trong đợt bán thứ nhất, chưa có cam kết lợi nhuận.  \n\nHãy để lại bình luận hoặc nhắn tin để đăng ký tham quan thực tế.",
+      "claimsCount": 0,
+      "claims": [],
+      "scores": {
+        "hook": 3,
+        "gia_tri": 2,
+        "giong_van": 3,
+        "nhip_va_do_dai": 4,
+        "cta": 4,
+        "sach_sao_rong": 5,
+        "trung_thuc": 5,
+        "nhan_xet": "Bài viết tuân thủ tuyệt đối các thông tin thực tế (facts) đã cung cấp, không có sự bịa đặt hay cam kết sai lệch (điểm trung thực và sạch sao rông đạt tối đa). Tuy nhiên, về mặt hiệu quả marketing, bài viết khá yếu. Hook (mở đầu) sử dụng câu hỏi tu từ nhưng thiếu sức hút và sự khác biệt, chỉ liệt kê thông số khô khan. Phần giá trị (gia tri) rất thấp vì chỉ lặp lại thông số kỹ thuật (2PN, 65m2) mà không khai thác lợi ích (benefit) hay cảm xúc của khách hàng, khiến người đọc không thấy lý do để quan tâm. Giọng văn (giong_van) trung tính, hơi máy móc và thiếu sự kết nối. Nhịp điệu (nhip_va_do_dai) ổn do câu ngắn gọn, dễ đọc. CTA (cta) rõ ràng và trực tiếp. Tổng thể, bài viết an toàn nhưng nhạt nhẽo, khó tạo chuyển đổi."
+      },
+      "wordCount": 86,
+      "charLength": 387
+    },
+    "conditionCPlus": {
+      "content": "Bạn đang đứng trước một căn hộ mới mở bán, diện tích 65m², 2 phòng ngủ.  \nBạn đã từng mơ về không gian sống lý tưởng cho gia đình?  \nBạn muốn biết chi tiết về căn hộ mẫu Y ngay hôm nay?  \n\nCăn hộ mẫu Y được thiết kế với 2 phòng ngủ, tổng diện tích 65m².  \nMẫu này đang trong đợt bán thứ nhất, chưa có cam kết lợi nhuận.  \n\nHãy để lại bình luận hoặc nhắn tin để đăng ký tham quan thực tế.",
+      "corrected": false,
+      "claimsCount": 0,
+      "claims": [],
+      "scores": {
+        "hook": 3,
+        "gia_tri": 2,
+        "giong_van": 3,
+        "nhip_va_do_dai": 4,
+        "cta": 4,
+        "sach_sao_rong": 5,
+        "trung_thuc": 5,
+        "nhan_xet": "Bài viết đạt yêu cầu về sự trung thực và sạch sẽ (không có từ khóa cấm, đúng facts). Tuy nhiên, hook khá yếu và lặp lại thông tin ngay lập tức, thiếu sức hút để giữ chân người dùng. Phần giá trị thông tin rất mỏng, chỉ liệt kê thông số khô khan mà không khai thác lợi ích (benefit) của việc sở hữu căn hộ 2PN 65m2 (ví dụ: phù hợp gia đình trẻ, tối ưu công năng...). Giọng văn hơi máy móc và thiếu cảm xúc. CTA rõ ràng nhưng tổng thể bài viết chưa đủ sức thuyết phục để chuyển đổi."
+      },
+      "wordCount": 86,
+      "charLength": 387
+    },
+    "conditionB": {
+      "rawContent": "Cánh cửa mở ra, ánh sáng tự nhiên tràn ngập phòng khách rộng rãi trong căn hộ 65m2.\n\nThiết kế 2 phòng ngủ được bố trí khoa học, tối ưu hóa từng mét vuông sinh hoạt.\n\nĐây là căn hộ mẫu Y đang mở bán đợt 1.\n\nKhông có cam kết lợi nhuận hay các điều khoản tài chính phức tạp.\n\nMọi thông tin đều minh bạch, tập trung vào chất lượng không gian sống thực tế.\n\nKhuyến khích quý khách đến tham quan thực tế trước khi đưa ra bất kỳ quyết định nào.\n\nNếu có thắc mắc về thiết kế hoặc quy trình đăng ký, hãy để lại bình luận bên dưới.",
+      "content": "Sáng sớm, khi bạn vừa khép lại màn hình laptop sau một đêm dài, khoảnh khắc được trở về với không gian riêng tư chính là điều quý giá nhất.\n\nThay vì những lời hứa hẹn hoa mỹ, chúng tôi tập trung vào sự rõ ràng. Dự án đang mở bán đợt 1 với thiết kế 2 phòng ngủ, phù hợp cho những ai tìm kiếm sự ổn định.\n\nĐiểm đặc biệt là không có cam kết lợi nhuận hay các điều khoản tài chính phức tạp. Mọi thứ được giữ ở mức đơn giản, tập trung vào giá trị thực tế của ngôi nhà.\n\nBạn có muốn tìm hiểu thêm về quy trình đăng ký không? Hãy để lại bình luận bên dưới nhé.",
+      "corrected": true,
+      "claimsFlaggedBefore": [],
+      "claimsCount": 0,
+      "claims": [],
+      "scores": {
+        "hook": 3,
+        "gia_tri": 2,
+        "giong_van": 4,
+        "nhip_va_do_dai": 4,
+        "cta": 3,
+        "sach_sao_rong": 5,
+        "trung_thuc": 5,
+        "nhan_xet": "Bài viết có giọng văn nhẹ nhàng, trung thực và tuân thủ tuyệt đối các thông tin sự thật (không bịa đặt lợi nhuận, đúng số phòng ngủ). Tuy nhiên, điểm yếu lớn nhất là thiếu thông số kỹ thuật quan trọng (diện tích 65m²) và tên căn hộ mẫu Y, khiến mục tiêu 'giới thiệu thông số' không đạt. Hook khá chung chung, không tạo sự tò mò đặc thù cho sản phẩm. CTA yếu, chỉ mời bình luận thay vì mời đăng ký tham quan thực tế như yêu cầu. Tổng thể bài viết an toàn nhưng thiếu sức hút và thông tin cần thiết để chuyển đổi khách hàng."
+      },
+      "wordCount": 125,
+      "charLength": 553
+    }
+  }
+]

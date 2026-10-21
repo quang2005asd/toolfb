@@ -1,0 +1,1478 @@
+{
+  "meo-nau-com-khong-bi-nhao": {
+    "topic_key": "meo-nau-com-khong-bi-nhao",
+    "display_name": "mẹo nấu cơm không bị nhão",
+    "parent_key": "general",
+    "sensitivity": "normal",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến mẹo nấu cơm không bị nhão",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về mẹo nấu cơm không bị nhão",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "du-lich-da-lat-2-ngay": {
+    "topic_key": "du-lich-da-lat-2-ngay",
+    "display_name": "du lịch Đà Lạt 2 ngày",
+    "parent_key": "travel",
+    "sensitivity": "normal",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến du lịch Đà Lạt 2 ngày",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về du lịch Đà Lạt 2 ngày",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook bằng khung cảnh cụ thể (thời gian, địa điểm, cảm giác giác quan chân thực)",
+      "Lịch trình súc tích theo từng ngày dựa trên facts",
+      "CTA mời chia sẻ địa điểm yêu thích, bỏ đoạn nhắc lại nỗi lo thiếu thời gian"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "nuoi-meo-moi-ve-nha": {
+    "topic_key": "nuoi-meo-moi-ve-nha",
+    "display_name": "nuôi mèo mới về nhà",
+    "parent_key": "general",
+    "sensitivity": "normal",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến nuôi mèo mới về nhà",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về nuôi mèo mới về nhà",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "hoc-tieng-anh-giao-tiep-cho-nguoi-di-lam": {
+    "topic_key": "hoc-tieng-anh-giao-tiep-cho-nguoi-di-lam",
+    "display_name": "học tiếng Anh giao tiếp cho người đi làm",
+    "parent_key": "general",
+    "sensitivity": "normal",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến học tiếng Anh giao tiếp cho người đi làm",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về học tiếng Anh giao tiếp cho người đi làm",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "trong-rau-ban-cong": {
+    "topic_key": "trong-rau-ban-cong",
+    "display_name": "trồng rau ban công",
+    "parent_key": "general",
+    "sensitivity": "normal",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến trồng rau ban công",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về trồng rau ban công",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "chon-laptop-cho-sinh-vien": {
+    "topic_key": "chon-laptop-cho-sinh-vien",
+    "display_name": "chọn laptop cho sinh viên",
+    "parent_key": "general",
+    "sensitivity": "normal",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến chọn laptop cho sinh viên",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về chọn laptop cho sinh viên",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "don-nha-gon-gang": {
+    "topic_key": "don-nha-gon-gang",
+    "display_name": "dọn nhà gọn gàng",
+    "parent_key": "general",
+    "sensitivity": "normal",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến dọn nhà gọn gàng",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về dọn nhà gọn gàng",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "ca-phe-pha-phin-tai-nha": {
+    "topic_key": "ca-phe-pha-phin-tai-nha",
+    "display_name": "cà phê pha phin tại nhà",
+    "parent_key": "general",
+    "sensitivity": "normal",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến cà phê pha phin tại nhà",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về cà phê pha phin tại nhà",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "chay-bo-cho-nguoi-moi": {
+    "topic_key": "chay-bo-cho-nguoi-moi",
+    "display_name": "chạy bộ cho người mới",
+    "parent_key": "general",
+    "sensitivity": "normal",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến chạy bộ cho người mới",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về chạy bộ cho người mới",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "quan-ly-thoi-gian-khi-lam-viec-tai-nha": {
+    "topic_key": "quan-ly-thoi-gian-khi-lam-viec-tai-nha",
+    "display_name": "quản lý thời gian khi làm việc tại nhà",
+    "parent_key": "general",
+    "sensitivity": "normal",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến quản lý thời gian khi làm việc tại nhà",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về quản lý thời gian khi làm việc tại nhà",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "serum-tri-mun": {
+    "topic_key": "serum-tri-mun",
+    "display_name": "serum trị mụn",
+    "parent_key": "health",
+    "sensitivity": "high",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến serum trị mụn",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về serum trị mụn",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "giam-can-sau-sinh": {
+    "topic_key": "giam-can-sau-sinh",
+    "display_name": "giảm cân sau sinh",
+    "parent_key": "health",
+    "sensitivity": "high",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến giảm cân sau sinh",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về giảm cân sau sinh",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "thuc-pham-chuc-nang-bo-khop": {
+    "topic_key": "thuc-pham-chuc-nang-bo-khop",
+    "display_name": "thực phẩm chức năng bổ khớp",
+    "parent_key": "health",
+    "sensitivity": "high",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến thực phẩm chức năng bổ khớp",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về thực phẩm chức năng bổ khớp",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "dau-tu-chung-khoan-cho-nguoi-moi": {
+    "topic_key": "dau-tu-chung-khoan-cho-nguoi-moi",
+    "display_name": "đầu tư chứng khoán cho người mới",
+    "parent_key": "finance",
+    "sensitivity": "high",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến đầu tư chứng khoán cho người mới",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về đầu tư chứng khoán cho người mới",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "vay-tien-nhanh-online": {
+    "topic_key": "vay-tien-nhanh-online",
+    "display_name": "vay tiền nhanh online",
+    "parent_key": "finance",
+    "sensitivity": "high",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến vay tiền nhanh online",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về vay tiền nhanh online",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "mua-dat-nen": {
+    "topic_key": "mua-dat-nen",
+    "display_name": "mua đất nền",
+    "parent_key": "real-estate",
+    "sensitivity": "high",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến mua đất nền",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về mua đất nền",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "kem-trang-da": {
+    "topic_key": "kem-trang-da",
+    "display_name": "kem trắng da",
+    "parent_key": "health",
+    "sensitivity": "high",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến kem trắng da",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về kem trắng da",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "thuoc-ngumat-ngu": {
+    "topic_key": "thuoc-ngumat-ngu",
+    "display_name": "thuốc ngủ/mất ngủ",
+    "parent_key": "health",
+    "sensitivity": "high",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến thuốc ngủ/mất ngủ",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về thuốc ngủ/mất ngủ",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn.",
+      "Chỉ chia sẻ thói quen vệ sinh giấc ngủ tự nhiên và khuyên người mất ngủ đi khám chuyên khoa."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí.",
+      "CẤM quảng cáo thuốc ngủ hoặc đưa ra liều dùng (mg) vì thuốc ngủ là thuốc kê đơn cấm quảng cáo theo Khoản 1 Điều 7 Luật Quảng cáo VN."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "tu-van-phap-ly-ly-hon": {
+    "topic_key": "tu-van-phap-ly-ly-hon",
+    "display_name": "tư vấn pháp lý ly hôn",
+    "parent_key": "general",
+    "sensitivity": "high",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến tư vấn pháp lý ly hôn",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về tư vấn pháp lý ly hôn",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "sua-cong-thuc-cho-tre-nho": {
+    "topic_key": "sua-cong-thuc-cho-tre-nho",
+    "display_name": "sữa công thức cho trẻ nhỏ",
+    "parent_key": "health",
+    "sensitivity": "high",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến sữa công thức cho trẻ nhỏ",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về sữa công thức cho trẻ nhỏ",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn.",
+      "Bắt buộc ghi rõ: Sữa mẹ là thức ăn tốt nhất cho sự phát triển toàn diện của trẻ sơ sinh và trẻ nhỏ."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí.",
+      "CẤM quảng cáo sản phẩm thay thế sữa mẹ cho trẻ dưới 24 tháng tuổi theo Khoản 4 Điều 7 Luật Quảng cáo VN."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "quan-ca-phe-test-coffee": {
+    "topic_key": "quan-ca-phe-test-coffee",
+    "display_name": "Quán cà phê “Test Coffee”",
+    "parent_key": "general",
+    "sensitivity": "normal",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến Quán cà phê “Test Coffee”",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về Quán cà phê “Test Coffee”",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "may-loc-nuoc-x": {
+    "topic_key": "may-loc-nuoc-x",
+    "display_name": "Máy lọc nước X",
+    "parent_key": "general",
+    "sensitivity": "normal",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến Máy lọc nước X",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về Máy lọc nước X",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "khoa-hoc-excel": {
+    "topic_key": "khoa-hoc-excel",
+    "display_name": "Khóa học Excel",
+    "parent_key": "general",
+    "sensitivity": "normal",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến Khóa học Excel",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về Khóa học Excel",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "shop-quan-ao-thoi-trang": {
+    "topic_key": "shop-quan-ao-thoi-trang",
+    "display_name": "Shop quần áo thời trang",
+    "parent_key": "general",
+    "sensitivity": "normal",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến Shop quần áo thời trang",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về Shop quần áo thời trang",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "can-ho-mau-y": {
+    "topic_key": "can-ho-mau-y",
+    "display_name": "Căn hộ mẫu Y",
+    "parent_key": "real-estate",
+    "sensitivity": "high",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến Căn hộ mẫu Y",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về Căn hộ mẫu Y",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "binh-yen": {
+    "topic_key": "binh-yen",
+    "display_name": "bình yên",
+    "parent_key": "general",
+    "sensitivity": "normal",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến bình yên",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về bình yên",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "sua-xe-dap-dien": {
+    "topic_key": "sua-xe-dap-dien",
+    "display_name": "sửa xe đạp điện",
+    "parent_key": "general",
+    "sensitivity": "normal",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến sửa xe đạp điện",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về sửa xe đạp điện",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "tieng-long-genz": {
+    "topic_key": "tieng-long-genz",
+    "display_name": "tiếng lóng GenZ",
+    "parent_key": "general",
+    "sensitivity": "normal",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến tiếng lóng GenZ",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về tiếng lóng GenZ",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "thuc-pham-lam-dep": {
+    "topic_key": "thuc-pham-lam-dep",
+    "display_name": "thực phẩm làm đẹp",
+    "parent_key": "general",
+    "sensitivity": "high",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến thực phẩm làm đẹp",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về thực phẩm làm đẹp",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook 3 dòng đầu bằng một khoảnh khắc/hình ảnh đời thực cụ thể",
+      "Thân bài: Nêu giải pháp và hướng dẫn thực hành bám sát facts đã cho (thiếu thông tin thì bỏ qua, tuyệt đối không bịa số liệu)",
+      "CTA kết bài nhẹ nhàng mời thảo luận, chia sẻ kinh nghiệm"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  },
+  "cach-kiem-50-trieuthang-nhanh-nhat": {
+    "topic_key": "cach-kiem-50-trieuthang-nhanh-nhat",
+    "display_name": "cách kiếm 50 triệu/tháng nhanh nhất",
+    "parent_key": "finance",
+    "sensitivity": "high",
+    "status": "CONFIRMED",
+    "generated_by": "human",
+    "version": 1,
+    "audience_default": "Độc giả quan tâm đến cách kiếm 50 triệu/tháng nhanh nhất",
+    "angles": [
+      "Góc chia sẻ kinh nghiệm thực tế về cách kiếm 50 triệu/tháng nhanh nhất",
+      "Góc hướng dẫn từng bước dễ áp dụng ngay tại nhà",
+      "Góc phân tích và cảnh báo những sai lầm phổ biến"
+    ],
+    "structure": [
+      "Hook bằng một khoảnh khắc đối diện thực tế, thức tỉnh lòng tham",
+      "Chuyển hướng cứng (Hard Pivot): Vạch trần bẫy làm giàu nhanh và khẳng định nguyên tắc lao động bền vững",
+      "Lời khuyên hành động: Tập trung nâng cao giá trị và kỹ năng giải quyết vấn đề"
+    ],
+    "style_defaults": {
+      "length": [
+        180,
+        320
+      ],
+      "emoji": "moderate",
+      "tone": "chân thành, hữu ích",
+      "hook_style": "Hình ảnh đời thực cụ thể"
+    },
+    "must_do": [
+      "Bám sát tuyệt đối thông tin facts được cung cấp. Nếu facts không có thì bỏ qua, không tự bịa.",
+      "Mở đầu bài viết bằng một hình ảnh, khoảnh khắc hoặc tình huống đời thực cụ thể.",
+      "Ngắt dòng thoáng đãng, mỗi đoạn chỉ dài 1 - 2 câu ngắn.",
+      "Bẻ hướng hoàn toàn: khẳng định không có con đường làm giàu thần tốc, chỉ có giá trị thực tạo ra cho xã hội."
+    ],
+    "must_not": [
+      "TUYỆT ĐỐI KHÔNG tự bịa số liệu, phần trăm (%), khoảng cách (km), liều lượng (mg, ml) ngoài facts.",
+      "TUYỆT ĐỐI KHÔNG dùng các cụm uy tín ngụy tạo (\"nghiên cứu cho thấy\", \"khoa học chứng minh\", \"chuyên gia khuyên\") nếu facts không có.",
+      "CẤM tự bịa quà tặng, checklist, ebook, voucher, tài liệu, tư vấn miễn phí.",
+      "CẤM bịa công thức đầu tư sinh lời, cấm hứa hẹn lợi nhuận (%) hoặc hướng dẫn chơi chứng khoán/đa cấp lướt sóng."
+    ],
+    "risky_claims": [
+      "cam ket 100%",
+      "tri dut diem",
+      "lam giau nhanh",
+      "kiem 50 trieu"
+    ],
+    "facts_needed": [
+      "Thông tin thực tế cụ thể",
+      "Số liệu/giá (nếu có)"
+    ]
+  }
+}

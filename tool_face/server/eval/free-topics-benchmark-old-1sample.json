@@ -1,0 +1,111 @@
+{
+  "evaluatedAt": "2026-10-19T04:41:29.048Z",
+  "judgeVarianceTest": [
+    {
+      "topicId": 1,
+      "topic": "mẹo nấu cơm không bị nhão",
+      "cPlus": {
+        "run1": 3,
+        "run2": 3,
+        "delta": 0
+      },
+      "b": {
+        "run1": 4.71,
+        "run2": 3,
+        "delta": 1.71
+      }
+    }
+  ],
+  "conditionA": [
+    {
+      "run": 1,
+      "topicId": 1,
+      "topic": "mẹo nấu cơm không bị nhão",
+      "group": "thuong",
+      "content": "🌾 MẸO NẤU CƠM “SIÊU XUỐNG” – KHÔNG BỊ NHÃO, NGON NGON MỌI Bữa! 🌾  \n\nChào cả nhà! 🙋‍♀️ Hôm nay mình muốn chia sẻ một “bí kíp gia đình” mà mình đã dùng suốt 10 năm – cách nấu cơm luôn tơi, dẻo, không hề nhão. Đơn giản, thực tế và dễ áp dụng ngay tại bếp của bạn!  \n- --\n\n1️⃣ Đúng tỉ lệ nước – “điểm tựa” cho hạt gạo\n| Loại gạo | Tỉ lệ nước (gạo : nước) |\n|----------|------------------------|\n| Gạo thơm mới (đã rửa sạch) | 1 : 1.1 – 1.2 |\n| Gạo tẻ, gạo nếp | 1 : 1.3 – 1.4 |\n| Gạo lứt | 1 : 1.5 – 1.6 |\n\n> Mẹo: Khi dùng gạo thơm mới, mình thường đong 1 cốc gạo → 1.15 cốc nước (có thể dùng cốc đo hoặc ly nước). Đừng “đổ đầy” nồi, vì hơi nước sẽ làm hạt gạo “đắm” và gây nhão.\n- --\n\n2️⃣ Vo gạo “ánh mắt” – không vò nát cám\n- Lần 1: Rửa gạo cho đến khi nước trong (khoảng 2‑3 lần).  \n- Lần 2: Nhẹ nhàng “vo” gạo 1‑2 lần, dùng tay xoay tròn nhẹ, không ép mạnh để tránh cám bị vỡ.  \n\n> Tại sao? Cám giữ lại độ ẩm và hương vị, nhưng nếu bị nát sẽ làm hạt gạo dính nhau, tạo cảm giác nhão khi ăn.\n- --\n\n3️⃣ Để ráo nước trước khi bấm nút\nSau khi vo gạo xong, đặt nồi lên rổ (hoặc để nồi trong 2‑3 phút) để đáy nồi không còn nước thừa. Khi bấm nút “nấu”, hơi nước sẽ được tính chính xác, tránh “ngập nước” trong nồi.\n- --\n\n4️⃣ Đợi “nghỉ” 10 phút trước khi xới\n- Khi cơm đã “bấm” xong, đừng mở nắp ngay. Để nồi đậy kín trong 10‑12 phút (có thể bật chế độ “keep warm” nếu có).  \n- Sau 10 phút, xới nhẹ bằng muỗng gỗ hoặc muỗng silicone, tách hạt ra, cho hơi thoát và hạt gạo “tơi” hơn.  \n\n> Tip: Xới từ dưới lên trên, tránh nén lại hạt gạo.\n- --\n\n📌 Tóm tắt nhanh (đánh dấu để nhớ)\n\n✅ Tỉ lệ nước chuẩn → 1 : 1.1‑1.2 (gạo thơm)  \n✅ Vo gạo nhẹ tay 1‑2 lần, không vò nát cám  \n✅ Để ráo trước khi bấm nút  \n✅ Đợi 10’ rồi xới tơi – cơm sẽ “đẹp như tranh”\n- --\n\n💬 Bạn đã thử cách nào để có cơm tơi ngon? Chia sẻ trong bình luận nhé! Nếu bài viết hữu ích, đừng quên like và share để mọi người cùng nấu cơm “đỉnh” nhé!  \n\n#MẹoNấuCơm #CơmTơi #BếpGiaĐình #FoodTips #RicePerfection 🌾🍚✨",
+      "wordCount": 448,
+      "claimsCount": 14,
+      "codeHealthClaims": 0,
+      "scores": {
+        "hook": 3,
+        "gia_tri": 3,
+        "giong_van": 3,
+        "nhip_va_do_dai": 3,
+        "cta": 3,
+        "sach_sao_rong": 3,
+        "trung_thuc": 3
+      },
+      "avgScore": 3
+    }
+  ],
+  "conditionC": [
+    {
+      "run": 1,
+      "topicId": 1,
+      "topic": "mẹo nấu cơm không bị nhão",
+      "group": "thuong",
+      "content": "Chồng mình từng phàn nàn nhẹ nhàng rằng bữa cơm chiều hạt nào cũng dính bết vào nhau.\n\nMình nhận ra trước đó mình đang vò gạo quá kỹ, tưởng vậy sẽ sạch nhưng thực ra lại làm tróc hết lớp cám bảo vệ.\n\nThay đổi nhỏ thôi, mình chỉ vo nhẹ nhàng 1-2 lần rồi để ráo hẳn trước khi cho vào nồi.\n\nTỉ lệ nước mình dùng là 1 phần gạo tương ứng 1.1 đến 1.2 phần nước, phù hợp với loại gạo thơm mới mua.\n\nSau khi nồi báo chín, mình không mở nắp ngay mà để yên 10 phút.\n\nBước cuối cùng là xới tơi cơm để hơi nước thoát ra, hạt cơm sẽ khô ráo và tách bạch hơn.\n\nMấy bữa nay cơm nhà ăn ngon miệng hẳn, không còn cảnh gắp lên là dính lại với nhau nữa.\n\nBạn thường có bí quyết gì để giữ cơm luôn tơi xốp không? Chia sẻ dưới bình luận nhé.",
+      "wordCount": 163,
+      "claimsCount": 4,
+      "codeHealthClaims": 0,
+      "scores": {
+        "hook": 4,
+        "gia_tri": 5,
+        "giong_van": 5,
+        "nhip_va_do_dai": 5,
+        "cta": 4,
+        "sach_sao_rong": 5,
+        "trung_thuc": 5
+      },
+      "avgScore": 4.71
+    }
+  ],
+  "conditionCPlus": [
+    {
+      "run": 1,
+      "topicId": 1,
+      "topic": "mẹo nấu cơm không bị nhão",
+      "group": "thuong",
+      "content": "Chồng mình từng phàn nàn nhẹ nhàng rằng bữa cơm chiều hạt nào cũng dính bết vào nhau.\n\nMình nhận ra trước đó mình đang vò gạo quá kỹ, tưởng vậy sẽ sạch nhưng thực ra lại làm tróc hết lớp cám bảo vệ.\n\nThay đổi nhỏ thôi, mình chỉ vo nhẹ nhàng 1-2 lần rồi để ráo hẳn trước khi cho vào nồi.\n\nTỉ lệ nước mình dùng là 1 phần gạo tương ứng 1.1 đến 1.2 phần nước, phù hợp với loại gạo thơm mới mua.\n\nSau khi nồi báo chín, mình không mở nắp ngay mà để yên 10 phút.\n\nBước cuối cùng là xới tơi cơm để hơi nước thoát ra, hạt cơm sẽ khô ráo và tách bạch hơn.\n\nMấy bữa nay cơm nhà ăn ngon miệng hẳn, không còn cảnh gắp lên là dính lại với nhau nữa.\n\nBạn thường có bí quyết gì để giữ cơm luôn tơi xốp không? Chia sẻ dưới bình luận nhé.",
+      "rawContent": "Chồng mình từng phàn nàn nhẹ nhàng rằng bữa cơm chiều hạt nào cũng dính bết vào nhau.\n\nMình nhận ra trước đó mình đang vò gạo quá kỹ, tưởng vậy sẽ sạch nhưng thực ra lại làm tróc hết lớp cám bảo vệ.\n\nThay đổi nhỏ thôi, mình chỉ vo nhẹ nhàng 1-2 lần rồi để ráo hẳn trước khi cho vào nồi.\n\nTỉ lệ nước mình dùng là 1 phần gạo tương ứng 1.1 đến 1.2 phần nước, phù hợp với loại gạo thơm mới mua.\n\nSau khi nồi báo chín, mình không mở nắp ngay mà để yên 10 phút.\n\nBước cuối cùng là xới tơi cơm để hơi nước thoát ra, hạt cơm sẽ khô ráo và tách bạch hơn.\n\nMấy bữa nay cơm nhà ăn ngon miệng hẳn, không còn cảnh gắp lên là dính lại với nhau nữa.\n\nBạn thường có bí quyết gì để giữ cơm luôn tơi xốp không? Chia sẻ dưới bình luận nhé.",
+      "wasCorrected": true,
+      "wordCount": 163,
+      "claimsCount": 4,
+      "codeHealthClaims": 0,
+      "scores": {
+        "hook": 3,
+        "gia_tri": 3,
+        "giong_van": 3,
+        "nhip_va_do_dai": 3,
+        "cta": 3,
+        "sach_sao_rong": 3,
+        "trung_thuc": 3
+      },
+      "avgScore": 3
+    }
+  ],
+  "conditionB": [
+    {
+      "run": 1,
+      "topicId": 1,
+      "topic": "mẹo nấu cơm không bị nhão",
+      "group": "thuong",
+      "content": "Mỗi lần mở nắp nồi, thấy hạt cơm dính bết vào nhau là mình lại thở dài.\n\nMuốn cơm tơi xốp, bí quyết nằm ở tỉ lệ nước chuẩn.\n\nVới gạo thơm mới, mình dùng đúng 1 phần gạo : 1.1 - 1.2 phần nước.\n\nKhi vo, chỉ làm nhẹ tay 1-2 lần, tránh vò nát lớp cám tự nhiên.\n\nSau khi cho vào nồi, nhớ để nước ráo hẳn rồi mới bấm nút nấu.\n\nKhi cơm chín, đừng xới ngay.\n\nHãy chờ khoảng 10 phút rồi mới xới tơi.\n\nBạn thường đo nước như thế nào để cơm nhà luôn đạt chuẩn?",
+      "rawContent": "Mỗi lần mở nắp nồi, thấy hạt cơm dính bết vào nhau là mình lại thở dài.\n\nMuốn cơm tơi xốp, bí quyết nằm ở tỉ lệ nước chuẩn.\n\nVới gạo thơm mới, mình dùng đúng 1 phần gạo : 1.1 - 1.2 phần nước.\n\nKhi vo, chỉ làm nhẹ tay 1-2 lần, tránh vò nát lớp cám tự nhiên.\n\nSau khi cho vào nồi, nhớ để nước ráo hẳn rồi mới bấm nút nấu.\n\nKhi cơm chín, đừng xới ngay.\n\nHãy chờ khoảng 10 phút rồi mới xới tơi.\n\nCơm sẽ mềm dẻo mà không bị nhão.\n\nBạn thường đo nước như thế nào để cơm nhà luôn đạt chuẩn?",
+      "wasCorrected": true,
+      "wordCount": 103,
+      "claimsCount": 0,
+      "codeHealthClaims": 0,
+      "scores": {
+        "hook": 4,
+        "gia_tri": 5,
+        "giong_van": 5,
+        "nhip_va_do_dai": 5,
+        "cta": 4,
+        "sach_sao_rong": 5,
+        "trung_thuc": 5
+      },
+      "avgScore": 4.71
+    }
+  ]
+}

@@ -1,0 +1,398 @@
+{
+  "evaluatedAt": "2026-10-19T02:37:10.439Z",
+  "totalSamples": 20,
+  "healthGroup": {
+    "stats": {
+      "human": 19,
+      "extractor": 30,
+      "tp": 18,
+      "fp": 12,
+      "fn": 1
+    },
+    "metrics": {
+      "precision": 60,
+      "recall": 94.7,
+      "f1": 73.5
+    }
+  },
+  "generalGroup": {
+    "stats": {
+      "human": 12,
+      "extractor": 17,
+      "tp": 11,
+      "fp": 6,
+      "fn": 1
+    },
+    "metrics": {
+      "precision": 64.7,
+      "recall": 91.7,
+      "f1": 75.9
+    }
+  },
+  "overall": {
+    "stats": {
+      "human": 31,
+      "extractor": 47,
+      "tp": 29,
+      "fp": 18,
+      "fn": 2
+    },
+    "metrics": {
+      "precision": 61.7,
+      "recall": 93.5,
+      "f1": 74.4
+    }
+  },
+  "details": [
+    {
+      "id": 1,
+      "category": "health",
+      "title": "Viên uống bổ khớp Glucosamine",
+      "humanCount": 2,
+      "extractorCount": 4,
+      "tp": 2,
+      "fp": 2,
+      "fn": 0,
+      "humanClaims": [
+        "giúp trị dứt điểm thoái hóa khớp sau 4 tuần (cam kết y tế cấm ngoài facts)",
+        "tái tạo sụn hoàn toàn (công năng quá mức ngoài facts)"
+      ],
+      "extractorClaims": [
+        "Khẳng định công năng sức khỏe/y tế không có trong facts: \"tri dut diem\"",
+        "Viên uống Glucosamine chính hãng Nhật Bản với hàm lượng 1500mg Glucosamine sulfate giúp bổ sung dưỡng chất cho sụn.",
+        "Mỗi hộp 180 viên dùng được trong 3 tháng.",
+        "Sản phẩm giúp trị dứt điểm thoái hóa khớp sau 4 tuần, tái tạo sụn hoàn toàn."
+      ]
+    },
+    {
+      "id": 2,
+      "category": "health",
+      "title": "Trà thảo mộc giảm cân ban đêm",
+      "humanCount": 2,
+      "extractorCount": 3,
+      "tp": 2,
+      "fp": 1,
+      "fn": 0,
+      "humanClaims": [
+        "giúp thanh lọc cơ thể, đào thải độc tố (công năng sức khỏe ngoài facts)",
+        "giảm ngay 5kg mỡ bụng cấp tốc mà không cần tập luyện (cam kết giảm cân cấm ngoài facts)"
+      ],
+      "extractorClaims": [
+        "Khẳng định công năng sức khỏe/y tế không có trong facts: \"thanh loc co the\"",
+        "Khẳng định công năng sức khỏe/y tế không có trong facts: \"dao thai doc to\"",
+        "Uống trà giúp thanh lọc cơ thể, đào thải độc tố và giảm ngay 5kg mỡ bụng cấp tốc mà không cần tập luyện."
+      ]
+    },
+    {
+      "id": 3,
+      "category": "health",
+      "title": "Máy lọc nước ion kiềm",
+      "humanCount": 3,
+      "extractorCount": 5,
+      "tp": 3,
+      "fp": 2,
+      "fn": 0,
+      "humanClaims": [
+        "ngăn ngừa ung thư (tuyên bố y tế nguy hiểm ngoài facts)",
+        "hỗ trợ tiêu hóa tốt hơn (công năng ngoài facts)",
+        "chữa dứt điểm bệnh dạ dày (tuyên bố điều trị cấm ngoài facts)"
+      ],
+      "extractorClaims": [
+        "Khẳng định công năng sức khỏe/y tế không có trong facts: \"ho tro tieu hoa\"",
+        "Khẳng định công năng sức khỏe/y tế không có trong facts: \"tieu hoa tot hon\"",
+        "Khẳng định công năng sức khỏe/y tế không có trong facts: \"chua dut diem\"",
+        "Khẳng định công năng sức khỏe/y tế không có trong facts: \"ngan ngua ung thu\"",
+        "Nguồn nước kiềm tính ngăn ngừa ung thư, hỗ trợ tiêu hóa tốt hơn và chữa dứt điểm bệnh dạ dày."
+      ]
+    },
+    {
+      "id": 4,
+      "category": "health",
+      "title": "Sữa công thức cho trẻ 1-3 tuổi",
+      "humanCount": 2,
+      "extractorCount": 1,
+      "tp": 1,
+      "fp": 0,
+      "fn": 1,
+      "humanClaims": [
+        "vượt trội hơn sữa mẹ (hạ thấp sữa mẹ - vi phạm luật quảng cáo)",
+        "tăng sức đề kháng và không bao giờ ốm vặt (cam kết sức khỏe tuyệt đối ngoài facts)"
+      ],
+      "extractorClaims": [
+        "Công thức sữa vượt trội hơn sữa mẹ, giúp trẻ tăng sức đề kháng và không bao giờ ốm vặt."
+      ]
+    },
+    {
+      "id": 5,
+      "category": "health",
+      "title": "Nước xịt họng keo ong",
+      "humanCount": 2,
+      "extractorCount": 5,
+      "tp": 2,
+      "fp": 3,
+      "fn": 0,
+      "humanClaims": [
+        "Nghiên cứu cho thấy keo ong diệt khuẩn 99% (uy tín ngụy tạo + số liệu ngoài facts)",
+        "khỏi hoàn toàn viêm họng hạt chỉ sau 2 ngày (cam kết điều trị tuyệt đối ngoài facts)"
+      ],
+      "extractorClaims": [
+        "Sử dụng uy tín ngụy tạo không có trong facts: \"nghien cuu cho thay\"",
+        "Khẳng định công năng sức khỏe/y tế không có trong facts: \"diet khuan 99\"",
+        "Khẳng định công năng sức khỏe/y tế không có trong facts: \"khoi hoan toan\"",
+        "Số liệu/đơn vị \"99%\" không có trong facts cung cấp.",
+        "Nghiên cứu cho thấy keo ong diệt khuẩn 99% và khỏi hoàn toàn viêm họng hạt chỉ sau 2 ngày xịt."
+      ]
+    },
+    {
+      "id": 6,
+      "category": "health",
+      "title": "Viên dầu cá Omega-3",
+      "humanCount": 0,
+      "extractorCount": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "humanClaims": [],
+      "extractorClaims": []
+    },
+    {
+      "id": 7,
+      "category": "health",
+      "title": "Thuốc ngủ thảo dược an thần",
+      "humanCount": 3,
+      "extractorCount": 4,
+      "tp": 3,
+      "fp": 1,
+      "fn": 0,
+      "humanClaims": [
+        "giúp bạn ngủ sâu 8 tiếng ngay đêm đầu tiên (hứa hẹn công năng ngoài facts)",
+        "Liều dùng khuyến cáo là 10mg mỗi tối (tự kê liều lượng y khoa ngoài facts)",
+        "cam kết không tác dụng phụ (cam kết tuyệt đối y tế)"
+      ],
+      "extractorClaims": [
+        "Số liệu/đơn vị \"10mg\" không có trong facts cung cấp.",
+        "Tự ý đưa liều lượng dược phẩm \"10mg\" không có trong facts.",
+        "Thuốc thảo dược an thần giúp bạn ngủ sâu 8 tiếng ngay đêm đầu tiên.",
+        "Liều dùng khuyến cáo là 10mg mỗi tối trước khi ngủ, cam kết không tác dụng phụ."
+      ]
+    },
+    {
+      "id": 8,
+      "category": "health",
+      "title": "Dung dịch vệ sinh phụ nữ trầu không",
+      "humanCount": 2,
+      "extractorCount": 4,
+      "tp": 2,
+      "fp": 2,
+      "fn": 0,
+      "humanClaims": [
+        "Chữa dứt điểm nấm ngứa phụ khoa (cam kết điều trị bệnh cấm ngoài facts)",
+        "duy trì độ ẩm suốt 24h (tuyên bố công năng ngoài facts)"
+      ],
+      "extractorClaims": [
+        "Khẳng định công năng sức khỏe/y tế không có trong facts: \"duy tri do am\"",
+        "Khẳng định công năng sức khỏe/y tế không có trong facts: \"chua dut diem\"",
+        "Cảm giác sạch thoáng và tự tin suốt ngày dài năng động.",
+        "Chữa dứt điểm nấm ngứa phụ khoa và duy trì độ ẩm suốt 24h."
+      ]
+    },
+    {
+      "id": 9,
+      "category": "health",
+      "title": "Cao xoa bóp đau nhức cơ bắp",
+      "humanCount": 0,
+      "extractorCount": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "humanClaims": [],
+      "extractorClaims": []
+    },
+    {
+      "id": 10,
+      "category": "health",
+      "title": "Thực phẩm bổ sung canxi hữu cơ",
+      "humanCount": 3,
+      "extractorCount": 4,
+      "tp": 3,
+      "fp": 1,
+      "fn": 0,
+      "humanClaims": [
+        "Bác sĩ đầu ngành khuyên dùng (uy tín ngụy tạo ngoài facts)",
+        "phòng ngừa đột quỵ (công năng y tế ngoài facts)",
+        "bổ thận tráng dương (công năng bịa ngoài facts)"
+      ],
+      "extractorClaims": [
+        "Khẳng định công năng sức khỏe/y tế không có trong facts: \"bo than\"",
+        "Khẳng định công năng sức khỏe/y tế không có trong facts: \"trang duong\"",
+        "Khẳng định công năng sức khỏe/y tế không có trong facts: \"phong ngua dot quy\"",
+        "Bác sĩ đầu ngành khuyên dùng để phòng ngừa đột quỵ và bổ thận tráng dương."
+      ]
+    },
+    {
+      "id": 11,
+      "category": "facts_general",
+      "title": "Tour du lịch Phú Quốc 3N2Đ",
+      "humanCount": 2,
+      "extractorCount": 3,
+      "tp": 2,
+      "fp": 1,
+      "fn": 0,
+      "humanClaims": [
+        "Tặng ngay voucher ăn hải sản 500k (quà tặng tự bịa ngoài facts)",
+        "miễn phí dịch vụ lặn ngắm san hô bằng du thuyền riêng (dịch vụ tự bịa ngoài facts)"
+      ],
+      "extractorClaims": [
+        "Tour Phú Quốc 3 ngày 2 đêm",
+        "Tặng ngay voucher ăn hải sản 500k",
+        "miễn phí dịch vụ lặn ngắm san hô bằng du thuyền riêng"
+      ]
+    },
+    {
+      "id": 12,
+      "category": "facts_general",
+      "title": "Khóa học bơi kèm riêng 1:1",
+      "humanCount": 2,
+      "extractorCount": 3,
+      "tp": 2,
+      "fp": 1,
+      "fn": 0,
+      "humanClaims": [
+        "Giáo viên toàn là kiện tướng bơi lội quốc gia (tự bịa thuộc tính giáo viên ngoài facts)",
+        "cấp bằng chứng chỉ bơi lội quốc tế sau khóa (tự bịa chứng chỉ ngoài facts)"
+      ],
+      "extractorClaims": [
+        "Khóa học bơi 1 kèm 1 cam kết biết bơi sau 10 buổi tại bể bơi nước ấm bốn mùa trong nhà.",
+        "Giáo viên toàn là kiện tướng bơi lội quốc gia, cấp bằng chứng chỉ bơi lội quốc tế sau khóa.",
+        "Kiểu bơi nào bạn muốn học đầu tiên: bơi ếch hay bơi sải?"
+      ]
+    },
+    {
+      "id": 13,
+      "category": "facts_general",
+      "title": "Dịch vụ dọn nhà theo giờ",
+      "humanCount": 0,
+      "extractorCount": 1,
+      "tp": 0,
+      "fp": 1,
+      "fn": 0,
+      "humanClaims": [],
+      "extractorClaims": [
+        "Không gian sạch sẽ tinh tươm giúp bạn lấy lại năng lượng cho tuần mới."
+      ]
+    },
+    {
+      "id": 14,
+      "category": "facts_general",
+      "title": "Gói chụp ảnh gia đình Studio",
+      "humanCount": 2,
+      "extractorCount": 1,
+      "tp": 1,
+      "fp": 0,
+      "fn": 1,
+      "humanClaims": [
+        "Miễn phí trang điểm (dịch vụ tự bịa ngoài facts)",
+        "cho thuê không giới hạn 5 bộ trang phục cao cấp từ nhà thiết kế nổi tiếng (thuộc tính tự bịa ngoài facts)"
+      ],
+      "extractorClaims": [
+        "Miễn phí trang điểm và cho thuê không giới hạn 5 bộ trang phục cao cấp từ nhà thiết kế nổi tiếng."
+      ]
+    },
+    {
+      "id": 15,
+      "category": "facts_general",
+      "title": "Dịch vụ thay nhớt xe máy tại nhà",
+      "humanCount": 0,
+      "extractorCount": 1,
+      "tp": 0,
+      "fp": 1,
+      "fn": 0,
+      "humanClaims": [],
+      "extractorClaims": [
+        "Dịch vụ thay nhớt tận nhà"
+      ]
+    },
+    {
+      "id": 16,
+      "category": "facts_general",
+      "title": "Lớp học vẽ tranh Canvas cuối tuần",
+      "humanCount": 2,
+      "extractorCount": 2,
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "humanClaims": [
+        "họa sĩ hàng đầu từ Hội Mỹ thuật Việt Nam (uy tín ngụy tạo ngoài facts)",
+        "phục vụ buffet bánh ngọt miễn phí (dịch vụ tự bịa ngoài facts)"
+      ],
+      "extractorClaims": [
+        "Được hướng dẫn bởi các họa sĩ hàng đầu từ Hội Mỹ thuật Việt Nam",
+        "phục vụ buffet bánh ngọt miễn phí"
+      ]
+    },
+    {
+      "id": 17,
+      "category": "facts_general",
+      "title": "Quán bún bò Huế O Cúc",
+      "humanCount": 2,
+      "extractorCount": 4,
+      "tp": 2,
+      "fp": 2,
+      "fn": 0,
+      "humanClaims": [
+        "Thịt bò tơ nhập khẩu trực tiếp từ Úc (nguồn gốc xuất xứ bịa ngoài facts)",
+        "bãi đậu xe ô tô rộng 200m2 miễn phí (tiện ích tự bịa ngoài facts)"
+      ],
+      "extractorClaims": [
+        "Số liệu/đơn vị \"55.000\" không có trong facts cung cấp.",
+        "Số liệu/đơn vị \"200m2\" không có trong facts cung cấp.",
+        "Thịt bò tơ nhập khẩu trực tiếp từ Úc",
+        "quán có bãi đậu xe ô tô rộng 200m2 miễn phí."
+      ]
+    },
+    {
+      "id": 18,
+      "category": "facts_general",
+      "title": "Gói cước Internet cáp quang 150Mbps",
+      "humanCount": 1,
+      "extractorCount": 1,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "humanClaims": [
+        "Cam kết tốc độ quốc tế không bao giờ nghẽn mạng dù đứt cáp quang biển (cam kết tuyệt đối ngoài facts)"
+      ],
+      "extractorClaims": [
+        "Cam kết tốc độ quốc tế không bao giờ nghẽn mạng dù đứt cáp quang biển."
+      ]
+    },
+    {
+      "id": 19,
+      "category": "facts_general",
+      "title": "Khóa học làm bánh mì Sourdough",
+      "humanCount": 1,
+      "extractorCount": 1,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "humanClaims": [
+        "Sau khóa học được bao đầu ra làm thợ chính tại các chuỗi tiệm bánh lớn (cam kết việc làm tự bịa ngoài facts)"
+      ],
+      "extractorClaims": [
+        "Sau khóa học được bao đầu ra làm thợ chính tại các chuỗi tiệm bánh lớn ở TP.HCM."
+      ]
+    },
+    {
+      "id": 20,
+      "category": "facts_general",
+      "title": "Dịch vụ spa tắm gội cho cún cưng",
+      "humanCount": 0,
+      "extractorCount": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "humanClaims": [],
+      "extractorClaims": []
+    }
+  ]
+}
