@@ -1,16 +1,67 @@
 /**
  * AiContentGenerator.js
- * Service tạo nhiều bài đăng Facebook từ prompt người dùng thông qua AI.
- * Hỗ trợ tạo batch nhiều bài cùng lúc, lưu nháp, chỉnh sửa, regenerate.
+ * Service tạo bài đăng Facebook thông minh tích hợp State Machine 14 trạng thái & Huấn luyện AI chuyên sâu:
+ * 
+ * 1. KIẾN TRÚC PROMPT HUẤN LUYỆN CHUYÊN GIA (Direct-Response & Storytelling Copywriting)
+ *    - Nạp 5 bộ Few-Shot Examples bài viết Facebook triệu view thực tế tại Việt Nam.
+ *    - Tối ưu 3 dòng đầu (The Hook) dừng ngón tay người lướt Feed trên điện thoại.
+ *    - Tuyệt đối KHÔNG có dấu sao Markdown (* hay **) vì Facebook không hỗ trợ.
+ * 
+ * 2. STATE MACHINE VÒNG ĐỜI NỘI DUNG CHUẨN MỰC:
+ *    NEW -> GENERATING -> VALIDATING ->
+ *      [Lỗi schema] -> GENERATION_FAILED
+ *      [Đạt schema] -> SAFETY_CHECK ->
+ *        [Rủi ro nghiêm trọng] -> BLOCKED
+ *        [Cần kiểm tra] -> PENDING_REVIEW -> [Từ chối] -> REJECTED
+ *                                          -> [Duyệt]   -> APPROVED
+ *        [Đạt kiểm tra]  -> READY_FOR_APPROVAL -> [Từ chối] -> REJECTED
+ *                                              -> [Duyệt]   -> APPROVED
+ *    APPROVED -> SCHEDULED -> PUBLISHING ->
+ *      [Thành công API] -> PUBLISHED
+ *      [Lỗi API]        -> PUBLISH_RETRY_OR_FAILED
  */
-const crypto = require('crypto');
-const axios = require('axios');
-const { sql, getPool } = require('../../config/db');
-const { getSettings } = require('./SettingsService');
-const webSearchService = require('./WebSearchService');
-const { stripMarkdown } = require('./TextFormat');
 
-// ═══ SCHEMA ═══
+const crypto = require('crypto');
+const { sql, getPool } = require('../../config/db');
+const webSearchService = require('./WebSearchService');
+const { callAiChat } = require('./AiClientService');
+const topicPackService = require('./TopicPackService');
+const {
+  resolveTopicPack,
+  mergeRules,
+  validatePostAgainstRules,
+  recordPostFeedback,
+  confirmTopicPack,
+  updateTopicPack,
+  checkPackConfirmationSuggestion,
+  COMMON_RULES
+} = topicPackService;
+const {
+  POST_STATES,
+  evaluateContentSafety,
+  handleContentMutation
+} = require('./PostStateMachine');
+
+// ═══ BỘ LỌC LÀM SẠCH BÀI ĐĂNG FACEBOOK (XÓA TRIỆT ĐỂ DẤU * VÀ MARKDOWN RÁC) ═══
+function cleanFacebookContent(text) {
+  if (!text || typeof text !== 'string') return '';
+  return text
+    // Bỏ markdown bold/italic asterisks: **text** -> text, *text* -> text, ***text*** -> text
+    .replace(/\*{1,3}(.*?)\*{1,3}/g, '$1')
+    // Bỏ tất cả dấu sao đơn lẻ còn sót lại
+    .replace(/\*/g, '')
+    // Chuyển bullet gạch đầu dòng Markdown thành gạch ngang đẹp
+    .replace(/^\s*[-•]\s*/gm, '- ')
+    // Xóa markdown header prefixes: ### Title -> Title
+    .replace(/^#{1,6}\s+/gm, '')
+    // Xóa các lời mào đầu bot nếu có
+    .replace(/^(Dưới đây là bài viết|Bài viết gợi ý|Đây là bài viết|Nội dung bài viết:)\s*:?\n?/i, '')
+    // Chuẩn hóa khoảng trống xuống dòng liên tiếp (tối đa 2 dấu enter)
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+// ═══ SCHEMA DATABASE DRAFTS & POSTS ═══
 let draftSchemaReady = null;
 
 async function ensureDraftSchema() {
@@ -28,8 +79,12 @@ async function ensureDraftSchema() {
             hashtags NVARCHAR(MAX) NOT NULL DEFAULT '[]',
             suggested_time VARCHAR(10) NOT NULL DEFAULT '',
             topic NVARCHAR(255) NOT NULL DEFAULT N'',
+            topic_key VARCHAR(100) NULL DEFAULT 'general',
             tone NVARCHAR(100) NOT NULL DEFAULT N'',
-            status VARCHAR(20) NOT NULL DEFAULT 'draft',
+            status VARCHAR(50) NOT NULL DEFAULT 'NEW',
+            safety_notes NVARCHAR(MAX) NULL,
+            media_type VARCHAR(20) NOT NULL CONSTRAINT DF_AiDrafts_media_type DEFAULT 'text',
+            media_links NVARCHAR(MAX) NOT NULL CONSTRAINT DF_AiDrafts_media_links DEFAULT '[]',
             selected_page_ids NVARCHAR(MAX) NOT NULL DEFAULT '[]',
             scheduled_at DATETIME2 NULL,
             original_prompt NVARCHAR(MAX) NOT NULL DEFAULT N'',
@@ -45,6 +100,12 @@ async function ensureDraftSchema() {
             ALTER TABLE dbo.AiGeneratedDrafts ADD media_type VARCHAR(20) NOT NULL CONSTRAINT DF_AiDrafts_media_type DEFAULT 'text';
           IF COL_LENGTH(N'dbo.AiGeneratedDrafts', N'media_links') IS NULL
             ALTER TABLE dbo.AiGeneratedDrafts ADD media_links NVARCHAR(MAX) NOT NULL CONSTRAINT DF_AiDrafts_media_links DEFAULT '[]';
+          IF COL_LENGTH(N'dbo.AiGeneratedDrafts', N'safety_notes') IS NULL
+            ALTER TABLE dbo.AiGeneratedDrafts ADD safety_notes NVARCHAR(MAX) NULL;
+          IF COL_LENGTH(N'dbo.AiGeneratedDrafts', N'topic_key') IS NULL
+            ALTER TABLE dbo.AiGeneratedDrafts ADD topic_key VARCHAR(100) NULL;
+          IF COL_LENGTH(N'dbo.AiGeneratedDrafts', N'force_review') IS NULL
+            ALTER TABLE dbo.AiGeneratedDrafts ADD force_review BIT NOT NULL CONSTRAINT DF_AiDrafts_force_review DEFAULT 0;
         END;
       `);
     });
@@ -56,32 +117,156 @@ function generateBatchId() {
   return 'batch_' + Date.now().toString(36) + '_' + crypto.randomBytes(4).toString('hex');
 }
 
-// ═══ AI CONFIG HELPER ═══
-async function getAiConfig() {
-  const settings = await getSettings().catch(() => ({}));
-  let apiKey = settings.ai_api_key || process.env.AI_API_KEY;
-  let model = settings.ai_model || process.env.AI_MODEL || 'gpt-4o-mini';
-  let baseUrl = (settings.ai_base_url || process.env.AI_API_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
+// ═══ HUẤN LUYỆN PROMPT CHUYÊN SÂU BẬC THẦY COPYWRITER FACEBOOK ═══
 
-  // Auto-detect Groq
-  if (apiKey?.startsWith('gsk_')) {
-    if (baseUrl.includes('api.openai.com')) {
-      baseUrl = 'https://api.groq.com/openai/v1';
-    }
-    if (model === 'llama-3.3-70b-versatile' || model === 'gpt-4o-mini') {
-      model = 'openai/gpt-oss-120b';
-    }
-  }
+const CORE_SYSTEM_PROMPT = `Bạn là Giám đốc Sáng tạo Nội dung (Creative Director & Master Copywriter) hàng đầu tại Việt Nam, am hiểu sâu sắc thuật toán Facebook và tâm lý hành vi mua sắm của người Việt.
 
-  return { apiKey, model, baseUrl };
-}
+## 1. NGUYÊN TẮC VÀNG VỀ TÂM LÝ KHÁCH HÀNG (3-SECOND RULE):
+- Người lướt Facebook chỉ dừng lại nếu 3 dòng đầu tiên (The Hook) mở đầu bằng MỘT HÌNH ẢNH, KHOẢNH KHẮC HOẶC TÌNH HUỐNG ĐỜI THỰC CỤ THỂ.
+- TUYỆT ĐỐI CẤM mở đầu bằng 2 câu hỏi liên tiếp ("Bạn có...? Bạn lo lắng...?").
+- Ngắt dòng thoáng đãng: Mỗi đoạn chỉ dài 1 - 2 câu ngắn. Tuyệt đối không viết thành một khối chữ dày đặc gây mỏi mắt trên điện thoại.
+- Giọng văn chân thực: Tự nhiên như người thật trải nghiệm, có cảm xúc, nhịp điệu mượt mà.
+- TUYỆT ĐỐI CẤM các câu từ sáo rỗng: "hạt hạnh phúc", "không lãng phí, tận hưởng từng khoảnh khắc", "hãy thử ngay hôm nay", "thời đại 4.0", "hãy cùng khám phá", "trong cuộc sống hiện đại", "giải pháp hoàn hảo".
+- TUYỆT ĐỐI CẤM bịa đặt Social Proof không có trong facts: Cấm viết "được nhiều người yêu thích", "đánh giá cao", "bán chạy", "khách hàng khen ngợi".
+- TUYỆT ĐỐI CẤM hứa hẹn thứ không có trong facts: Cấm tự bịa tặng checklist, ebook, voucher, tài liệu, tư vấn miễn phí.
+- Lời khuyên & kiến thức: Chỉ viết điều phổ biến, chuẩn xác và chắc chắn về khoa học/đời sống. Không chắc thì bỏ qua.
+- Với bài viết du lịch/lịch trình: Mở bằng một cảnh cụ thể (thời gian, địa điểm, cảm xúc giác quan), tiếp nối bằng lịch trình ngắn gọn theo ngày, không lặp lại câu hỏi băn khoăn.
 
-// ═══ GENERATE POSTS ═══
-async function generatePosts(userId, { prompt, tone = '', includeHashtags = true, includeEmoji = true, enableWebSearch = true, eventDetails = '' }) {
-  const { apiKey, model, baseUrl } = await getAiConfig();
-  if (!apiKey) throw new Error('AI chưa được cấu hình. Hãy vào Cài đặt để thêm AI API Key.');
-  if (!prompt?.trim()) throw new Error('Vui lòng nhập yêu cầu tạo bài.');
+## 2. QUY TẮC ĐỊNH DẠNG BẮT BUỘC CHO FACEBOOK:
+- TUYỆT ĐỐI KHÔNG DÙNG DẤU SAO (*) HOẶC CÚ PHÁP MARKDOWN NHƯ **in đậm**, *in nghiêng*, ***chữ*** HOẶC DẤU * GẠCH ĐẦU DÒNG. (Facebook KHÔNG hỗ trợ Markdown, dấu sao sẽ biến thành ký tự rác làm xấu bài viết).
+- Nhấn mạnh bằng cách: Dùng IN HOA TỰ NHIÊN cho các từ khóa đắt giá, hoặc đặt trong ngoặc vuông [ƯU ĐÃI ĐỘC QUYỀN], [CAM KẾT CHÍNH HÃNG].
+- Dùng dấu gạch ngang (-) hoặc icon nhẹ nhàng đầu dòng khi liệt kê tính năng.
+- Lời kêu gọi hành động (Call To Action - CTA) tự nhiên, rõ ràng ở cuối bài: Mời bình luận chia sẻ quan điểm, kinh nghiệm hoặc nhắn tin trao đổi bình thường.
 
+## 3. CÁC BỘ VÍ DỤ MẪU MỰC HUẤN LUYỆN (FEW-SHOT TRAINING EXAMPLES):
+
+### Ví dụ 1: Bài Bán Hàng Trực Tiếp (Direct Response Sales)
+TIÊU ĐỀ: Đừng để chiếc áo sơ mi nhăn nhúm làm mất điểm trong mắt đối tác!
+NỘI DUNG:
+Đi gặp khách hàng quan trọng mà áo sơ mi vừa mặc 15 phút đã nhăn nhúm khắp tay áo thì tự tin thế nào được?
+
+Đó là lý do chiếc sơ mi Nano Spun này ra đời - cứu cánh cho các anh em công sở bận rộn:
+
+- Chất vải dệt công nghệ Nano chống nhăn tự nhiên, giặt máy xong phơi lên là thẳng thớm, không cần là ủi tốn thời gian.
+- Kháng khuẩn, thoáng khí vượt trội, dù làm việc cả ngày ngoài trời vẫn mát rượi, không lo ám mùi mồ hôi.
+- Form dáng Regular Fit chuẩn quý ông Việt, tôn dáng và che khuyết điểm vòng 2 cực khéo.
+
+[ƯU ĐÃI ĐẶC BIỆT TUẦN NÀY]
+Tặng ngay voucher freeship toàn quốc cho 50 đơn hàng đầu tiên hôm nay.
+
+Anh em chỉ cần để lại bình luận [Chiều cao + Cân nặng] hoặc nhắn tin cho shop để nhận tư vấn size chuẩn xác nhất nhé!
+
+### Ví dụ 2: Bài Kể Chuyện Khách Hàng (Storytelling & Case Study)
+TIÊU ĐỀ: Câu chuyện của chị Lan sau 3 tháng tìm lại làn da khỏe khoắn
+NỘI DUNG:
+Hôm qua chị Lan ghé lại shop với nụ cười tươi rói làm cả team vui lây: "Em ơi, trộm vía đợt này bạn bè ai cũng khen da chị sáng mịn hẳn ra, tự tin để mặt mộc đi làm luôn rồi!"
+
+Nhớ lại 3 tháng trước, chị nhắn cho shop trong tâm trạng stress cùng cực vì dùng mỹ phẩm trôi nổi khiến da kích ứng, ửng đỏ khắp hai bên má.
+
+Hành trình phục hồi làn da không cần những bước quá cầu kỳ, chỉ cần đúng và đủ:
+- Tối giản chu trình skincare, tập trung phục hồi hàng rào bảo vệ da với B5 và Ceramide.
+- Chống nắng phổ rộng bảo vệ da mỗi ngày.
+- Uống đủ nước và ngủ trước 23h.
+
+Chăm sóc da là một hành trình kiên trì yêu thương bản thân. Nếu da bạn đang gặp vấn đề nhạy cảm, đừng ngần ngại nhắn tin cho shop để cùng tìm ra giải pháp phù hợp nhất nhé!
+
+### Ví dụ 4: Bài Flash Sale / Xả Kho Tạo Khan Hiếm (FOMO Sales)
+TIÊU ĐỀ: [XẢ KHO GIỜ VÀNG] Cơ hội duy nhất trong năm - Giảm đến 50%
+NỘI DUNG:
+Chỉ còn đúng 20 bộ cuối cùng tại kho trước khi chuyển sang lô hàng mới!
+
+Toàn bộ bộ sưu tập mùa hè chính thức bước vào đợt Flash Sale sâu nhất năm:
+- Giá gốc 450.000đ nay chỉ còn 229.000đ.
+- Mua từ 2 sản phẩm tặng thêm 1 bình giữ nhiệt cao cấp.
+- Cam kết hàng chính hãng 100%, kiểm tra ưng ý mới thanh toán.
+
+Đồng hồ đếm ngược: Chương trình chỉ áp dụng trong 24 giờ hôm nay hoặc đến khi hết 20 suất cuối cùng.
+
+Nhắn tin ngay cho shop hoặc bình luận [MUA NGAY] để giữ quà tặng trước khi cháy hàng!
+
+## 4. QUY TẮC AN TOÀN CHÍNH SÁCH META:
+- Tuyệt đối không dùng từ ngữ cấm (hàng fake, cam kết 100% khỏi bệnh, số đề cờ bạc, chất kích thích...).
+- Bài viết phải vượt qua bộ lọc kiểm duyệt an toàn Meta Community Standards.
+
+## 5. YÊU CẦU ĐẦU RA:
+- Trả về DUY NHẤT một chuỗi JSON hợp lệ theo schema, tuyệt đối không có lời bình luận mào đầu hay kết thúc ngoài JSON.`;
+
+const CONTENT_TYPE_GUIDES = {
+  auto: `CHIẾN LƯỢC NỘI DUNG: ĐA DẠNG HÓA GÓC NHÌN BÁN HÀNG & MARKETING.
+Tự động phối hợp các góc chốt đơn khác nhau giữa các bài:
+- Bài bán hàng trực tiếp (nêu vấn đề -> giải pháp -> ưu đãi -> CTA)
+- Bài kể chuyện khách hàng / Case study cảm xúc (Before & After)
+- Bài xả kho, flash sale, tạo khan hiếm (FOMO quà tặng giới hạn)
+- Bài xử lý từ chối và cam kết bảo hành uy tín
+- Bài minigame / câu hỏi gợi mở kéo tương tác`,
+
+  sales: `CHIẾN LƯỢC: BÁN HÀNG & CHỐT ĐƠN TRỰC TIẾP (DIRECT SALES).
+- Đánh trúng nỗi đau khách hàng gặp phải và định vị sản phẩm là lời giải tốt nhất.
+- Nêu 3 điểm khác biệt vượt trội (USP) của sản phẩm.
+- CTA dứt khoát: Nhắn tin ngay để chốt giá tốt.`,
+
+  promo: `CHIẾN LƯỢC: XẢ KHO & FLASH SALE (FOMO SALES).
+- Tạo cảm giác gấp gáp, khan hiếm: Giới hạn số lượng (chỉ còn X suất) hoặc thời gian (hôm nay).
+- Nhấn mạnh ưu đãi: Mua 1 tặng 1, giảm sâu, voucher kèm freeship.
+- Thúc giục khách hành động ngay.`,
+
+  storytelling: `CHIẾN LƯỢC: KỂ CHUYỆN KHÁCH HÀNG & CASE STUDY.
+- Kể câu chuyện chân thực về khách hàng trước và sau khi sử dụng sản phẩm.
+- Hoặc câu chuyện tâm huyết của người làm sản phẩm.
+- Xây dựng niềm tin tự nhiên, dẫn dắt khách tự muốn sở hữu.`,
+
+  objection: `CHIẾN LƯỢC: XỬ LÝ TỪ CHỐI & TƯ VẤN CHUYÊN SÂU.
+- Đập tan lo ngại của người mua: Giá đắt không? Bền không? Không vừa có đổi không?
+- Cam kết vàng: Kiểm tra hàng trước khi thanh toán, đổi trả 1-1 miễn phí.`,
+
+  engagement: `CHIẾN LƯỢC: MINIGAME & TƯƠNG TÁC BÃO COMMENT.
+- Minigame đơn giản: Đoán số, ghép hình, bình luận nhận voucher giảm giá.
+- Kéo tương tác tự nhiên cho Fanpage để tăng điểm hiển thị thuật toán Facebook.`,
+
+  review: `CHIẾN LƯỢC: REVIEW & ĐẬP HỘP SẢN PHẨM KHÁCH QUAN.
+- Trải nghiệm thực tế: Chất liệu, cảm giác sử dụng, ưu điểm nổi trội.
+- Nhận xét công tâm tạo sự tin cậy tuyệt đối.`
+};
+
+const TONE_GUIDES = {
+  persuasive: 'Giọng văn: Thuyết phục, tâm lý bán hàng đỉnh cao, thôi miên tự nhiên không gượng ép.',
+  friendly: 'Giọng văn: Thân thiện, gần gũi như người bạn thân tư vấn nhiệt tình.',
+  expert: 'Giọng văn: Chuyên gia uy tín, am hiểu sâu sắc, tư vấn chuẩn mực khoa học.',
+  urgent: 'Giọng văn: Khẩn cấp, khan hiếm, thôi thúc hành động ngay kẻo lỡ.',
+  natural: 'Giọng văn: Đời thường, mộc mạc, chân thực như khách hàng chia sẻ lại.'
+};
+
+const LENGTH_GUIDES = {
+  short: 'Độ dài: Ngắn gọn (120 - 180 từ, khách lướt điện thoại đọc nhanh chốt đơn liền).',
+  medium: 'Độ dài: Vừa vặn (220 - 380 từ, chuẩn mực tối ưu cho bài đăng Facebook).',
+  long: 'Độ dài: Phân tích sâu (400 - 650 từ, đầy đủ câu chuyện, tính năng và cam kết).',
+  auto: 'Độ dài: Tự động tối ưu theo từng sản phẩm.'
+};
+
+// ═══ QUY TRÌNH SINH BÀI ĐĂNG TÍCH HỢP STATE MACHINE, TOPIC PACK & SAFETY CHECK ═══
+async function generatePosts(userId, options = {}) {
+  const {
+    prompt,
+    contentType = 'auto',
+    tone = 'natural',
+    postCount = 3,
+    length = 'medium',
+    emoji = 'moderate',
+    objective = 'balanced',
+    diversity = 'high',
+    includeHashtags = true,
+    enableWebSearch = true,
+    eventDetails = '',
+    brandName = '',
+    facts = ''
+  } = options;
+
+  if (!prompt?.trim()) throw new Error('Vui lòng nhập chủ đề hoặc yêu cầu tạo bài.');
+
+  // BƯỚC 0: RESOLVE TOPIC PACK & MERGE RULES
+  const { pack, forceReview, cls } = await resolveTopicPack(prompt);
+
+  // Nạp tin tức thời sự nếu có
   let newsContext = '';
   if (eventDetails && eventDetails.trim()) {
     newsContext = `\n\n📌 THÔNG TIN SỰ KIỆN DO NGƯỜI DÙNG CUNG CẤP:\n${eventDetails.trim()}\n(BẮT BUỘC BÁM SÁT THÔNG TIN NÀY)\n`;
@@ -89,106 +274,226 @@ async function generatePosts(userId, { prompt, tone = '', includeHashtags = true
     try {
       newsContext = await webSearchService.getNewsContext(prompt, 5);
       if (newsContext) {
-        console.log('[AiContentGenerator] Đã tra cứu tin tức thời sự nạp vào AI prompt thành công.');
+        console.log('[AiContentGenerator] Đã nạp tin tức thời sự bổ trợ cho AI prompt thành công.');
       }
     } catch (searchErr) {
       console.warn('[AiContentGenerator WebSearch Warning]', searchErr.message);
     }
   }
 
-  const systemPrompt = `Bạn là chuyên gia viết content Facebook chuyên nghiệp. Nhiệm vụ: tạo các bài đăng Facebook theo yêu cầu của người dùng.
+  // Kiểm tra facts_needed
+  const providedFacts = (facts || eventDetails || '').trim();
+  const hasFacts = Boolean(providedFacts);
+  const mergedRules = mergeRules(pack, { hasFacts });
+  const factsNeededList = Array.isArray(mergedRules.facts_needed) ? mergedRules.facts_needed : [];
+  const hasMissingFacts = factsNeededList.length > 0 && !providedFacts;
 
-QUY TẮC BẮT BUỘC:
-1. Phân tích yêu cầu của người dùng để xác định CÓ BAO NHIÊU bài cần tạo và CHỦ ĐỀ gì.
-2. Nếu người dùng yêu cầu "2 bài", tạo đúng 2 bài. "5 bài" thì tạo 5. Nếu không nói cụ thể, mặc định tạo 3 bài.
-3. Mỗi bài phải CÓ NỘI DUNG KHÁC NHAU, không được giống nhau.
-4. ${includeEmoji ? 'SỬ DỤNG emoji phù hợp trong nội dung.' : 'KHÔNG sử dụng emoji.'}
-5. ${includeHashtags ? 'THÊM hashtag liên quan vào mảng hashtags.' : 'KHÔNG thêm hashtag.'}
-6. ${tone ? `Giọng văn: ${tone}.` : 'Giọng văn tự nhiên, thu hút.'}
-7. Nội dung bài phải ĐẦY ĐỦ, SẴN SÀNG ĐĂNG ĐƯỢC NGAY, không dùng placeholder [...].
-8. CHỐNG BỊA ĐẶT (ANTI-HALLUCINATION): Khi viết về nhân vật có thật, sự kiện thời sự hay tin tức, TUYỆT ĐỐI KHÔNG tự bịa đặt các chi tiết sai thực tế (như tỷ số, bàn thắng, sự việc chưa từng xảy ra). Bắt buộc bám sát các dữ kiện báo chí hoặc sự kiện người dùng cung cấp. Nếu không có dữ kiện chi tiết, hãy tập trung vào bình luận cảm xúc, tri ân và hành trình.
-9. MỖI BÀI LÀ MỘT PHẦN TỬ RIÊNG trong mảng "posts" — không gộp nhiều bài vào một "content", không đánh số "Bài viết 1" trong nội dung.
-10. Facebook KHÔNG hiển thị markdown: TUYỆT ĐỐI KHÔNG dùng **, *, #, ---, \`\`\` để định dạng; chỉ dùng chữ thường, xuống dòng và emoji. Hashtag đặt trong mảng hashtags, không lặp lại trong content.
+  const targetCount = Math.min(10, Math.max(1, Number(postCount) || 3));
 
-PHẢI trả về JSON duy nhất theo ĐÚNG format sau (KHÔNG có text nào khác ngoài JSON):
+  // Ghép nối prompt theo thứ tự yêu cầu:
+  // 1. Quy tắc chung
+  // 2. Topic Pack (angles, structure, style, must_do, must_not)
+  // 3. Thông tin người dùng nhập (giọng, mục tiêu, facts)
+  // 4. Chủ đề
+  // 5. Thêm dòng cố định: "Chỉ dùng số liệu, giá, ưu đãi có trong phần facts. Không có thì không viết."
+
+  const packAngles = Array.isArray(pack.angles) ? pack.angles.map((a, i) => `  ${i + 1}. ${a}`).join('\n') : '';
+  const packStructure = (!hasFacts && Array.isArray(pack.structure))
+    ? pack.structure.map((s, i) => `  Bước ${i + 1}: ${s}`).join('\n')
+    : '  - Đi thẳng vào từng dữ kiện trong Facts được cung cấp (bỏ qua pain point, tiện ích xung quanh, câu chuyện thương hiệu nếu facts không nêu).';
+  const packMustNot = mergedRules.must_not.map((r) => `- ${r}`).join('\n');
+  const packMustDo = mergedRules.must_do.map((r) => `- ${r}`).join('\n');
+  const packRisky = mergedRules.risky_claims.map((r) => `- ${r}`).join('\n');
+
+  const topicPackSection = `## ĐẶC TẢ TOPIC PACK: ${pack.display_name} (Ngành: ${pack.parent_key || 'general'})
+- Đối tượng độc giả mục tiêu: ${pack.audience_default || 'Người dùng Facebook'}
+- Độ nhạy cảm: ${pack.sensitivity} (${pack.status === 'CONFIRMED' ? 'ĐÃ XÁC NHẬN' : 'BẢN NHÁP DRAFT'})
+
+CÁC GÓC TIẾP CẬN NỘI DUNG (ANGLES) ĐƯỢC CHỌN LỰA:
+${packAngles}
+
+CẤU TRÚC BÀI VIẾT:
+${packStructure}
+
+QUY TẮC BẮT BUỘC (MUST DO):
+${packMustDo}
+
+QUY TẮC TUYỆT ĐỐI CẤM (MUST NOT - BẢO LƯU COMMON RULES):
+${packMustNot}
+
+CÁC TUYÊN BỐ RỦI RO CẦN TRÁNH (RISKY CLAIMS):
+${packRisky}`;
+
+  const factsSection = providedFacts
+    ? `\n📌 DỮ KIỆN THỰC TẾ (FACTS) ĐƯỢC CUNG CẤP:\n${providedFacts}\n`
+    : `\n📌 DỮ KIỆN THỰC TẾ (FACTS): Chưa có thông tin thực tế được cung cấp.\n`;
+
+  const fixedRuleLine = providedFacts
+    ? `⚠️ DÒNG CỐ ĐỊNH BẮT BUỘC: Chỉ dùng số liệu, giá, ưu đãi có trong phần facts. Tên sản phẩm chỉ được mô tả bằng đúng các mục trong facts. Tuyệt đối KHÔNG tự thêm chất liệu (cotton, da...), kích cỡ (size S, M, L), màu sắc, vị trí, khoảng cách (km), menu, công dụng nếu facts không có. Bài viết bắt buộc ngắn gọn (100 - 160 từ), không được kéo dài bài viết rồi độn thêm chi tiết.`
+    : `⚠️ DÒNG CỐ ĐỊNH BẮT BUỘC: Chỉ dùng thông tin chắc chắn. Không tự bịa số liệu, giá hay cam kết tuyệt đối.`;
+
+  const layer1Core = CORE_SYSTEM_PROMPT;
+  const layer2Strategy = CONTENT_TYPE_GUIDES[contentType] || CONTENT_TYPE_GUIDES.auto;
+  const layer3Constraints = [
+    TONE_GUIDES[tone] || TONE_GUIDES.natural,
+    LENGTH_GUIDES[length] || LENGTH_GUIDES.medium,
+    emoji === 'none' ? 'Emoji: TUYỆT ĐỐI KHÔNG dùng emoji.' : 'Emoji: Dùng vừa phải, điểm xuyết làm nổi bật ý chính.',
+    includeHashtags ? 'Hashtag: 3 - 5 hashtag ngắn gọn, có tính nhận diện cao.' : 'Hashtag: KHÔNG dùng hashtag.',
+    brandName ? `Hồ sơ Fanpage: Thương hiệu/Page "${brandName}". Tuân thủ phong cách thương hiệu.` : ''
+  ].filter(Boolean).join('\n');
+
+  const fullSystemPrompt = `${layer1Core}
+
+---
+${topicPackSection}
+
+---
+${layer2Strategy}
+
+---
+${factsSection}
+${fixedRuleLine}
+
+---
+YÊU CẦU CỤ THỂ:
+- Số lượng bài cần tạo: ĐÚNG ${targetCount} BÀI RIÊNG BIỆT.
+${layer3Constraints}
+
+ĐỊNH DẠNG BẮT BUỘC (TRẢ VỀ DUY NHẤT JSON NÀY):
 {
   "posts": [
     {
-      "title": "Tiêu đề ngắn gọn (dưới 50 ký tự)",
-      "content": "Nội dung đầy đủ của bài đăng...",
-      "hashtags": ["#hashtag1", "#hashtag2"],
+      "title": "Tiêu đề ngắn gọn không có dấu sao",
+      "content": "Toàn bộ nội dung bài viết Facebook, ngắt dòng đẹp mắt, tuyệt đối không có dấu sao (*)",
+      "hashtags": ["#tag1", "#tag2"],
       "suggestedTime": "09:00",
-      "topic": "Chủ đề của bài"
+      "topic": "Chủ đề con của bài",
+      "contentType": "sales | storytelling | promo | objection | engagement | review"
     }
   ]
 }`;
 
   const userPromptWithContext = newsContext ? `${prompt.trim()}\n${newsContext}` : prompt.trim();
 
-  const response = await axios.post(`${baseUrl}/chat/completions`, {
-    model,
+  // BƯỚC 1: TRẠNG THÁI GENERATING
+  const { content: rawReply, provider } = await callAiChat({
     messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPromptWithContext }
+      { role: 'system', content: fullSystemPrompt },
+      { role: 'user', content: `Hãy viết ${targetCount} bài đăng Facebook chất lượng cao theo yêu cầu sau:\n${userPromptWithContext}` }
     ],
-    temperature: 0.8,
+    temperature: diversity === 'high' ? 0.85 : 0.72,
     max_tokens: 4096
-  }, {
-    headers: { Authorization: `Bearer ${apiKey}` },
-    timeout: 120000
   });
 
-  const rawReply = response.data.choices?.[0]?.message?.content;
   if (!rawReply) throw new Error('AI không trả về kết quả. Vui lòng thử lại.');
 
-  // Parse JSON from AI response (handle markdown code blocks)
+  // BƯỚC 2: TRẠNG THÁI VALIDATING (KIỂM TRA SCHEMA JSON)
   let parsed;
   try {
     let jsonStr = rawReply.trim();
-    // Remove markdown code fence if present
     const codeBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (codeBlockMatch) {
       jsonStr = codeBlockMatch[1].trim();
     }
     parsed = JSON.parse(jsonStr);
   } catch (parseErr) {
-    console.error('[AiContentGenerator] Failed to parse AI JSON:', rawReply.slice(0, 500));
-    throw new Error('AI trả về format không hợp lệ. Vui lòng thử lại.');
+    console.error('[AiContentGenerator] Parse error:', rawReply.slice(0, 400));
+    // Schema thất bại -> GENERATION_FAILED
+    throw new Error('AI trả về dữ liệu lỗi cấu trúc (GENERATION_FAILED). Vui lòng bấm tạo lại.');
   }
 
-  if (!parsed.posts || !Array.isArray(parsed.posts) || parsed.posts.length === 0) {
-    throw new Error('AI không tạo được bài viết nào. Vui lòng mô tả rõ hơn yêu cầu.');
+  const postsArray = Array.isArray(parsed?.posts) ? parsed.posts : [];
+  if (postsArray.length === 0) {
+    throw new Error('AI không tạo được bài viết nào (GENERATION_FAILED). Vui lòng mô tả chi tiết hơn.');
   }
 
-  // Save drafts to DB
+  // BƯỚC 3: TRẠNG THÁI SAFETY_CHECK, FORCE REVIEW & LƯU TRỮ DATABASE
   await ensureDraftSchema();
   const pool = await getPool();
   const batchId = generateBatchId();
   const savedDrafts = [];
 
-  for (const post of parsed.posts) {
+  for (const post of postsArray) {
+    const cleanTitle = cleanFacebookContent(post.title || prompt.slice(0, 50));
+    const cleanContent = cleanFacebookContent(post.content || '');
+    const hashtagsArray = Array.isArray(post.hashtags) ? post.hashtags : [];
+
+    // Chạy bộ lọc an toàn chính sách Meta (Safety Check Engine)
+    const safetyResult = evaluateContentSafety(cleanTitle, cleanContent);
+
+    // Gán trạng thái theo kết quả kiểm tra an toàn và quy tắc Topic Pack:
+    // 1. Nếu BLOCKED (rủi ro nghiêm trọng) -> Luôn giữ BLOCKED
+    // 2. Nếu DRAFT + sensitivity=high: bắt buộc vào PENDING_REVIEW cho tới khi pack được CONFIRMED
+    let assignedState = safetyResult.state;
+    let safetyNotes = `[${safetyResult.state}] Điểm an toàn: ${safetyResult.score}/100. ${safetyResult.notes} (${safetyResult.reasons.join('; ')})`;
+
+    // Chốt chặn bằng code (Code Content Validator against pack rules)
+    const ruleViolations = validatePostAgainstRules(cleanTitle, cleanContent, pack, mergedRules);
+    if (!ruleViolations.isValid) {
+      const hasCritical = ruleViolations.violations.some((v) => v.includes('nghiêm trọng') || v.includes('Markdown'));
+      if (hasCritical) {
+        assignedState = POST_STATES.BLOCKED;
+      } else if (assignedState !== POST_STATES.BLOCKED) {
+        assignedState = POST_STATES.PENDING_REVIEW;
+      }
+      safetyNotes += ` [Vi phạm luật pack: ${ruleViolations.violations.join('; ')}]`;
+    }
+
+    if (assignedState !== POST_STATES.BLOCKED && forceReview) {
+      assignedState = POST_STATES.PENDING_REVIEW;
+      safetyNotes = `[${POST_STATES.PENDING_REVIEW}] Ngành nhạy cảm (${pack.display_name}) thuộc Topic Pack '${pack.topic_key}' đang ở trạng thái DRAFT - Bắt buộc chờ quản trị viên phê duyệt. (${safetyResult.notes})`;
+    }
+
+    if (hasMissingFacts) {
+      safetyNotes += ` [CHƯA CÓ THÔNG TIN THẬT: Cần bổ sung facts (${factsNeededList.slice(0, 3).join(', ')}) trước khi xuất bản]`;
+    }
+
     const result = await pool.request()
       .input('user_id', sql.VarChar(64), String(userId))
       .input('batch_id', sql.VarChar(64), batchId)
-      .input('title', sql.NVarChar(255), stripMarkdown(post.title).slice(0, 255))
-      .input('content', sql.NVarChar(sql.MAX), stripMarkdown(post.content))
-      .input('hashtags', sql.NVarChar(sql.MAX), JSON.stringify(Array.isArray(post.hashtags) ? post.hashtags : []))
-      .input('suggested_time', sql.VarChar(10), String(post.suggestedTime || '').slice(0, 10))
-      .input('topic', sql.NVarChar(255), String(post.topic || '').slice(0, 255))
+      .input('title', sql.NVarChar(255), cleanTitle.slice(0, 255))
+      .input('content', sql.NVarChar(sql.MAX), cleanContent)
+      .input('hashtags', sql.NVarChar(sql.MAX), JSON.stringify(hashtagsArray))
+      .input('suggested_time', sql.VarChar(10), String(post.suggestedTime || '09:00').slice(0, 10))
+      .input('topic', sql.NVarChar(255), String(post.topic || post.contentType || pack.display_name || 'Facebook Post').slice(0, 255))
+      .input('topic_key', sql.VarChar(100), String(pack.topic_key || 'general').slice(0, 100))
       .input('tone', sql.NVarChar(100), String(tone).slice(0, 100))
+      .input('status', sql.VarChar(50), assignedState)
+      .input('force_review', sql.Bit, forceReview ? 1 : 0)
+      .input('safety_notes', sql.NVarChar(sql.MAX), safetyNotes)
       .input('original_prompt', sql.NVarChar(sql.MAX), prompt.trim())
       .query(`
-        INSERT INTO dbo.AiGeneratedDrafts (user_id, batch_id, title, content, hashtags, suggested_time, topic, tone, original_prompt)
+        INSERT INTO dbo.AiGeneratedDrafts (
+          user_id, batch_id, title, content, hashtags, suggested_time, topic, topic_key, tone, status, force_review, safety_notes, original_prompt
+        )
         OUTPUT INSERTED.*
-        VALUES (@user_id, @batch_id, @title, @content, @hashtags, @suggested_time, @topic, @tone, @original_prompt);
+        VALUES (
+          @user_id, @batch_id, @title, @content, @hashtags, @suggested_time, @topic, @topic_key, @tone, @status, @force_review, @safety_notes, @original_prompt
+        );
       `);
+
     savedDrafts.push(formatDraft(result.recordset[0]));
   }
 
-  return { batchId, drafts: savedDrafts, count: savedDrafts.length };
+  return {
+    batchId,
+    drafts: savedDrafts,
+    count: savedDrafts.length,
+    provider,
+    pack: {
+      topic_key: pack.topic_key,
+      display_name: pack.display_name,
+      parent_key: pack.parent_key,
+      sensitivity: pack.sensitivity,
+      status: pack.status,
+      version: pack.version
+    },
+    forceReview,
+    hasMissingFacts
+  };
 }
 
-// ═══ REGENERATE SINGLE DRAFT ═══
+// ═══ REGENERATE SINGLE DRAFT (VIẾT LẠI 1 BÀI VÀ QUÉT AN TOÀN) ═══
 async function regenerateDraft(userId, draftId) {
   await ensureDraftSchema();
   const pool = await getPool();
@@ -201,130 +506,209 @@ async function regenerateDraft(userId, draftId) {
   if (!existing.recordset.length) throw new Error('Bài nháp không tồn tại.');
   const draft = existing.recordset[0];
 
-  const { apiKey, model, baseUrl } = await getAiConfig();
-  if (!apiKey) throw new Error('AI chưa được cấu hình.');
-
   const regenPrompt = `Viết lại bài đăng Facebook với chủ đề: "${draft.topic}". 
-Nội dung cũ (cần viết lại hoàn toàn mới, KHÁC nội dung cũ): ${draft.content.slice(0, 500)}
+Nội dung cũ: ${draft.content.slice(0, 400)}
 
-Trả về JSON duy nhất:
+QUY TẮC BẮT BUỘC:
+- Viết lại nội dung HOÀN TOÀN MỚI với góc nhìn lôi cuốn hơn.
+- TUYỆT ĐỐI KHÔNG DÙNG DẤU SAO (*) HOẶC MARKDOWN NHƯ **in đậm**.
+- Trả về JSON duy nhất:
 {
-  "title": "Tiêu đề mới",
-  "content": "Nội dung mới hoàn toàn...",
-  "hashtags": ["#tag1"],
-  "suggestedTime": "09:00",
-  "topic": "${draft.topic}"
+  "title": "Tiêu đề mới (không có dấu sao)",
+  "content": "Nội dung mới hoàn toàn ngắt đoạn đẹp mắt...",
+  "hashtags": ["#tag1", "#tag2"],
+  "suggestedTime": "09:00"
 }`;
 
-  const response = await axios.post(`${baseUrl}/chat/completions`, {
-    model,
+  const { content: rawReply } = await callAiChat({
     messages: [
-      { role: 'system', content: 'Bạn là chuyên gia viết content Facebook. Trả về JSON duy nhất, không có text nào khác. Không dùng markdown (**, *, #) trong nội dung vì Facebook không hiển thị được.' },
+      { role: 'system', content: CORE_SYSTEM_PROMPT },
       { role: 'user', content: regenPrompt }
     ],
-    temperature: 0.9,
-    max_tokens: 2048
-  }, {
-    headers: { Authorization: `Bearer ${apiKey}` },
-    timeout: 60000
+    temperature: 0.85,
+    max_tokens: 1500
   });
 
-  const rawReply = response.data.choices?.[0]?.message?.content;
+  if (!rawReply) throw new Error('AI không trả về kết quả viết lại.');
+
   let parsed;
   try {
     let jsonStr = rawReply.trim();
-    const codeBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (codeBlockMatch) jsonStr = codeBlockMatch[1].trim();
+    const match = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (match) jsonStr = match[1].trim();
     parsed = JSON.parse(jsonStr);
-  } catch {
-    throw new Error('AI trả về format không hợp lệ khi tạo lại bài.');
+  } catch (err) {
+    throw new Error('AI trả về định dạng chưa khớp JSON (GENERATION_FAILED).');
   }
+
+  const cleanTitle = cleanFacebookContent(parsed.title || draft.title);
+  const cleanContent = cleanFacebookContent(parsed.content || draft.content);
+  const hashtagsArray = Array.isArray(parsed.hashtags) ? parsed.hashtags : JSON.parse(draft.hashtags || '[]');
+
+  // Chạy lại kiểm tra an toàn chính sách
+  const safetyResult = evaluateContentSafety(cleanTitle, cleanContent);
+  const safetyNotes = `[${safetyResult.state}] Điểm an toàn: ${safetyResult.score}/100. ${safetyResult.notes}`;
 
   const updated = await pool.request()
     .input('id', sql.Int, draftId)
     .input('user_id', sql.VarChar(64), String(userId))
-    .input('title', sql.NVarChar(255), stripMarkdown(parsed.title || draft.topic).slice(0, 255))
-    .input('content', sql.NVarChar(sql.MAX), stripMarkdown(parsed.content))
-    .input('hashtags', sql.NVarChar(sql.MAX), JSON.stringify(Array.isArray(parsed.hashtags) ? parsed.hashtags : []))
-    .input('suggested_time', sql.VarChar(10), String(parsed.suggestedTime || '').slice(0, 10))
+    .input('title', sql.NVarChar(255), cleanTitle.slice(0, 255))
+    .input('content', sql.NVarChar(sql.MAX), cleanContent)
+    .input('hashtags', sql.NVarChar(sql.MAX), JSON.stringify(hashtagsArray))
+    .input('suggested_time', sql.VarChar(10), String(parsed.suggestedTime || draft.suggested_time || '09:00').slice(0, 10))
+    .input('status', sql.VarChar(50), safetyResult.state)
+    .input('safety_notes', sql.NVarChar(sql.MAX), safetyNotes)
     .query(`
       UPDATE dbo.AiGeneratedDrafts
-      SET title = @title, content = @content, hashtags = @hashtags, suggested_time = @suggested_time, updated_at = SYSUTCDATETIME()
+      SET title = @title, content = @content, hashtags = @hashtags, suggested_time = @suggested_time,
+          status = @status, safety_notes = @safety_notes, updated_at = SYSUTCDATETIME()
+      OUTPUT INSERTED.*
       WHERE id = @id AND user_id = @user_id;
-      SELECT * FROM dbo.AiGeneratedDrafts WHERE id = @id;
     `);
 
   return formatDraft(updated.recordset[0]);
 }
 
-// ═══ CRUD DRAFTS ═══
-async function getDrafts(userId, status = 'draft') {
+// ═══ DUYỆT BÀI ĐĂNG (APPROVE DRAFT) ═══
+async function approveDraft(userId, draftId) {
   await ensureDraftSchema();
   const pool = await getPool();
-  const result = await pool.request()
+
+  const existing = await pool.request()
+    .input('id', sql.Int, draftId)
     .input('user_id', sql.VarChar(64), String(userId))
-    .input('status', sql.VarChar(20), status)
+    .query('SELECT * FROM dbo.AiGeneratedDrafts WHERE id = @id AND user_id = @user_id');
+
+  if (!existing.recordset.length) throw new Error('Bài viết không tồn tại.');
+  const draft = existing.recordset[0];
+
+  // Chỉ cho phép duyệt từ READY_FOR_APPROVAL hoặc PENDING_REVIEW
+  if (draft.status === POST_STATES.BLOCKED) {
+    throw new Error('Nội dung đang ở trạng thái BLOCKED do vi phạm chính sách Meta. Không được phép duyệt; chỉ được sửa và tạo bản mới.');
+  }
+
+  const updated = await pool.request()
+    .input('id', sql.Int, draftId)
+    .input('user_id', sql.VarChar(64), String(userId))
+    .input('status', sql.VarChar(50), POST_STATES.APPROVED)
     .query(`
-      SELECT * FROM dbo.AiGeneratedDrafts
-      WHERE user_id = @user_id AND status = @status
-      ORDER BY created_at DESC
+      UPDATE dbo.AiGeneratedDrafts
+      SET status = @status, updated_at = SYSUTCDATETIME()
+      OUTPUT INSERTED.*
+      WHERE id = @id AND user_id = @user_id;
     `);
-  return result.recordset.map(formatDraft);
+
+  return formatDraft(updated.recordset[0]);
 }
 
-async function getDraftsByBatch(userId, batchId) {
+// ═══ TỪ CHỐI BÀI ĐĂNG (REJECT DRAFT) ═══
+async function rejectDraft(userId, draftId, reason = '') {
   await ensureDraftSchema();
   const pool = await getPool();
-  const result = await pool.request()
+
+  const safetyNote = reason ? `[BỊ TỪ CHỐI]: ${reason}` : '[BỊ TỪ CHỐI BỞI NGƯỜI DUYỆT]';
+
+  const updated = await pool.request()
+    .input('id', sql.Int, draftId)
     .input('user_id', sql.VarChar(64), String(userId))
-    .input('batch_id', sql.VarChar(64), batchId)
+    .input('status', sql.VarChar(50), POST_STATES.REJECTED)
+    .input('safety_notes', sql.NVarChar(sql.MAX), safetyNote)
     .query(`
-      SELECT * FROM dbo.AiGeneratedDrafts
-      WHERE user_id = @user_id AND batch_id = @batch_id
-      ORDER BY id ASC
+      UPDATE dbo.AiGeneratedDrafts
+      SET status = @status, safety_notes = @safety_notes, updated_at = SYSUTCDATETIME()
+      OUTPUT INSERTED.*
+      WHERE id = @id AND user_id = @user_id;
     `);
-  return result.recordset.map(formatDraft);
+
+  return formatDraft(updated.recordset[0]);
 }
 
-async function updateDraft(userId, draftId, updates) {
+// ═══ CẬP NHẬT DRAFT VỚI QUY TẮC HỦY APPROVED NẾU SỬA NỘI DUNG ═══
+async function updateDraft(userId, draftId, updates = {}) {
   await ensureDraftSchema();
   const pool = await getPool();
-  const fields = [];
+
+  const existing = await pool.request()
+    .input('id', sql.Int, draftId)
+    .input('user_id', sql.VarChar(64), String(userId))
+    .query('SELECT * FROM dbo.AiGeneratedDrafts WHERE id = @id AND user_id = @user_id');
+
+  if (!existing.recordset.length) throw new Error('Bài nháp không tồn tại.');
+  const draft = existing.recordset[0];
+
+  // Kiểm tra quy tắc: Nếu nội dung thay đổi sau khi APPROVED/SCHEDULED -> Hủy APPROVED và chạy lại SAFETY_CHECK!
+  const mutationResult = handleContentMutation(draft, updates);
+
+  // ═══ GHI FEEDBACK NGAY TỪ ĐẦU (RULE 6) ═══
+  // Mỗi lần người sửa bài trước khi duyệt: lưu (bản AI, bản cuối, topic_key)
+  if (updates.content !== undefined && updates.content.trim() !== draft.content.trim()) {
+    recordPostFeedback({
+      postId: draft.id,
+      topicKey: draft.topic_key || 'general',
+      aiVersion: draft.content,
+      finalVersion: updates.content,
+      changeType: 'manual_edit'
+    }).catch((fbErr) => console.warn('[AiContentGenerator] Lỗi ghi post feedback:', fbErr.message));
+  }
+
   const req = pool.request()
     .input('id', sql.Int, draftId)
     .input('user_id', sql.VarChar(64), String(userId));
 
+  const fields = [];
+
   if (updates.title !== undefined) {
+    const cleanTitle = cleanFacebookContent(updates.title);
+    req.input('title', sql.NVarChar(255), cleanTitle.slice(0, 255));
     fields.push('title = @title');
-    req.input('title', sql.NVarChar(255), String(updates.title).slice(0, 255));
   }
+
   if (updates.content !== undefined) {
+    const cleanContent = cleanFacebookContent(updates.content);
+    req.input('content', sql.NVarChar(sql.MAX), cleanContent);
     fields.push('content = @content');
-    req.input('content', sql.NVarChar(sql.MAX), String(updates.content));
   }
+
   if (updates.hashtags !== undefined) {
+    const hashtagsArray = Array.isArray(updates.hashtags) ? updates.hashtags : [];
+    req.input('hashtags', sql.NVarChar(sql.MAX), JSON.stringify(hashtagsArray));
     fields.push('hashtags = @hashtags');
-    req.input('hashtags', sql.NVarChar(sql.MAX), JSON.stringify(Array.isArray(updates.hashtags) ? updates.hashtags : []));
   }
-  if (updates.selected_page_ids !== undefined) {
-    fields.push('selected_page_ids = @page_ids');
-    req.input('page_ids', sql.NVarChar(sql.MAX), JSON.stringify(Array.isArray(updates.selected_page_ids) ? updates.selected_page_ids : []));
+
+  if (updates.suggested_time !== undefined) {
+    req.input('suggested_time', sql.VarChar(10), String(updates.suggested_time).slice(0, 10));
+    fields.push('suggested_time = @suggested_time');
   }
+
   if (updates.scheduled_at !== undefined) {
-    fields.push('scheduled_at = @scheduled_at');
     req.input('scheduled_at', sql.DateTime2, updates.scheduled_at ? new Date(updates.scheduled_at) : null);
+    fields.push('scheduled_at = @scheduled_at');
   }
-  if (updates.status !== undefined) {
-    fields.push('status = @status');
-    req.input('status', sql.VarChar(20), String(updates.status));
+
+  if (updates.selected_page_ids !== undefined) {
+    req.input('selected_page_ids', sql.NVarChar(sql.MAX), JSON.stringify(Array.isArray(updates.selected_page_ids) ? updates.selected_page_ids : []));
+    fields.push('selected_page_ids = @selected_page_ids');
   }
+
   if (updates.media_type !== undefined) {
+    req.input('media_type', sql.VarChar(20), String(updates.media_type).slice(0, 20));
     fields.push('media_type = @media_type');
-    req.input('media_type', sql.VarChar(20), String(updates.media_type));
   }
+
   if (updates.media_links !== undefined) {
-    fields.push('media_links = @media_links');
     req.input('media_links', sql.NVarChar(sql.MAX), JSON.stringify(Array.isArray(updates.media_links) ? updates.media_links : []));
+    fields.push('media_links = @media_links');
+  }
+
+  // Nếu bị hủy duyệt do nội dung thay đổi
+  if (mutationResult.invalidated) {
+    req.input('status', sql.VarChar(50), mutationResult.nextState);
+    req.input('safety_notes', sql.NVarChar(sql.MAX), mutationResult.safetyNotes);
+    fields.push('status = @status');
+    fields.push('safety_notes = @safety_notes');
+  } else if (updates.status !== undefined) {
+    req.input('status', sql.VarChar(50), String(updates.status).slice(0, 50));
+    fields.push('status = @status');
   }
 
   if (fields.length === 0) throw new Error('Không có trường nào cần cập nhật.');
@@ -343,6 +727,54 @@ async function updateDraft(userId, draftId, updates) {
   return result.recordset.length ? formatDraft(result.recordset[0]) : null;
 }
 
+// ═══ LẤY DANH SÁCH DRAFTS THEO BATCH / USER ═══
+async function getDraftsByBatch(userId, batchId) {
+  await ensureDraftSchema();
+  const pool = await getPool();
+
+  const result = await pool.request()
+    .input('user_id', sql.VarChar(64), String(userId))
+    .input('batch_id', sql.VarChar(64), batchId)
+    .query('SELECT * FROM dbo.AiGeneratedDrafts WHERE user_id = @user_id AND batch_id = @batch_id ORDER BY id ASC');
+
+  return result.recordset.map(formatDraft);
+}
+
+async function getRecentDrafts(userId, limit = 20) {
+  await ensureDraftSchema();
+  const pool = await getPool();
+
+  const result = await pool.request()
+    .input('user_id', sql.VarChar(64), String(userId))
+    .input('limit', sql.Int, Math.min(100, Math.max(1, limit)))
+    .query(`
+      SELECT TOP (@limit) * FROM dbo.AiGeneratedDrafts
+      WHERE user_id = @user_id
+      ORDER BY id DESC
+    `);
+
+  return result.recordset.map(formatDraft);
+}
+
+async function getDrafts(userId, status) {
+  await ensureDraftSchema();
+  const pool = await getPool();
+
+  if (status && status !== 'all') {
+    const result = await pool.request()
+      .input('user_id', sql.VarChar(64), String(userId))
+      .input('status', sql.VarChar(50), status)
+      .query(`
+        SELECT TOP 50 * FROM dbo.AiGeneratedDrafts
+        WHERE user_id = @user_id AND status = @status
+        ORDER BY id DESC
+      `);
+    return result.recordset.map(formatDraft);
+  }
+
+  return getRecentDrafts(userId, 50);
+}
+
 async function deleteDraft(userId, draftId) {
   await ensureDraftSchema();
   const pool = await getPool();
@@ -359,11 +791,44 @@ async function deleteBatch(userId, batchId) {
   const result = await pool.request()
     .input('user_id', sql.VarChar(64), String(userId))
     .input('batch_id', sql.VarChar(64), batchId)
-    .query("DELETE FROM dbo.AiGeneratedDrafts WHERE user_id = @user_id AND batch_id = @batch_id AND status = 'draft'");
+    .query('DELETE FROM dbo.AiGeneratedDrafts WHERE user_id = @user_id AND batch_id = @batch_id');
   return result.rowsAffected[0];
 }
 
-// ═══ HELPERS ═══
+// ═══ SINH BÌNH LUẬN SEEDING ═══
+async function generateSeedingComments({ postContent, count = 3, tone = 'tự nhiên, thân thiện' }) {
+  const targetCount = Math.min(10, Math.max(1, Number(count) || 3));
+  const prompt = `Viết ${targetCount} bình luận seeding Facebook đa dạng cho bài đăng sau:
+Nội dung bài viết: "${(postContent || '').slice(0, 500)}"
+Giọng văn: ${tone}
+
+Yêu cầu:
+- Tự nhiên như người dùng thật (hỏi giá, hỏi tư vấn, khen ngợi, xin thông tin).
+- Tuyệt đối không giống bot robot, ngắt câu đời thường.
+- Tuyệt đối không dùng dấu sao Markdown (*).
+- Trả về DUY NHẤT một chuỗi JSON hợp lệ: { "comments": ["bình luận 1", "bình luận 2", ...] }`;
+
+  const { content: rawReply } = await callAiChat({
+    messages: [
+      { role: 'system', content: 'Bạn là chuyên gia marketing mạng xã hội chuyên viết bình luận seeding Facebook tự nhiên.' },
+      { role: 'user', content: prompt }
+    ],
+    temperature: 0.8,
+    max_tokens: 1000,
+    jsonMode: true
+  });
+
+  try {
+    const jsonStr = rawReply.trim();
+    const match = jsonStr.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(match ? match[0] : jsonStr);
+    return Array.isArray(parsed?.comments) ? parsed.comments : [];
+  } catch {
+    return [];
+  }
+}
+
+// ═══ FORMATTER ═══
 function formatDraft(row) {
   if (!row) return null;
   let hashtags = [];
@@ -380,8 +845,11 @@ function formatDraft(row) {
     hashtags,
     suggested_time: row.suggested_time,
     topic: row.topic,
+    topic_key: row.topic_key || 'general',
     tone: row.tone,
     status: row.status,
+    force_review: Boolean(row.force_review),
+    safety_notes: row.safety_notes || '',
     media_type: row.media_type || 'text',
     media_links: mediaLinks,
     selected_page_ids: selectedPageIds,
@@ -392,88 +860,37 @@ function formatDraft(row) {
   };
 }
 
-// ═══ GENERATE SEEDING COMMENTS ═══
-async function generateSeedingComments({ postContent, count = 3, tone = 'tự nhiên, thân thiện' }) {
-  if (!postContent || !postContent.trim()) {
-    throw new Error('Cần có nội dung bài đăng để AI sinh comment mồi phù hợp.');
-  }
-
-  const { apiKey, model, baseUrl } = await getAiConfig();
-  if (!apiKey) throw new Error('AI chưa được cấu hình. Hãy vào Cài đặt để thêm AI API Key.');
-
-  const targetCount = Math.min(5, Math.max(1, count || 3));
-  const systemPrompt = `Bạn là chuyên gia marketing Facebook chuyên viết comment seeding (bình luận mồi) để kích thích thuật toán Facebook đẩy bài viết lên Feed và tăng tương tác.
-
-Nhiệm vụ: Viết đúng ${targetCount} comment seeding cực kỳ tự nhiên dựa trên nội dung bài viết.
-Các dạng comment cần có:
-1. Comment kêu gọi hành động / Thông tin (Admin Fanpage chia sẻ Hotline, Zalo, link tư vấn hoặc nhắc inbox).
-2. Comment người dùng hỏi han (Khách hỏi về giá, chất lượng, cách mua hàng, địa chỉ shop).
-3. Comment feedback mồi / Tạo hiệu ứng đám đông (Khen ngợi, chấm hóng, xin thêm thông tin).
-
-QUY TẮC BẮT BUỘC:
-- Dùng tiếng Việt tự nhiên, phù hợp với người dùng mạng xã hội, có emoji thích hợp.
-- Gợi ý số phút delay hợp lý (ví dụ: comment 1 delay 0 phút, comment 2 delay 2 phút, comment 3 delay 5 phút).
-- KHÔNG dùng markdown hay chữ thừa nào khác ngoài JSON.
-
-PHẢI trả về JSON duy nhất theo ĐÚNG định dạng:
-{
-  "comments": [
-    {
-      "content": "Nội dung comment seeding...",
-      "delayMinutes": 0,
-      "type": "cta | question | feedback"
-    }
-  ]
-}`;
-
-  const response = await axios.post(`${baseUrl}/chat/completions`, {
-    model,
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: `Nội dung bài viết Facebook:\n"""\n${postContent.trim().slice(0, 3000)}\n"""` }
-    ],
-    temperature: 0.8,
-    max_tokens: 1024
-  }, {
-    headers: { Authorization: `Bearer ${apiKey}` },
-    timeout: 60000
-  });
-
-  const rawReply = response.data.choices?.[0]?.message?.content;
-  if (!rawReply) throw new Error('AI không trả về kết quả comment seeding.');
-
-  let parsed;
-  try {
-    let jsonStr = rawReply.trim();
-    const codeBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (codeBlockMatch) jsonStr = codeBlockMatch[1].trim();
-    parsed = JSON.parse(jsonStr);
-  } catch (parseErr) {
-    console.error('[AiContentGenerator] Parse seeding comments error:', rawReply.slice(0, 300));
-    throw new Error('AI trả về định dạng comment không hợp lệ.');
-  }
-
-  const rawComments = Array.isArray(parsed?.comments) ? parsed.comments : [];
-  if (rawComments.length === 0) {
-    throw new Error('AI không sinh được comment seeding nào.');
-  }
-
-  return rawComments.slice(0, 5).map((c, i) => ({
-    content: String(c.content || '').trim(),
-    delayMinutes: Number.isInteger(c.delayMinutes) ? Math.max(0, c.delayMinutes) : (i * 2),
-    type: c.type || 'seeding'
-  })).filter(c => c.content.length > 0);
+async function getAiConfig() {
+  const { getSettings } = require('./SettingsService');
+  const settings = await getSettings().catch(() => ({}));
+  let apiKey = settings.ai_api_key || process.env.AI_API_KEY || process.env.AI_API_KEY_1;
+  let model = settings.ai_model || process.env.AI_MODEL || 'openai/gpt-oss-120b';
+  let baseUrl = (settings.ai_base_url || process.env.AI_API_BASE_URL || 'https://api.groq.com/openai/v1').replace(/\/$/, '');
+  return { apiKey, model, baseUrl };
 }
 
 module.exports = {
-  getAiConfig,
+  POST_STATES,
   generatePosts,
   regenerateDraft,
-  getDrafts,
-  getDraftsByBatch,
+  approveDraft,
+  rejectDraft,
   updateDraft,
+  getDraftsByBatch,
+  getRecentDrafts,
+  getDrafts,
+  generateSeedingComments,
   deleteDraft,
   deleteBatch,
-  generateSeedingComments
+  formatDraft,
+  cleanFacebookContent,
+  getAiConfig,
+  // Export TopicPack utilities
+  topicPackService,
+  resolveTopicPack,
+  confirmTopicPack,
+  updateTopicPack,
+  recordPostFeedback,
+  checkPackConfirmationSuggestion,
+  COMMON_RULES
 };
-

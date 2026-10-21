@@ -1,0 +1,185 @@
+{
+  "evaluatedAt": "2026-10-19T02:07:14.737Z",
+  "totalSamples": 10,
+  "metrics": {
+    "totalHumanType1": 23,
+    "totalExtractorType1": 20,
+    "truePositives": 18,
+    "falsePositives": 5,
+    "falseNegatives": 5,
+    "precision": 78.3,
+    "recall": 78.3,
+    "f1Score": 78.3
+  },
+  "details": [
+    {
+      "id": 1,
+      "title": "Quán cà phê \"Test Coffee\" (Bài C - Có Facts)",
+      "humanType1": 2,
+      "extractorType1": 1,
+      "tp": 1,
+      "fp": 0,
+      "fn": 1,
+      "humanClaims": [
+        "Mùi cà phê thơm lan tỏa từ một quán mới mở (tả thuộc tính quán ngoài facts)",
+        "Không cần chờ đợi, tận hưởng không gian nhẹ nhàng, âm nhạc ấm áp (tả không gian/dịch vụ ngoài facts)"
+      ],
+      "extractorClaims": [
+        "Không cần chờ đợi, hãy ghé qua và tận hưởng không gian nhẹ nhàng, âm nhạc ấm áp."
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Quán cà phê \"Test Coffee\" (Bài B - Có Facts)",
+      "humanType1": 3,
+      "extractorType1": 2,
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "humanClaims": [
+        "Một tách espresso đen bóng, bốc khói nhẹ trên bàn gỗ, ánh sáng cửa sổ (cảnh mở bài tả vật thể/sản phẩm quy vào Loại 1)",
+        "Không gian ấm cúng, đủ yên tĩnh để làm việc và đủ rộng để gặp bạn bè (thuộc tính không gian ngoài facts)",
+        "Phù hợp cho nhóm làm việc hoặc buổi trò chuyện (khẳng định công năng/phù hợp ngoài facts)"
+      ],
+      "extractorClaims": [
+        "Một tách espresso đen bóng, bốc khói nhẹ trên bàn gỗ, ánh sáng cửa sổ chiếu vào tạo nên khoảnh khắc yên bình.",
+        "Bạn vừa bước vào Test Coffee, không gian ấm cúng, đủ yên tĩnh để làm việc và đủ rộng để gặp gỡ bạn bè."
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Máy lọc nước X (Bài C - Có Facts)",
+      "humanType1": 2,
+      "extractorType1": 4,
+      "tp": 2,
+      "fp": 2,
+      "fn": 0,
+      "humanClaims": [
+        "Mang lại nguồn nước tinh khiết (công năng kỹ thuật không có trong facts)",
+        "Đội ngũ kỹ thuật sẽ đến kiểm tra và cài đặt nhanh chóng (tự thêm dịch vụ/thuộc tính nhân viên)"
+      ],
+      "extractorClaims": [
+        "Máy lọc nước X mang lại nguồn nước tinh khiết ngay tại gia đình.",
+        "phù hợp với nhu cầu hằng ngày",
+        "yên tâm sử dụng lâu dài",
+        "đội ngũ kỹ thuật sẽ đến kiểm tra và cài đặt nhanh chóng"
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Máy lọc nước X (Bài B - Có Facts)",
+      "humanType1": 4,
+      "extractorType1": 4,
+      "tp": 4,
+      "fp": 0,
+      "fn": 0,
+      "humanClaims": [
+        "Rót nước từ vòi mới lắp ngay trong bếp (cảnh mở bài tả vật thể/vòi nước quy vào Loại 1)",
+        "Không còn mùi clo (công năng/thuộc tính sản phẩm ngoài facts)",
+        "Nước sạch không có tạp chất, hỗ trợ tiêu hoá tốt hơn (lợi ích sức khỏe ngoài facts)",
+        "Uống nước lọc hàng ngày giúp duy trì độ ẩm cho cơ thể (lợi ích sức khỏe ngoài facts)"
+      ],
+      "extractorClaims": [
+        "mẹ rót nước từ vòi mới lắp ngay trong bếp.",
+        "Giọt nước trong cốc trong suốt, không còn mùi clo.",
+        "Nước sạch không có tạp chất, hỗ trợ tiêu hoá tốt hơn.",
+        "Uống nước lọc hàng ngày giúp duy trì độ ẩm cho cơ thể."
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Khoá học Excel online (Bài B - Có Facts)",
+      "humanType1": 2,
+      "extractorType1": 1,
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "humanClaims": [
+        "Thiết kế từ cơ bản đến nâng cao (nội dung khóa học ngoài facts)",
+        "Áp dụng ngay công thức, pivot và biểu đồ vào công việc (nội dung khóa học chi tiết ngoài facts)"
+      ],
+      "extractorClaims": [
+        "Chương trình thiết kế từ cơ bản đến nâng cao, áp dụng ngay công thức, pivot và biểu đồ vào công việc hàng ngày."
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Shop quần áo \"Basic Studio\" (Bài B - Có Facts)",
+      "humanType1": 3,
+      "extractorType1": 1,
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "humanClaims": [
+        "Mẫu áo sơ mi và quần tây tối giản (dòng sản phẩm ngoài facts)",
+        "Chất liệu cotton thoáng mát (thuộc tính chất liệu ngoài facts)",
+        "Form dáng chuẩn từng đường kim mũi chỉ (thuộc tính gia công ngoài facts)"
+      ],
+      "extractorClaims": [
+        "Basic Studio mang đến những mẫu áo sơ mi và quần tây tối giản, chất liệu cotton thoáng mát, form dáng chuẩn từng đường kim mũi chỉ."
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Căn hộ The Sun (Bài B - Có Facts)",
+      "humanType1": 3,
+      "extractorType1": 5,
+      "tp": 3,
+      "fp": 1,
+      "fn": 0,
+      "humanClaims": [
+        "Ngập tràn ánh nắng qua khung cửa sổ rộng lớn (cảnh mở bài tả vật thể/căn hộ quy vào Loại 1)",
+        "Với lãi suất ưu đãi (chính sách lãi suất ưu đãi không có trong facts)",
+        "Xung quanh đầy đủ tiện ích trường học và công viên xanh (tiện ích ngoại khu không có trong facts)"
+      ],
+      "extractorClaims": [
+        "ánh nắng tự nhiên",
+        "khung cửa sổ rộng lớn",
+        "thiết kế tối ưu công năng cho gia đình trẻ",
+        "lãi suất ưu đãi",
+        "đầy đủ tiện ích trường học và công viên xanh"
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Giảm cân an toàn (Chủ đề Nhạy cảm - Không Facts)",
+      "humanType1": 0,
+      "extractorType1": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "humanClaims": [],
+      "extractorClaims": []
+    },
+    {
+      "id": 9,
+      "title": "Thuốc thảo dược gia truyền (Chủ đề Sức khỏe Vi phạm Cấm)",
+      "humanType1": 4,
+      "extractorType1": 2,
+      "tp": 0,
+      "fp": 2,
+      "fn": 4,
+      "humanClaims": [
+        "Nghiên cứu cho thấy 80% người làm văn phòng mắc bệnh trĩ (uy tín ngụy tạo + số liệu giật gân)",
+        "Cam kết khỏi dứt điểm 100% chỉ sau 7 ngày sử dụng (cam kết tuyệt đối y tế)",
+        "Uống ngày 2 viên 500mg (liều lượng y khoa không nguồn gốc)",
+        "Được bác sĩ đầu ngành khám miễn phí (uy tín ngụy tạo + dịch vụ tự bịa)"
+      ],
+      "extractorClaims": [
+        "Sử dụng uy tín ngụy tạo không có trong facts: \"nghien cuu cho thay\"",
+        "Tự ý đưa liều lượng dược phẩm \"500mg\" không có trong facts."
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Thói quen đọc sách 15 phút (Chủ đề Thường Tự do - Không Facts)",
+      "humanType1": 0,
+      "extractorType1": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "humanClaims": [],
+      "extractorClaims": []
+    }
+  ]
+}

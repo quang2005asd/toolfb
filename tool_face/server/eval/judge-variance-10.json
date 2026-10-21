@@ -1,0 +1,319 @@
+{
+  "measuredAt": "2026-10-19T07:18:36.936Z",
+  "criteria": [
+    "hook",
+    "gia_tri",
+    "giong_van",
+    "nhip_va_do_dai",
+    "cta"
+  ],
+  "judgeModel": "qwen/qwen3.8-27b",
+  "totalSamples": 10,
+  "validSamples": 10,
+  "invalidSamples": 0,
+  "avgDelta": 0.1,
+  "threshold": 0.2,
+  "isAccepted": true,
+  "results": [
+    {
+      "sampleIndex": 1,
+      "topicId": 21,
+      "topic": "Quán cà phê “Test Coffee”",
+      "condition": "C+",
+      "isValid": true,
+      "run1": {
+        "scores": {
+          "hook": 4,
+          "gia_tri": 4,
+          "giong_van": 4,
+          "nhip_va_do_dai": 4,
+          "cta": 4
+        },
+        "avgScore": 4,
+        "comment": "Bài viết có cấu trúc tốt, thông tin ưu đãi rõ ràng và giọng văn tự nhiên. Tuy nhiên, cụm từ 'tuần khai trương' trong bài viết không khớp với dữ liệu thực tế 'giảm 20% đến hết tuần' (có thể là tuần bất kỳ), gây ra sự thiếu chính xác nhỏ về mặt sự thật."
+      },
+      "run2": {
+        "scores": {
+          "hook": 4,
+          "gia_tri": 5,
+          "giong_van": 4,
+          "nhip_va_do_dai": 4,
+          "cta": 4
+        },
+        "avgScore": 4.2,
+        "comment": "Bài viết có hook đồng cảm tốt, truyền tải đầy đủ thông tin ưu đãi chính xác và giọng văn tự nhiên. CTA hơi chung chung nhưng vẫn đủ để thúc đẩy tương tác."
+      },
+      "delta": 0.2
+    },
+    {
+      "sampleIndex": 2,
+      "topicId": 22,
+      "topic": "Máy lọc nước X",
+      "condition": "B",
+      "isValid": true,
+      "run1": {
+        "scores": {
+          "hook": 2,
+          "gia_tri": 3,
+          "giong_van": 3,
+          "nhip_va_do_dai": 4,
+          "cta": 3
+        },
+        "avgScore": 3,
+        "comment": "Bài viết quá khô khan, liệt kê thông tin như bảng giá thay vì kể chuyện, hook mở đầu bằng câu hỏi sáo rỗng và thiếu sức hút."
+      },
+      "run2": {
+        "scores": {
+          "hook": 2,
+          "gia_tri": 4,
+          "giong_van": 3,
+          "nhip_va_do_dai": 4,
+          "cta": 3
+        },
+        "avgScore": 3.2,
+        "comment": "Mở đầu bằng câu hỏi sáo rỗng và thiếu sức hút, giọng văn hơi khô khan và mang tính liệt kê thông tin hơn là kể chuyện, tuy nhiên cấu trúc đoạn văn và thông tin giá/bảo hành được trình bày rõ ràng."
+      },
+      "delta": 0.2
+    },
+    {
+      "sampleIndex": 3,
+      "topicId": 23,
+      "topic": "Khóa học Excel",
+      "condition": "C+",
+      "isValid": true,
+      "run1": {
+        "scores": {
+          "hook": 4,
+          "gia_tri": 5,
+          "giong_van": 4,
+          "nhip_va_do_dai": 4,
+          "cta": 4
+        },
+        "avgScore": 4.2,
+        "comment": "Bài viết có hook đồng cảm tốt, cung cấp đầy đủ thông tin thực tế (số buổi, học phí, chứng chỉ) và giọng văn tự nhiên. CTA tương tác hợp lý, tuy nhiên độ dài hơi ngắn so với mức tối ưu để tạo chiều sâu nội dung."
+      },
+      "run2": {
+        "scores": {
+          "hook": 4,
+          "gia_tri": 5,
+          "giong_van": 4,
+          "nhip_va_do_dai": 4,
+          "cta": 4
+        },
+        "avgScore": 4.2,
+        "comment": "Bài viết có hook đồng cảm tốt, cung cấp đầy đủ thông tin thực tế (số buổi, học phí, chứng chỉ) và giọng văn tự nhiên. CTA tương tác hợp lý, phù hợp với mục tiêu tuyển sinh."
+      },
+      "delta": 0
+    },
+    {
+      "sampleIndex": 4,
+      "topicId": 24,
+      "topic": "Shop quần áo thời trang",
+      "condition": "B",
+      "isValid": true,
+      "run1": {
+        "scores": {
+          "hook": 4,
+          "gia_tri": 5,
+          "giong_van": 4,
+          "nhip_va_do_dai": 5,
+          "cta": 4
+        },
+        "avgScore": 4.4,
+        "comment": "Bài viết truyền tải chính xác thông tin freeship và đổi trả với giọng văn tự nhiên, ngắt dòng thoáng đãng. Hook và CTA đều hiệu quả, thúc đẩy tương tác tốt."
+      },
+      "run2": {
+        "scores": {
+          "hook": 4,
+          "gia_tri": 5,
+          "giong_van": 4,
+          "nhip_va_do_dai": 5,
+          "cta": 4
+        },
+        "avgScore": 4.4,
+        "comment": "Bài viết truyền tải chính xác thông tin freeship và đổi trả, cấu trúc đoạn ngắn gọn dễ đọc. Hook và CTA tự nhiên, phù hợp mục tiêu tăng tương tác."
+      },
+      "delta": 0
+    },
+    {
+      "sampleIndex": 5,
+      "topicId": 25,
+      "topic": "Căn hộ mẫu Y",
+      "condition": "C+",
+      "isValid": true,
+      "run1": {
+        "scores": {
+          "hook": 2,
+          "gia_tri": 4,
+          "giong_van": 3,
+          "nhip_va_do_dai": 4,
+          "cta": 3
+        },
+        "avgScore": 3.2,
+        "comment": "Mở đầu dùng 3 câu hỏi liên tiếp gây cảm giác sáo rỗng và thiếu sức hút, không tạo được sự tò mò đặc biệt. Nội dung thông số chính xác nhưng văn phong hơi khô khan, thiếu sự gần gũi và cảm xúc cần có của một bài viết mạng xã hội."
+      },
+      "run2": {
+        "scores": {
+          "hook": 2,
+          "gia_tri": 4,
+          "giong_van": 3,
+          "nhip_va_do_dai": 4,
+          "cta": 3
+        },
+        "avgScore": 3.2,
+        "comment": "Mở đầu dùng 3 câu hỏi liên tiếp gây nhàm chán và thiếu sức hút, không tạo được sự tò mò đặc biệt. Nội dung thông số chính xác nhưng văn phong hơi khô khan, thiếu sự gần gũi đặc trưng của mạng xã hội."
+      },
+      "delta": 0
+    },
+    {
+      "sampleIndex": 6,
+      "topicId": 1,
+      "topic": "mẹo nấu cơm không bị nhão",
+      "condition": "C",
+      "isValid": true,
+      "run1": {
+        "scores": {
+          "hook": 5,
+          "gia_tri": 5,
+          "giong_van": 5,
+          "nhip_va_do_dai": 5,
+          "cta": 4
+        },
+        "avgScore": 4.8,
+        "comment": "Bài viết xuất sắc với hook đời thực, nội dung chính xác theo facts, giọng văn tự nhiên và cấu trúc đoạn ngắn gọn dễ đọc."
+      },
+      "run2": {
+        "scores": {
+          "hook": 5,
+          "gia_tri": 5,
+          "giong_van": 5,
+          "nhip_va_do_dai": 5,
+          "cta": 4
+        },
+        "avgScore": 4.8,
+        "comment": "Bài viết xuất sắc với hook đời thực, nội dung bám sát facts, giọng văn tự nhiên và cấu trúc đoạn ngắn gọn, dễ đọc."
+      },
+      "delta": 0
+    },
+    {
+      "sampleIndex": 7,
+      "topicId": 2,
+      "topic": "du lịch Đà Lạt 2 ngày",
+      "condition": "B",
+      "isValid": true,
+      "run1": {
+        "scores": {
+          "hook": 5,
+          "gia_tri": 4,
+          "giong_van": 5,
+          "nhip_va_do_dai": 5,
+          "cta": 4
+        },
+        "avgScore": 4.6,
+        "comment": "Bài viết có hook cảm xúc mạnh, giọng văn tự nhiên và nhịp điệu thoáng đãng, phù hợp với mục tiêu cho người bận rộn. CTA tuy hơi chung chung nhưng vẫn đủ để kích thích tương tác."
+      },
+      "run2": {
+        "scores": {
+          "hook": 4,
+          "gia_tri": 5,
+          "giong_van": 5,
+          "nhip_va_do_dai": 5,
+          "cta": 4
+        },
+        "avgScore": 4.6,
+        "comment": "Bài viết bám sát yêu cầu thực tế, ngắn gọn và có cảm xúc, nhịp điệu phù hợp với người bận rộn. Hook và CTA tự nhiên, tạo tương tác tốt."
+      },
+      "delta": 0
+    },
+    {
+      "sampleIndex": 8,
+      "topicId": 3,
+      "topic": "nuôi mèo mới về nhà",
+      "condition": "C",
+      "isValid": true,
+      "run1": {
+        "scores": {
+          "hook": 5,
+          "gia_tri": 5,
+          "giong_van": 5,
+          "nhip_va_do_dai": 5,
+          "cta": 5
+        },
+        "avgScore": 5,
+        "comment": "Bài viết xuất sắc với hình ảnh mở đầu sống động, truyền tải đầy đủ các thông tin thực tế cần thiết một cách tự nhiên và có nhịp điệu phù hợp cho mạng xã hội."
+      },
+      "run2": {
+        "scores": {
+          "hook": 5,
+          "gia_tri": 5,
+          "giong_van": 5,
+          "nhip_va_do_dai": 5,
+          "cta": 5
+        },
+        "avgScore": 5,
+        "comment": "Bài viết xuất sắc với hình ảnh mở đầu sống động, truyền tải đầy đủ các thông tin thực tế cần thiết một cách tự nhiên, nhịp điệu ngắn gọn phù hợp mạng xã hội và CTA thúc đẩy tương tác hiệu quả."
+      },
+      "delta": 0
+    },
+    {
+      "sampleIndex": 9,
+      "topicId": 4,
+      "topic": "học tiếng Anh giao tiếp cho người đi làm",
+      "condition": "B",
+      "isValid": true,
+      "run1": {
+        "scores": {
+          "hook": 4,
+          "gia_tri": 4,
+          "giong_van": 4,
+          "nhip_va_do_dai": 4,
+          "cta": 4
+        },
+        "avgScore": 4,
+        "comment": "Bài viết có hook thực tế, truyền tải đúng thông tin cốt lõi về phương pháp học chunks và nhịp điệu phù hợp với mạng xã hội. CTA tự nhiên, tuy nhiên có thể thêm một ví dụ cụ thể về cụm từ để tăng tính 'thực chiến' hơn nữa."
+      },
+      "run2": {
+        "scores": {
+          "hook": 4,
+          "gia_tri": 5,
+          "giong_van": 4,
+          "nhip_va_do_dai": 5,
+          "cta": 4
+        },
+        "avgScore": 4.4,
+        "comment": "Bài viết bám sát facts, đưa ra giải pháp cụ thể (chunks, 15-20 phút) thay vì lý thuyết suông. Cấu trúc ngắn gọn, dễ đọc, hook thực tế và CTA tự nhiên, phù hợp với mục tiêu tư vấn lộ trình."
+      },
+      "delta": 0.4
+    },
+    {
+      "sampleIndex": 10,
+      "topicId": 5,
+      "topic": "trồng rau ban công",
+      "condition": "C",
+      "isValid": true,
+      "run1": {
+        "scores": {
+          "hook": 4,
+          "gia_tri": 5,
+          "giong_van": 4,
+          "nhip_va_do_dai": 5,
+          "cta": 4
+        },
+        "avgScore": 4.4,
+        "comment": "Bài viết ngắn gọn, đi thẳng vào các tips thực tế (loại rau, đất, thùng xốp) đúng trọng tâm. Mở đầu tạo cảm giác thư thái và CTA cuối bài tự nhiên, phù hợp với phong cách mạng xã hội."
+      },
+      "run2": {
+        "scores": {
+          "hook": 4,
+          "gia_tri": 5,
+          "giong_van": 5,
+          "nhip_va_do_dai": 5,
+          "cta": 4
+        },
+        "avgScore": 4.6,
+        "comment": "Bài viết có giọng văn tự nhiên, giàu hình ảnh và truyền cảm hứng tốt. Nội dung bám sát các thông tin sự thật được cung cấp, cấu trúc đoạn ngắn gọn phù hợp với nền tảng Facebook."
+      },
+      "delta": 0.2
+    }
+  ]
+}

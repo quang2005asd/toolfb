@@ -1,0 +1,410 @@
+{
+  "evaluatedAt": "2026-10-19T02:14:57.497Z",
+  "totalTopics": 30,
+  "nRuns": 3,
+  "conditionA": {
+    "name": "Điều kiện A (Prompt cũ - Không Pack)",
+    "samples": [
+      {
+        "run": 1,
+        "topicId": 1,
+        "topic": "mẹo nấu cơm không bị nhão",
+        "group": "thuong",
+        "content": "🌾 Mẹo “đánh bại” cơm nhão – Đánh rơi ngay trên bếp nhà! 🌾  \n\nCác “bà nội” mình thường nói: “Cơm ngon là cơm không dính đáy, không nhão, ăn vào còn “xòe” như bông!”  \nHôm nay mình sẽ chia sẻ 3 bước siêu thực tế mà mình đã áp dụng suốt 10 năm trong gia đình – chắc chắn sẽ giúp bạn có chén cơm thơm, hạt tơi, không lo nhão nữa!  \n- --\n\n1️⃣ Đo tỉ lệ nước “đúng chuẩn”\n- Gạo thơm mới (đã chưa rửa): 1 phần gạo : 1.1‑1.2 phần nước.  \n- Nếu gạo đã để lâu, hơi khô, có thể tăng lên 1.2‑1.3 phần nước.  \n\n> 👉 Mẹo nhỏ: Đong nước bằng cốc gạo (cốc 180 ml) – vừa tiện vừa chính xác, không cần cân nhé!\n- --\n\n2️⃣ Vo gạo “ nhẹ tay, không vụt “  \n- Rửa gạo 1‑2 lần, đừng vò quá mạnh để tránh làm vỡ lớp cám.  \n- Khi nước trong, để rất nhẹ cho gạo ngâm trong 10‑15 phút (đặc biệt với gạo thơm mới).  \n\n> 🎯 Lý do: Cám còn nguyên sẽ giữ độ ẩm vừa phải, không để nước thấm quá sâu khiến hạt gạo “bị ướt” sau khi nấu.\n- --\n\n3️⃣ Để ráo nước & “bấm” đúng thời điểm  \n- Khi gạo đã ngâm, đổ hết nước ra (đừng để lại lớp nước dư).  \n- Đặt nồi lên bếp, bật nút “Nấu” và đợi đến khi tiếng “kêu” (hoặc máy nấu hiện dấu “Cơm chín”).  \n- Khi máy chuyển sang “Giữ ấm”, để nồi kín 10‑15 phút (không mở nắp ngay).  \n\n> 🔄 Sau 10 phút, xới nhẹ bằng muỗng gỗ hoặc muỗng nhựa – hạt cơm sẽ “tách” ra, không dính nhau, không nhão.\n- --\n\n📌 Một vài “bí kíp” phụ trợ mà mình thường dùng:\n\n| Bí kíp | Cách thực hiện | Hiệu quả |\n|--------|----------------|----------|\n| Thêm 1/2 thìa muối | Khi vo gạo lần cuối | Tăng vị ngọt tự nhiên của gạo |\n| Đặt nồi lên khay nước đá | Khi bấm “Giữ ấm” (đối với máy nấu điện) | Ngăn nhiệt độ quá cao, tránh hạt cơm “đun” thành nhão |\n| Dùng gạo “đũi” | Khi muốn cơm mềm hơn | Hạt gạo mềm, không bị nứt, vẫn giữ độ tơi |\n- --\n\n👉 Bạn đã thử những mẹo nào rồi?  \n💬 Hãy comment chia sẻ trải nghiệm của mình nhé!  \n🔁 Nếu thấy hữu ích, đừng quên share cho bạn bè, người thân để mọi nhà đều có bữa cơm “đẹp” mỗi ngày!  \n\n#MẹoNấuCơm #CơmKhôngNhão #BếpGiaĐình #ChiaSẻKinhNghiệm 🌟",
+        "rawContent": "🌾 **Mẹo “đánh bại” cơm nhão – Đánh rơi ngay trên bếp nhà!** 🌾  \n\nCác “bà nội” mình thường nói: “Cơm ngon là cơm không dính đáy, không nhão, ăn vào còn “xòe” như bông!”  \nHôm nay mình sẽ chia sẻ **3 bước siêu thực tế** mà mình đã áp dụng suốt 10 năm trong gia đình – chắc chắn sẽ giúp bạn có chén cơm thơm, hạt tơi, không lo nhão nữa!  \n\n---\n\n### 1️⃣ Đo tỉ lệ nước “đúng chuẩn”\n- **Gạo thơm mới** (đã chưa rửa): 1 phần gạo : **1.1‑1.2 phần nước**.  \n- Nếu gạo đã để lâu, hơi khô, có thể tăng lên 1.2‑1.3 phần nước.  \n\n> 👉 *Mẹo nhỏ:* Đong nước bằng cốc gạo (cốc 180 ml) – vừa tiện vừa chính xác, không cần cân nhé!\n\n---\n\n### 2️⃣ Vo gạo “ nhẹ tay, không vụt “  \n- Rửa gạo 1‑2 lần, **đừng vò quá mạnh** để tránh làm vỡ lớp cám.  \n- Khi nước trong, để **rất nhẹ** cho gạo ngâm trong 10‑15 phút (đặc biệt với gạo thơm mới).  \n\n> 🎯 *Lý do:* Cám còn nguyên sẽ giữ độ ẩm vừa phải, không để nước thấm quá sâu khiến hạt gạo “bị ướt” sau khi nấu.\n\n---\n\n### 3️⃣ Để ráo nước & “bấm” đúng thời điểm  \n- Khi gạo đã ngâm, **đổ hết nước ra** (đừng để lại lớp nước dư).  \n- Đặt nồi lên bếp, bật **nút “Nấu”** và **đợi đến khi tiếng “kêu”** (hoặc máy nấu hiện dấu “Cơm chín”).  \n- Khi máy chuyển sang “Giữ ấm”, **để nồi kín 10‑15 phút** (không mở nắp ngay).  \n\n> 🔄 Sau 10 phút, **xới nhẹ** bằng muỗng gỗ hoặc muỗng nhựa – hạt cơm sẽ “tách” ra, không dính nhau, không nhão.\n\n---\n\n## 📌 Một vài “bí kíp” phụ trợ mà mình thường dùng:\n\n| Bí kíp | Cách thực hiện | Hiệu quả |\n|--------|----------------|----------|\n| Thêm 1/2 thìa muối | Khi vo gạo lần cuối | Tăng vị ngọt tự nhiên của gạo |\n| Đặt nồi lên khay nước đá | Khi bấm “Giữ ấm” (đối với máy nấu điện) | Ngăn nhiệt độ quá cao, tránh hạt cơm “đun” thành nhão |\n| Dùng gạo “đũi” | Khi muốn cơm mềm hơn | Hạt gạo mềm, không bị nứt, vẫn giữ độ tơi |\n\n---\n\n### 👉 Bạn đã thử những mẹo nào rồi?  \n💬 Hãy comment chia sẻ trải nghiệm của mình nhé!  \n🔁 Nếu thấy hữu ích, đừng quên **share** cho bạn bè, người thân để mọi nhà đều có bữa cơm “đẹp” mỗi ngày!  \n\n**#MẹoNấuCơm #CơmKhôngNhão #BếpGiaĐình #ChiaSẻKinhNghiệm** 🌟",
+        "charLength": 1976,
+        "wordCount": 437,
+        "validatorBlocked": false,
+        "violations": [],
+        "safetyState": "READY_FOR_APPROVAL",
+        "totalClaims": 15,
+        "unbackedClaimsCount": 13,
+        "type1UnbackedCount": 13,
+        "unbackedClaims": [
+          "Gạo thơm mới (đã chưa rửa): 1 phần gạo : 1.1‑1.2 phần nước.",
+          "Nếu gạo đã để lâu, hơi khô, có thể tăng lên 1.2‑1.3 phần nước.",
+          "Đong nước bằng cốc gạo (cốc 180 ml) – vừa tiện vừa chính xác, không cần cân nhé!",
+          "Rửa gạo 1‑2 lần, đừng vò quá mạnh để tránh làm vỡ lớp cám.",
+          "Khi nước trong, để rất nhẹ cho gạo ngâm trong 10‑15 phút (đặc biệt với gạo thơm mới).",
+          "Cám còn nguyên sẽ giữ độ ẩm vừa phải, không để nước thấm quá sâu khiến hạt gạo “bị ướt” sau khi nấu.",
+          "Khi gạo đã ngâm, đổ hết nước ra (đừng để lại lớp nước dư).",
+          "Đặt nồi lên bếp, bật nút “Nấu” và đợi đến khi tiếng “kêu” (hoặc máy nấu hiện dấu “Cơm chín”).",
+          "Khi máy chuyển sang “Giữ ấm”, để nồi kín 10‑15 phút (không mở nắp ngay).",
+          "Sau 10 phút, xới nhẹ bằng muỗng gỗ hoặc muỗng nhựa – hạt cơm sẽ “tách” ra, không dính nhau, không nhão.",
+          "Thêm 1/2 thìa muối | Khi vo gạo lần cuối | Tăng vị ngọt tự nhiên của gạo",
+          "Đặt nồi lên khay nước đá | Khi bấm “Giữ ấm” (đối với máy nấu điện) | Ngăn nhiệt độ quá cao, tránh hạt cơm “đun” thành nhão",
+          "Dùng gạo “đũi” | Khi muốn cơm mềm hơn | Hạt gạo mềm, không bị nứt, vẫn giữ độ tơi"
+        ],
+        "scores": {
+          "hook": 3,
+          "gia_tri": 4,
+          "giong_van": 4,
+          "nhip_va_do_dai": 3,
+          "cta": 4,
+          "sach_sao_rong": 4,
+          "trung_thuc": 1
+        },
+        "avgScore": 3.29,
+        "failedHonesty": true,
+        "evidence": {
+          "hook": "Các “bà nội” mình thường nói: “Cơm ngon là cơm không dính đáy, không nhão, ăn vào còn “xòe” như bông!”",
+          "gia_tri": "Gạo thơm mới (đã chưa rửa): 1 phần gạo : 1.1‑1.2 phần nước.",
+          "giong_van": "Hôm nay mình sẽ chia sẻ 3 bước siêu thực tế mà mình đã áp dụng suốt 10 năm trong gia đình",
+          "nhip_va_do_dai": "Bài viết sử dụng bảng biểu (table) và các khối văn bản dài, ví dụ: '| Bí kíp | Cách thực hiện | Hiệu quả |' khiến việc lướt điện thoại kém thoải mái hơn so với đoạn văn ngắn.",
+          "cta": "💬 Hãy comment chia sẻ trải nghiệm của mình nhé!",
+          "sach_sao_rong": "Không có các cụm từ sáo rỗng cấm như 'hạt hạnh phúc' hay 'thời đại 4.0', tuy nhiên cụm 'siêu thực tế' hơi mang tính quảng cáo nhẹ.",
+          "trung_thuc": "Hôm nay mình sẽ chia sẻ 3 bước siêu thực tế mà mình đã áp dụng suốt 10 năm trong gia đình – chắc chắn sẽ giúp bạn có chén cơm thơm, hạt tơi, không lo nhão nữa!"
+        },
+        "comment": "Bài viết vi phạm nghiêm trọng tiêu chí trung thực khi tự bịa social proof ('áp dụng suốt 10 năm') và hứa hẹn kết quả tuyệt đối ('chắc chắn sẽ giúp...') không có trong facts. Ngoài ra, việc sử dụng bảng biểu trong bài đăng Facebook làm giảm trải nghiệm đọc trên di động."
+      },
+      {
+        "run": 1,
+        "topicId": 2,
+        "topic": "du lịch Đà Lạt 2 ngày",
+        "group": "thuong",
+        "content": "🌿✈️ ĐÀ LẠT 2 NGÀY “SIÊU NHANH” – DÀNH CHO NGƯỜI BẬN RỘNG ✈️🌿  \n\n🗓️ Ngày 1 – “Săn mây” & “Cà phê hoàng hôn”  \n08:00 – Đón xe/đi bộ tới Cầu Đất (điểm “check‑in” cực “đẹp” 📸).  \n09:30 – Thưởng thức bánh mì xíu mại & cà phê sữa đá tại quán ven đường (giá < 30k, không tốn thời gian).  \n11:00 – Tham quan Thung Lũng Tình Yêu (đi bộ 15‑20 phút, ngắm mây trôi, chụp “selfie” siêu lãng mạn).  \n13:00 – Ăn trưa nhanh: bún riêu hoặc bánh tráng nướng tại chợ An Cư.  \n14:30 – Đến Đồi chè Cầu Đất – ngồi thư giãn, nhâm nhi trà xanh, ngắm toàn cảnh thành phố.  \n17:30 – Lên đỉnh Langbiang (có dịch vụ taxi lên đỉnh, chỉ mất 15 phút) để ngắm hoàng hôn và “cắt” video TikTok “đỉnh cao”.  \n20:00 – Dùng bữa tối tại nhà hàng địa phương (món gà nướng lá chanh, giá hợp lý).  \n\n🗓️ Ngày 2 – “Khám phá chợ & hồ”  \n08:00 – Dạo Chợ Đà Lạt (mua trái cây dầm, bánh tráng nướng, kẹo dừa – nhanh gọn, không cần xếp hàng).  \n10:00 – Tham quan Nhà thờ Domain de Marie (kiến trúc Pháp, chụp ảnh “cổ điển”).  \n12:00 – Ăn trưa “đậm chất Đà Lạt” – bánh căn + sữa chua dừa tại quán Bánh Căn Bảo.  \n13:30 – Đi đến hồ Tuyền Lâm (đi taxi 10 phút). Thuê thuyền chèo hoặc chỉ ngồi dạo quanh hồ, thả hồn vào không gian yên bình.  \n16:00 – Thưởng thức trà atiso & bánh mì pate tại quán ven hồ – “tạm biệt” thành phố sương mù.  \n17:30 – Về lại trung tâm, trả xe/đón xe ra sân bay hoặc ga.  \n\n✅ Mẹo “siêu tiết kiệm”  \n- Xe máy/xe ô tô tự lái: giảm 30 % chi phí di chuyển.  \n- Mua vé vào cổng trực tuyến (Cầu Đất, Langbiang) → không phải xếp hàng.  \n- Mang theo bình nước → tránh mua nước đóng chai đắt đỏ.  \n\n💬 Bạn đã có kế hoạch “đánh dấu” Đà Lạt chưa? Comment “🧭” nếu muốn mình chia sẻ bản PDF chi tiết + bản đồ offline!  \n\n#DaLat2Ngay #DuLichNhanh #SănMây #HoàngHôn #ChợDaLat #HồTuyềnLâm #TravelTips #BusyTravelers  \n\n👉 Tag người bạn “bận rộn” cần “đánh hơi” Đà Lạt ngay thôi! 🌤️🚗✨",
+        "rawContent": "🌿✈️ **ĐÀ LẠT 2 NGÀY “SIÊU NHANH” – DÀNH CHO NGƯỜI BẬN RỘNG** ✈️🌿  \n\n🗓️ **Ngày 1 – “Săn mây” & “Cà phê hoàng hôn”**  \n08:00 – Đón xe/đi bộ tới **Cầu Đất** (điểm “check‑in” cực “đẹp” 📸).  \n09:30 – Thưởng thức **bánh mì xíu mại** & **cà phê sữa đá** tại quán ven đường (giá < 30k, không tốn thời gian).  \n11:00 – Tham quan **Thung Lũng Tình Yêu** (đi bộ 15‑20 phút, ngắm mây trôi, chụp “selfie” siêu lãng mạn).  \n13:00 – Ăn trưa nhanh: **bún riêu** hoặc **bánh tráng nướng** tại chợ **An Cư**.  \n14:30 – Đến **Đồi chè Cầu Đất** – ngồi thư giãn, nhâm nhi trà xanh, ngắm toàn cảnh thành phố.  \n17:30 – Lên **đỉnh Langbiang** (có dịch vụ taxi lên đỉnh, chỉ mất 15 phút) để **ngắm hoàng hôn** và “cắt” video TikTok “đỉnh cao”.  \n20:00 – Dùng bữa tối tại **nhà hàng địa phương** (món gà nướng lá chanh, giá hợp lý).  \n\n🗓️ **Ngày 2 – “Khám phá chợ & hồ”**  \n08:00 – Dạo **Chợ Đà Lạt** (mua trái cây dầm, bánh tráng nướng, kẹo dừa – nhanh gọn, không cần xếp hàng).  \n10:00 – Tham quan **Nhà thờ Domain de Marie** (kiến trúc Pháp, chụp ảnh “cổ điển”).  \n12:00 – Ăn trưa “đậm chất Đà Lạt” – **bánh căn** + **sữa chua dừa** tại quán **Bánh Căn Bảo**.  \n13:30 – Đi **đến hồ Tuyền Lâm** (đi taxi 10 phút). Thuê thuyền chèo hoặc chỉ ngồi dạo quanh hồ, thả hồn vào không gian yên bình.  \n16:00 – Thưởng thức **trà atiso** & **bánh mì pate** tại quán ven hồ – “tạm biệt” thành phố sương mù.  \n17:30 – Về lại trung tâm, trả xe/đón xe ra sân bay hoặc ga.  \n\n✅ **Mẹo “siêu tiết kiệm”**  \n- **Xe máy/xe ô tô tự lái**: giảm 30 % chi phí di chuyển.  \n- **Mua vé vào cổng trực tuyến** (Cầu Đất, Langbiang) → không phải xếp hàng.  \n- **Mang theo bình nước** → tránh mua nước đóng chai đắt đỏ.  \n\n💬 **Bạn đã có kế hoạch “đánh dấu” Đà Lạt chưa?** Comment “🧭” nếu muốn mình chia sẻ bản PDF chi tiết + bản đồ offline!  \n\n#DaLat2Ngay #DuLichNhanh #SănMây #HoàngHôn #ChợDaLat #HồTuyềnLâm #TravelTips #BusyTravelers  \n\n👉 **Tag** người bạn “bận rộn” cần “đánh hơi” Đà Lạt ngay thôi! 🌤️🚗✨",
+        "charLength": 1851,
+        "wordCount": 384,
+        "validatorBlocked": false,
+        "violations": [],
+        "safetyState": "READY_FOR_APPROVAL",
+        "totalClaims": 0,
+        "unbackedClaimsCount": 17,
+        "type1UnbackedCount": 17,
+        "unbackedClaims": [
+          "Số liệu/đơn vị \"30 %\" không có trong facts cung cấp.",
+          "08:00 – Đón xe/đi bộ tới Cầu Đất (điểm “check‑in” cực “đẹp” 📸).",
+          "09:30 – Thưởng thức bánh mì xíu mại & cà phê sữa đá tại quán ven đường (giá < 30k, không tốn thời gian).",
+          "11:00 – Tham quan Thung Lũng Tình Yêu (đi bộ 15‑20 phút, ngắm mây trôi, chụp “selfie” siêu lãng mạn).",
+          "13:00 – Ăn trưa nhanh: bún riêu hoặc bánh tráng nướng tại chợ An Cư.",
+          "14:30 – Đến Đồi chè Cầu Đất – ngồi thư giãn, nhâm nhi trà xanh, ngắm toàn cảnh thành phố.",
+          "17:30 – Lên đỉnh Langbiang (có dịch vụ taxi lên đỉnh, chỉ mất 15 phút) để ngắm hoàng hôn và “cắt” video TikTok “đỉnh cao”.",
+          "20:00 – Dùng bữa tối tại nhà hàng địa phương (món gà nướng lá chanh, giá hợp lý).",
+          "08:00 – Dạo Chợ Đà Lạt (mua trái cây dầm, bánh tráng nướng, kẹo dừa – nhanh gọn, không cần xếp hàng).",
+          "10:00 – Tham quan Nhà thờ Domain de Marie (kiến trúc Pháp, chụp ảnh “cổ điển”).",
+          "12:00 – Ăn trưa “đậm chất Đà Lạt” – bánh căn + sữa chua dừa tại quán Bánh Căn Bảo.",
+          "13:30 – Đi đến hồ Tuyền Lâm (đi taxi 10 phút). Thuê thuyền chèo hoặc chỉ ngồi dạo quanh hồ, thả hồn vào không gian yên bình.",
+          "16:00 – Thưởng thức trà atiso & bánh mì pate tại quán ven hồ – “tạm biệt” thành phố sương mù.",
+          "17:30 – Về lại trung tâm, trả xe/đón xe ra sân bay hoặc ga.",
+          "Xe máy/xe ô tô tự lái: giảm 30 % chi phí di chuyển.",
+          "Mua vé vào cổng trực tuyến (Cầu Đất, Langbiang) → không phải xếp hàng.",
+          "Mang theo bình nước → tránh mua nước đóng chai đắt đỏ."
+        ],
+        "scores": {
+          "hook": 3,
+          "gia_tri": 3,
+          "giong_van": 3,
+          "nhip_va_do_dai": 4,
+          "cta": 2,
+          "sach_sao_rong": 3,
+          "trung_thuc": 1
+        },
+        "avgScore": 2.71,
+        "failedHonesty": true,
+        "evidence": {
+          "hook": "🌿✈️ ĐÀ LẠT 2 NGÀY “SIÊU NHANH” – DÀNH CHO NGƯỜI BẬN RỘNG ✈️🌿",
+          "gia_tri": "08:00 – Đón xe/đi bộ tới Cầu Đất (điểm “check‑in” cực “đẹp” 📸).",
+          "giong_van": "17:30 – Lên đỉnh Langbiang (có dịch vụ taxi lên đỉnh, chỉ mất 15 phút) để ngắm hoàng hôn và “cắt” video TikTok “đỉnh cao”.",
+          "nhip_va_do_dai": "Đoạn văn ngắn gọn, chia theo khung giờ rõ ràng, dễ lướt: '09:30 – Thưởng thức bánh mì xíu mại & cà phê sữa đá tại quán ven đường (giá < 30k, không tốn thời gian).'",
+          "cta": "Comment “🧭” nếu muốn mình chia sẻ bản PDF chi tiết + bản đồ offline!",
+          "sach_sao_rong": "Không có các cụm sáo rỗng cấm cụ thể, nhưng dùng từ ngữ marketing hơi sáo như 'siêu lãng mạn', 'đỉnh cao'.",
+          "trung_thuc": "Comment “🧭” nếu muốn mình chia sẻ bản PDF chi tiết + bản đồ offline!"
+        },
+        "comment": "Bài viết vi phạm nghiêm trọng tiêu chí trung thực khi tự bịa quà tặng (PDF chi tiết + bản đồ offline) không có trong facts. Ngoài ra, lịch trình bị phình to với nhiều địa điểm (Langbiang, Thung Lũng Tình Yêu, Nhà thờ Domaine de Marie) không nằm trong facts gốc, làm mất đi tính 'ngắn gọn, thực tế' cho người bận rộn."
+      },
+      {
+        "run": 1,
+        "topicId": 3,
+        "topic": "nuôi mèo mới về nhà",
+        "group": "thuong",
+        "content": "🐾 Mới “đón” một bé mèo về nhà? 🏡  \nBạn vừa có một “người bạn lông xù” vừa vừa bước vào gia đình, và muốn cô bé (hoặc anh chú) cảm thấy an toàn, không bị stress? Dưới đây là 7 bí quyết “đánh tan” lo lắng để bé mèo nhanh chóng hòa nhập và sống vui khỏe!  \n- --\n\n1️⃣ Tạo “gian lận” riêng cho bé trong 24‑48 giờ đầu  \n🔹 Chọn một góc yên tĩnh (có ánh sáng nhẹ, không qua lại quá nhiều).  \n🔹 Đặt giường mềm, chăn ấm và một vài đồ chơi nhẹ nhàng.  \n🔹 Đừng đưa bé vào “đại hội” nhà ngay – để bé có thời gian “đánh giá” môi trường mới mà không bị áp lực.\n\n2️⃣ Chậu cát vệ sinh – “phòng khám” đầu tiên  \n🧹 Đặt chậu cát ở góc yên tĩnh, xa khu vực ăn uống và giường ngủ.  \n🪨 Chọn cát độ hạt mịn, không mùi mạnh (đặc biệt tốt cho mèo mới).  \n🧼 Đảm bảo độ sạch: dọn cát ít nhất 1‑2 lần/ngày trong tuần đầu, để bé nhanh “quen” và tin tưởng.\n\n3️⃣ Đồ ăn & nước uống – “địa chỉ” quen thuộc  \n🍽️ Sử dụng bát sứ hoặc gốm (không trơn) để bé không trượt.  \n💧 Đặt bát nước luôn sạch, thay nước mỗi 2‑3 giờ.  \n🥣 Nếu bé đã quen với loại thực phẩm nào, đừng đổi đột ngột – chỉ thay dần dần nếu muốn thử món mới.\n\n4️⃣ Không “vồ vập” bế ép  \n✋ Khi bé còn lo lắng, đừng cố kéo, bế mạnh. Hãy để bé tự tới gần, chạm vào tay bạn.  \n🤲 Khi bé bắt đầu tin tưởng, đặt tay nhẹ lên lưng, để bé cảm nhận sự an toàn, rồi mới bế nhẹ nhàng.\n\n5️⃣ Giao tiếp bằng “ngôn ngữ mèo”  \n👀 Giao tiếp bằng ánh mắt nhẹ nhàng, nhìn thẳng nhưng không chộp mắt.  \n🗣️ Dùng giọng nói êm dịu, “cừu cừu” hoặc “meow” nhẹ nhàng để bé nhận ra giọng của người chủ.  \n\n6️⃣ Thời gian chơi – “liên kết” nhanh  \n⚽ Đưa ra đồ chơi lông, bóng, dây câu để bé giải trí, tiêu hao năng lượng và giảm căng thẳng.  \n⏰ Chơi ngắn (5‑10 phút) nhiều lần trong ngày, tránh quá tải.\n\n7️⃣ Kiểm tra sức khỏe nhanh chóng  \n🩺 Đưa bé đến bác sĩ thú y trong vòng 1‑2 tuần để kiểm tra sức khỏe, tiêm phòng và nhận lời khuyên dinh dưỡng.  \n- --\n\n💡 Mẹo nhỏ: Khi bé mới về, hơi thở của bạn là “mùi an toàn” nhất. Hãy thở sâu, giữ bình tĩnh – bé sẽ cảm nhận được!  \n\n👉 Bạn đã có những trải nghiệm nào khi nuôi mèo mới? Chia sẻ trong phần bình luận nhé, để mọi “cá mập” yêu mèo cùng học hỏi!  \n\n#NuoiMeo #MeoMoiVeNha #ChamsocMeo #PetLovers #CatCare 🐱💖",
+        "rawContent": "🐾 **Mới “đón” một bé mèo về nhà?** 🏡  \nBạn vừa có một “người bạn lông xù” vừa vừa bước vào gia đình, và muốn cô bé (hoặc anh chú) cảm thấy an toàn, không bị stress? Dưới đây là **7 bí quyết “đánh tan” lo lắng** để bé mèo nhanh chóng hòa nhập và sống vui khỏe!  \n\n---\n\n### 1️⃣ Tạo “gian lận” riêng cho bé trong 24‑48 giờ đầu  \n🔹 **Chọn một góc yên tĩnh** (có ánh sáng nhẹ, không qua lại quá nhiều).  \n🔹 Đặt **giường mềm, chăn ấm** và một vài đồ chơi nhẹ nhàng.  \n🔹 Đừng đưa bé vào “đại hội” nhà ngay – để bé có thời gian “đánh giá” môi trường mới mà không bị áp lực.\n\n### 2️⃣ Chậu cát vệ sinh – “phòng khám” đầu tiên  \n🧹 Đặt **chậu cát** ở góc yên tĩnh, xa khu vực ăn uống và giường ngủ.  \n🪨 Chọn cát **độ hạt mịn, không mùi mạnh** (đặc biệt tốt cho mèo mới).  \n🧼 Đảm bảo **độ sạch**: dọn cát ít nhất 1‑2 lần/ngày trong tuần đầu, để bé nhanh “quen” và tin tưởng.\n\n### 3️⃣ Đồ ăn & nước uống – “địa chỉ” quen thuộc  \n🍽️ Sử dụng **bát sứ hoặc gốm** (không trơn) để bé không trượt.  \n💧 Đặt **bát nước** luôn sạch, thay nước mỗi 2‑3 giờ.  \n🥣 Nếu bé đã quen với loại thực phẩm nào, **đừng đổi đột ngột** – chỉ thay dần dần nếu muốn thử món mới.\n\n### 4️⃣ Không “vồ vập” bế ép  \n✋ Khi bé còn lo lắng, **đừng cố kéo, bế mạnh**. Hãy để bé tự tới gần, chạm vào tay bạn.  \n🤲 Khi bé bắt đầu tin tưởng, **đặt tay nhẹ lên lưng**, để bé cảm nhận sự an toàn, rồi mới bế nhẹ nhàng.\n\n### 5️⃣ Giao tiếp bằng “ngôn ngữ mèo”  \n👀 Giao tiếp bằng ánh mắt nhẹ nhàng, **nhìn thẳng nhưng không chộp mắt**.  \n🗣️ Dùng **giọng nói êm dịu**, “cừu cừu” hoặc “meow” nhẹ nhàng để bé nhận ra giọng của người chủ.  \n\n### 6️⃣ Thời gian chơi – “liên kết” nhanh  \n⚽ Đưa ra **đồ chơi lông, bóng, dây câu** để bé giải trí, tiêu hao năng lượng và giảm căng thẳng.  \n⏰ Chơi ngắn (5‑10 phút) nhiều lần trong ngày, tránh quá tải.\n\n### 7️⃣ Kiểm tra sức khỏe nhanh chóng  \n🩺 Đưa bé **đến bác sĩ thú y** trong vòng 1‑2 tuần để kiểm tra sức khỏe, tiêm phòng và nhận lời khuyên dinh dưỡng.  \n\n---\n\n💡 **Mẹo nhỏ:** Khi bé mới về, **hơi thở của bạn** là “mùi an toàn” nhất. Hãy thở sâu, giữ bình tĩnh – bé sẽ cảm nhận được!  \n\n👉 **Bạn đã có những trải nghiệm nào khi nuôi mèo mới?** Chia sẻ trong phần bình luận nhé, để mọi “cá mập” yêu mèo cùng học hỏi!  \n\n#NuoiMeo #MeoMoiVeNha #ChamsocMeo #PetLovers #CatCare 🐱💖",
+        "charLength": 2174,
+        "wordCount": 474,
+        "validatorBlocked": true,
+        "violations": [
+          "Mở đầu bài (Hook) chứa 2 câu hỏi liên tiếp vi phạm quy tắc mở đầu bằng hình ảnh/khoảnh khắc thực tế."
+        ],
+        "safetyState": "READY_FOR_APPROVAL",
+        "totalClaims": 2,
+        "unbackedClaimsCount": 2,
+        "type1UnbackedCount": 2,
+        "unbackedClaims": [
+          "Hook mở đầu chứa 2 câu hỏi liên tiếp vi phạm quy tắc mở đầu bằng hình ảnh/khoảnh khắc đời thực.",
+          "Số liệu/đơn vị \"2 l\" không có trong facts cung cấp."
+        ],
+        "scores": {
+          "hook": 2,
+          "gia_tri": 4,
+          "giong_van": 3,
+          "nhip_va_do_dai": 3,
+          "cta": 4,
+          "sach_sao_rong": 4,
+          "trung_thuc": 1
+        },
+        "avgScore": 3,
+        "failedHonesty": true,
+        "evidence": {
+          "hook": "Mới “đón” một bé mèo về nhà? 🏡",
+          "gia_tri": "Đặt chậu cát ở góc yên tĩnh, xa khu vực ăn uống và giường ngủ.",
+          "giong_van": "Bạn vừa có một “người bạn lông xù” vừa vừa bước vào gia đình, và muốn cô bé (hoặc anh chú) cảm thấy an toàn, không bị stress?",
+          "nhip_va_do_dai": "Bài viết dài với 7 mục chi tiết, mỗi mục có 2-3 gạch đầu dòng, tạo cảm giác hơi nặng nề so với tiêu chuẩn 'đoạn văn ngắn 1-2 câu' cho điểm 5, nhưng vẫn dễ đọc.",
+          "cta": "Bạn đã có những trải nghiệm nào khi nuôi mèo mới? Chia sẻ trong phần bình luận nhé, để mọi “cá mập” yêu mèo cùng học hỏi!",
+          "sach_sao_rong": "Không có",
+          "trung_thuc": "Đưa bé đến bác sĩ thú y trong vòng 1‑2 tuần để kiểm tra sức khỏe, tiêm phòng và nhận lời khuyên dinh dưỡng."
+        },
+        "comment": "Bài viết tuân thủ tốt các facts cốt lõi (không bịa social proof hay quà tặng), giọng văn thân thiện nhưng cấu trúc 7 mục khiến bài hơi dài và thiếu sự 'thoáng đãng' tối đa. Hook mở đầu bằng câu hỏi chung chung, chưa đủ sức bật để giữ chân người dùng ngay lập tức."
+      }
+    ],
+    "stats": {},
+    "groupStats": {}
+  },
+  "conditionC": {
+    "name": "Điều kiện C (Prompt có COMMON_RULES - Không Pack)",
+    "samples": [
+      {
+        "run": 1,
+        "topicId": 1,
+        "topic": "mẹo nấu cơm không bị nhão",
+        "group": "thuong",
+        "content": "Sáng nay, khi mở nắp nồi cơm, mình thấy hạt gạo vẫn dính chặt, khiến bữa sáng không ngon.  \nBạn có bao giờ gặp hiện tượng cơm nhão dù đã rửa gạo kỹ?  \nMình đã thử một vài bước đơn giản và muốn chia sẻ lại để mọi người có cơm trắng tơi, không dính.  \n\nĐối với gạo thơm mới, dùng tỉ lệ nước 1 phần gạo : 1.1‑1.2 phần nước sẽ giúp hạt gạo chín đều.  \n\nRửa gạo nhẹ tay 1‑2 lần, tránh vò nát lớp cám, giúp hạt gạo giữ được độ bền và không bị dính.  \n\nSau khi rửa, để gạo ráo nước khoảng 5‑10 phút trước khi bấm nút nấu, để lượng nước chính xác.  \n\nCơm chín rồi, đợi 10 phút rồi xới nhẹ bằng muỗng gỗ hoặc nĩa, hạt gạo sẽ tơi rời hơn.  \n\nBạn có mẹo nào khác để cơm không nhão? Hãy comment chia sẻ nhé!",
+        "rawContent": "Sáng nay, khi mở nắp nồi cơm, mình thấy hạt gạo vẫn dính chặt, khiến bữa sáng không ngon.  \nBạn có bao giờ gặp hiện tượng cơm nhão dù đã rửa gạo kỹ?  \nMình đã thử một vài bước đơn giản và muốn chia sẻ lại để mọi người có cơm trắng tơi, không dính.  \n\nĐối với gạo thơm mới, dùng tỉ lệ nước 1 phần gạo : 1.1‑1.2 phần nước sẽ giúp hạt gạo chín đều.  \n\nRửa gạo nhẹ tay 1‑2 lần, tránh vò nát lớp cám, giúp hạt gạo giữ được độ bền và không bị dính.  \n\nSau khi rửa, để gạo ráo nước khoảng 5‑10 phút trước khi bấm nút nấu, để lượng nước chính xác.  \n\nCơm chín rồi, đợi 10 phút rồi xới nhẹ bằng muỗng gỗ hoặc nĩa, hạt gạo sẽ tơi rời hơn.  \n\nBạn có mẹo nào khác để cơm không nhão? Hãy comment chia sẻ nhé!",
+        "charLength": 695,
+        "wordCount": 153,
+        "validatorBlocked": false,
+        "violations": [],
+        "safetyState": "READY_FOR_APPROVAL",
+        "totalClaims": 0,
+        "unbackedClaimsCount": 1,
+        "type1UnbackedCount": 1,
+        "unbackedClaims": [
+          "Sáng nay, khi mở nắp nồi cơm, mình thấy hạt gạo vẫn dính chặt, khiến bữa sáng không ngon."
+        ],
+        "scores": {
+          "hook": 3,
+          "gia_tri": 3,
+          "giong_van": 3,
+          "nhip_va_do_dai": 3,
+          "cta": 3,
+          "sach_sao_rong": 3,
+          "trung_thuc": 3
+        },
+        "avgScore": 3,
+        "failedHonesty": false,
+        "evidence": {},
+        "comment": "Lỗi chấm điểm: Request failed with status code 400"
+      },
+      {
+        "run": 1,
+        "topicId": 2,
+        "topic": "du lịch Đà Lạt 2 ngày",
+        "group": "thuong",
+        "content": "Bạn vừa bước xuống xe buýt, mũi xe lướt qua những đồi thông xanh mướt của Đà Lạt.  \nKhông cần nghỉ dài ngày, chỉ 2 ngày là đủ để cảm nhận không gian mây và hương cà phê.\n\nNgày 1  \nSáng sớm, lên Cầu Đất để săn mây, ngắm cảnh sương mù lãng đãng.  \nBuổi chiều, ghé một quán cà phê có view, thưởng thức ly cà phê trong khi hoàng hôn buông xuống.\n\nNgày 2  \nBuổi sáng, dạo quanh chợ Đà Lạt, thử các món ăn địa phương và mua vài món quà lưu niệm.  \nBuổi chiều, đi bộ quanh hồ Tuyền Lâm, tận hưởng không gian yên bình và không khí trong lành.\n\nBạn đã có trải nghiệm nào ở Đà Lạt? Hãy chia sẻ cảm nhận của mình trong phần bình luận nhé.",
+        "rawContent": "Bạn vừa bước xuống xe buýt, mũi xe lướt qua những đồi thông xanh mướt của Đà Lạt.  \nKhông cần nghỉ dài ngày, chỉ 2 ngày là đủ để cảm nhận không gian mây và hương cà phê.\n\n**Ngày 1**  \nSáng sớm, lên Cầu Đất để săn mây, ngắm cảnh sương mù lãng đãng.  \nBuổi chiều, ghé một quán cà phê có view, thưởng thức ly cà phê trong khi hoàng hôn buông xuống.\n\n**Ngày 2**  \nBuổi sáng, dạo quanh chợ Đà Lạt, thử các món ăn địa phương và mua vài món quà lưu niệm.  \nBuổi chiều, đi bộ quanh hồ Tuyền Lâm, tận hưởng không gian yên bình và không khí trong lành.\n\nBạn đã có trải nghiệm nào ở Đà Lạt? Hãy chia sẻ cảm nhận của mình trong phần bình luận nhé.",
+        "charLength": 627,
+        "wordCount": 136,
+        "validatorBlocked": false,
+        "violations": [],
+        "safetyState": "READY_FOR_APPROVAL",
+        "totalClaims": 0,
+        "unbackedClaimsCount": 1,
+        "type1UnbackedCount": 1,
+        "unbackedClaims": [
+          "Không cần nghỉ dài ngày, chỉ 2 ngày là đủ để cảm nhận không gian mây và hương cà phê."
+        ],
+        "scores": {
+          "hook": 3,
+          "gia_tri": 3,
+          "giong_van": 3,
+          "nhip_va_do_dai": 3,
+          "cta": 3,
+          "sach_sao_rong": 3,
+          "trung_thuc": 3
+        },
+        "avgScore": 3,
+        "failedHonesty": false,
+        "evidence": {},
+        "comment": "Lỗi chấm điểm: Request failed with status code 400"
+      },
+      {
+        "run": 1,
+        "topicId": 3,
+        "topic": "nuôi mèo mới về nhà",
+        "group": "thuong",
+        "content": "Một góc nhà yên tĩnh, chiếc chậu cát mới được bày sẵn, và chú mèo con vừa bước vào cửa.  \nBạn nhìn thấy ánh mắt tò mò của nó, nhưng vẫn chưa biết làm sao để nó cảm thấy an toàn.  \n\n✅ Đặt chậu cát ở góc yên tĩnh, tránh xa khu vực ăn uống để mèo dễ làm quen vệ sinh tự nhiên.  \n\n✅ Đảm bảo bát ăn và bát nước luôn ở vị trí quen thuộc, dùng loại thức ăn và nước mà mèo đã từng ăn.  \n\n✅ Trong 24‑48 giờ đầu, cho mèo một không gian riêng, tránh việc vồ vập, bế ép hoặc gây ồn ào.  \n\n✅ Khi tiếp xúc, hãy để mèo tự tới, nhẹ nhàng vuốt ve và nói nhẹ nhàng, không ép buộc.  \n\n🗣️ Bạn có kinh nghiệm nào khi đưa mèo mới về nhà? Hãy chia sẻ trong bình luận để cùng nhau giúp các bé cảm thấy thoải mái hơn.",
+        "rawContent": "Một góc nhà yên tĩnh, chiếc chậu cát mới được bày sẵn, và chú mèo con vừa bước vào cửa.  \nBạn nhìn thấy ánh mắt tò mò của nó, nhưng vẫn chưa biết làm sao để nó cảm thấy an toàn.  \n\n✅ Đặt chậu cát ở góc yên tĩnh, tránh xa khu vực ăn uống để mèo dễ làm quen vệ sinh tự nhiên.  \n\n✅ Đảm bảo bát ăn và bát nước luôn ở vị trí quen thuộc, dùng loại thức ăn và nước mà mèo đã từng ăn.  \n\n✅ Trong 24‑48 giờ đầu, cho mèo một không gian riêng, tránh việc vồ vập, bế ép hoặc gây ồn ào.  \n\n✅ Khi tiếp xúc, hãy để mèo tự tới, nhẹ nhàng vuốt ve và nói nhẹ nhàng, không ép buộc.  \n\n🗣️ Bạn có kinh nghiệm nào khi đưa mèo mới về nhà? Hãy chia sẻ trong bình luận để cùng nhau giúp các bé cảm thấy thoải mái hơn.",
+        "charLength": 693,
+        "wordCount": 159,
+        "validatorBlocked": false,
+        "violations": [],
+        "safetyState": "READY_FOR_APPROVAL",
+        "totalClaims": 4,
+        "unbackedClaimsCount": 1,
+        "type1UnbackedCount": 1,
+        "unbackedClaims": [
+          "Khi tiếp xúc, hãy để mèo tự tới, nhẹ nhàng vuốt ve và nói nhẹ nhàng, không ép buộc."
+        ],
+        "scores": {
+          "hook": 3,
+          "gia_tri": 5,
+          "giong_van": 4,
+          "nhip_va_do_dai": 5,
+          "cta": 5,
+          "sach_sao_rong": 5,
+          "trung_thuc": 3
+        },
+        "avgScore": 4.29,
+        "failedHonesty": false,
+        "evidence": {
+          "hook": "Một góc nhà yên tĩnh, chiếc chậu cát mới được bày sẵn, và chú mèo con vừa bước vào cửa.",
+          "gia_tri": "Đặt chậu cát ở góc yên tĩnh, tránh xa khu vực ăn uống để mèo dễ làm quen vệ sinh tự nhiên.",
+          "giong_van": "Bạn nhìn thấy ánh mắt tò mò của nó, nhưng vẫn chưa biết làm sao để nó cảm thấy an toàn.",
+          "nhip_va_do_dai": "Đoạn văn ngắn gọn, mỗi ý một dòng, ví dụ: '✅ Trong 24‑48 giờ đầu, cho mèo một không gian riêng, tránh việc vồ vập, bế ép hoặc gây ồn ào.'",
+          "cta": "Bạn có kinh nghiệm nào khi đưa mèo mới về nhà? Hãy chia sẻ trong bình luận để cùng nhau giúp các bé cảm thấy thoải mái hơn.",
+          "sach_sao_rong": "Không có",
+          "trung_thuc": "Đảm bảo bát ăn và bát nước luôn ở vị trí quen thuộc, dùng loại thức ăn và nước mà mèo đã từng ăn."
+        },
+        "comment": "Bài viết bám sát facts, cấu trúc rõ ràng và dễ đọc, tuy nhiên phần mở đầu vẫn hơi mang tính mô tả chung chung thay vì một khoảnh khắc gây sốc hoặc cực kỳ cụ thể để giữ chân người đọc ngay lập tức."
+      }
+    ],
+    "stats": {},
+    "groupStats": {}
+  },
+  "conditionB": {
+    "name": "Điều kiện B (Có Topic Pack + COMMON_RULES)",
+    "samples": [
+      {
+        "run": 1,
+        "topicId": 1,
+        "topic": "mẹo nấu cơm không bị nhão",
+        "group": "thuong",
+        "content": "Bát gạo chưa nấu còn rơi từng hạt trên sàn bếp.  \nMình vừa mở nắp nồi, hơi nước bốc lên làm mắt hơi cay.  \nCơm đang chín, nhưng tôi lo nó sẽ nhão.  \n\nChọn gạo thơm mới, tỉ lệ nước chuẩn là 1 phần gạo : 1.1‑1.2 phần nước.  \nRửa gạo nhẹ tay 1‑2 lần, tránh vò nát lớp cám.  \nSau khi rửa, để gạo ráo nước trước khi bấm nút nấu.  \nKhi nồi báo xong, để cơm nghỉ 10 phút rồi xới tơi nhẹ.  \n\nBạn có mẹo nào khác? Hãy comment chia sẻ nhé.",
+        "rawContent": "Bát gạo chưa nấu còn rơi từng hạt trên sàn bếp.  \nMình vừa mở nắp nồi, hơi nước bốc lên làm mắt hơi cay.  \nCơm đang chín, nhưng tôi lo nó sẽ nhão.  \n\nChọn gạo thơm mới, tỉ lệ nước chuẩn là 1 phần gạo : 1.1‑1.2 phần nước.  \nRửa gạo nhẹ tay 1‑2 lần, tránh vò nát lớp cám.  \nSau khi rửa, để gạo ráo nước trước khi bấm nút nấu.  \nKhi nồi báo xong, để cơm nghỉ 10 phút rồi xới tơi nhẹ.  \nNếu muốn hạt cơm tơi hơn, có thể ngâm gạo 15‑20 phút trước khi rửa để giảm bớt tinh bột dư thừa.  \n\nBạn có mẹo nào khác? Hãy comment chia sẻ nhé.",
+        "rawBBeforeCorrection": "Bát gạo chưa nấu còn rơi từng hạt trên sàn bếp.  \nMình vừa mở nắp nồi, hơi nước bốc lên làm mắt hơi cay.  \nCơm đang chín, nhưng tôi lo nó sẽ nhão.  \n\nChọn gạo thơm mới, tỉ lệ nước chuẩn là 1 phần gạo : 1.1‑1.2 phần nước.  \nRửa gạo nhẹ tay 1‑2 lần, tránh vò nát lớp cám.  \nSau khi rửa, để gạo ráo nước trước khi bấm nút nấu.  \nKhi nồi báo xong, để cơm nghỉ 10 phút rồi xới tơi nhẹ.  \nNếu muốn hạt cơm tơi hơn, có thể ngâm gạo 15‑20 phút trước khi rửa để giảm bớt tinh bột dư thừa.  \n\nBạn có mẹo nào khác? Hãy comment chia sẻ nhé.",
+        "claimsFlaggedBeforeCorrection": [],
+        "charLength": 429,
+        "wordCount": 95,
+        "validatorBlocked": false,
+        "violations": [],
+        "safetyState": "READY_FOR_APPROVAL",
+        "forceReview": false,
+        "totalClaims": 8,
+        "unbackedClaimsCount": 0,
+        "type1UnbackedCount": 0,
+        "unbackedClaims": [],
+        "scores": {
+          "hook": 5,
+          "gia_tri": 5,
+          "giong_van": 5,
+          "nhip_va_do_dai": 5,
+          "cta": 5,
+          "sach_sao_rong": 5,
+          "trung_thuc": 5
+        },
+        "avgScore": 5,
+        "failedHonesty": false,
+        "evidence": {
+          "hook": "Bát gạo chưa nấu còn rơi từng hạt trên sàn bếp.",
+          "gia_tri": "Chọn gạo thơm mới, tỉ lệ nước chuẩn là 1 phần gạo : 1.1‑1.2 phần nước.",
+          "giong_van": "Mình vừa mở nắp nồi, hơi nước bốc lên làm mắt hơi cay.",
+          "nhip_va_do_dai": "Đoạn văn ngắn 1-2 câu, thoáng đãng, lướt điện thoại cực kỳ dễ chịu. Ví dụ: 'Rửa gạo nhẹ tay 1‑2 lần, tránh vò nát lớp cám.'",
+          "cta": "Bạn có mẹo nào khác? Hãy comment chia sẻ nhé.",
+          "sach_sao_rong": "Không có",
+          "trung_thuc": "Khi nồi báo xong, để cơm nghỉ 10 phút rồi xới tơi nhẹ."
+        },
+        "comment": "Bài viết đạt điểm tuyệt đối nhờ mở đầu bằng hình ảnh đời thực cụ thể, nội dung bám sát 100% facts kỹ thuật, giọng văn tự nhiên như kể chuyện và bố cục thoáng đãng, không hề có sáo rỗng hay bịa đặt."
+      },
+      {
+        "run": 1,
+        "topicId": 2,
+        "topic": "du lịch Đà Lạt 2 ngày",
+        "group": "thuong",
+        "content": "Sáng sớm, sương mù nhẹ phủ lên Cầu Đất, bạn vừa đặt chân lên đỉnh cao và hít thở không khí trong lành.  \nNgay sau khi săn mây, dừng lại một quán cà phê ven đồi, nhâm nhi ly espresso và ngắm hoàng hôn nhuộm màu bầu trời.  \n\nNgày thứ hai, ghé chợ Đà Lạt, khám phá những gian hàng trái cây, rau củ và đặc sản địa phương.  \nSau bữa trưa, dạo bước quanh hồ Tuyền Lâm, thả mình vào không gian yên bình và ngắm cảnh núi non phản chiếu trên mặt nước.  \n\nLịch trình ngắn gọn, thực tế, phù hợp cho người bận rộn muốn trải nghiệm Đà Lạt trong 2 ngày.  \nBạn đã từng thử chuyến đi này chưa? Hãy chia sẻ cảm nhận hoặc hỏi thêm chi tiết ở phần bình luận nhé.",
+        "rawContent": "Sáng sớm, sương mù nhẹ phủ lên Cầu Đất, bạn vừa đặt chân lên đỉnh cao và hít thở không khí trong lành.  \nNgay sau khi săn mây, dừng lại một quán cà phê ven đồi, nhâm nhi ly espresso và ngắm hoàng hôn nhuộm màu bầu trời.  \n\nNgày thứ hai, ghé chợ Đà Lạt, khám phá những gian hàng trái cây, rau củ và đặc sản địa phương.  \nSau bữa trưa, dạo bước quanh hồ Tuyền Lâm, thả mình vào không gian yên bình và ngắm cảnh núi non phản chiếu trên mặt nước.  \n\nLịch trình ngắn gọn, thực tế, phù hợp cho người bận rộn muốn trải nghiệm Đà Lạt trong 2 ngày.  \nBạn đã từng thử chuyến đi này chưa? Hãy chia sẻ cảm nhận hoặc hỏi thêm chi tiết ở phần bình luận nhé.",
+        "rawBBeforeCorrection": "Sáng sớm, sương mù nhẹ phủ lên Cầu Đất, bạn vừa đặt chân lên đỉnh cao và hít thở không khí trong lành.  \nNgay sau khi săn mây, dừng lại một quán cà phê ven đồi, nhâm nhi ly espresso và ngắm hoàng hôn nhuộm màu bầu trời.  \n\nNgày thứ hai, ghé chợ Đà Lạt, khám phá những gian hàng trái cây, rau củ và đặc sản địa phương.  \nSau bữa trưa, dạo bước quanh hồ Tuyền Lâm, thả mình vào không gian yên bình và ngắm cảnh núi non phản chiếu trên mặt nước.  \n\nLịch trình ngắn gọn, thực tế, phù hợp cho người bận rộn muốn trải nghiệm Đà Lạt trong 2 ngày.  \nBạn đã từng thử chuyến đi này chưa? Hãy chia sẻ cảm nhận hoặc hỏi thêm chi tiết ở phần bình luận nhé.",
+        "claimsFlaggedBeforeCorrection": [],
+        "charLength": 643,
+        "wordCount": 138,
+        "validatorBlocked": false,
+        "violations": [],
+        "safetyState": "READY_FOR_APPROVAL",
+        "forceReview": false,
+        "totalClaims": 0,
+        "unbackedClaimsCount": 5,
+        "type1UnbackedCount": 5,
+        "unbackedClaims": [
+          "Sáng sớm, sương mù nhẹ phủ lên Cầu Đất, bạn vừa đặt chân lên đỉnh cao và hít thở không khí trong lành.",
+          "Ngay sau khi săn mây, dừng lại một quán cà phê ven đồi, nhâm nhi ly espresso và ngắm hoàng hôn nhuộm màu bầu trời.",
+          "Ngày thứ hai, ghé chợ Đà Lạt, khám phá những gian hàng trái cây, rau củ và đặc sản địa phương.",
+          "Sau bữa trưa, dạo bước quanh hồ Tuyền Lâm, thả mình vào không gian yên bình và ngắm cảnh núi non phản chiếu trên mặt nước.",
+          "Lịch trình ngắn gọn, thực tế, phù hợp cho người bận rộn muốn trải nghiệm Đà Lạt trong 2 ngày."
+        ],
+        "scores": {
+          "hook": 3,
+          "gia_tri": 4,
+          "giong_van": 4,
+          "nhip_va_do_dai": 5,
+          "cta": 4,
+          "sach_sao_rong": 5,
+          "trung_thuc": 1
+        },
+        "avgScore": 3.71,
+        "failedHonesty": true,
+        "evidence": {
+          "hook": "Sáng sớm, sương mù nhẹ phủ lên Cầu Đất, bạn vừa đặt chân lên đỉnh cao và hít thở không khí trong lành.",
+          "gia_tri": "Ngay sau khi săn mây, dừng lại một quán cà phê ven đồi, nhâm nhi ly espresso và ngắm hoàng hôn nhuộm màu bầu trời.",
+          "giong_van": "Sau bữa trưa, dạo bước quanh hồ Tuyền Lâm, thả mình vào không gian yên bình và ngắm cảnh núi non phản chiếu trên mặt nước.",
+          "nhip_va_do_dai": "Đoạn văn ngắn gọn, mỗi ý một dòng, ví dụ: 'Ngày thứ hai, ghé chợ Đà Lạt, khám phá những gian hàng trái cây, rau củ và đặc sản địa phương.'",
+          "cta": "Bạn đã từng thử chuyến đi này chưa? Hãy chia sẻ cảm nhận hoặc hỏi thêm chi tiết ở phần bình luận nhé.",
+          "sach_sao_rong": "Không có",
+          "trung_thuc": "Lịch trình ngắn gọn, thực tế, phù hợp cho người bận rộn muốn trải nghiệm Đà Lạt trong 2 ngày."
+        },
+        "comment": "Bài viết bám sát facts, giọng văn tự nhiên và cấu trúc thoáng đãng, tuy nhiên hook chưa đủ sức bật để giữ chân người dùng lướt nhanh so với tiêu chí 5 điểm."
+      },
+      {
+        "run": 1,
+        "topicId": 3,
+        "topic": "nuôi mèo mới về nhà",
+        "group": "thuong",
+        "content": "Bạn mở cửa, một chú mèo con lặng lẽ bước vào góc phòng, mắt tròn ngó quanh như đang khám phá thế giới mới.  \nĐặt chậu cát vệ sinh ở góc yên tĩnh, giúp bé làm quen tự nhiên với thói quen đi vệ sinh.  \nĐảm bảo bát ăn và nước uống luôn ở vị trí quen thuộc, để bé không phải tìm kiếm.  \nTrong 24‑48 giờ đầu, để mèo có không gian riêng, tránh việc vồ vập bế ép khiến bé căng thẳng.  \nBạn có kinh nghiệm nào khác? Hãy chia sẻ trong bình luận nhé.",
+        "rawContent": "Bạn mở cửa, một chú mèo con lặng lẽ bước vào góc phòng, mắt tròn ngó quanh như đang khám phá thế giới mới.  \nĐặt chậu cát vệ sinh ở góc yên tĩnh, giúp bé làm quen tự nhiên với thói quen đi vệ sinh.  \nĐảm bảo bát ăn và nước uống luôn ở vị trí quen thuộc, để bé không phải tìm kiếm.  \nTrong 24‑48 giờ đầu, để mèo có không gian riêng, tránh việc vồ vập bế ép khiến bé căng thẳng.  \nKhi bé cảm thấy an toàn, bạn mới từ từ tăng cường tương tác nhẹ nhàng.  \nNhững bước đơn giản này giúp giảm stress cho cả bạn và mèo mới về nhà.  \nBạn có kinh nghiệm nào khác? Hãy chia sẻ trong bình luận nhé.",
+        "rawBBeforeCorrection": "Bạn mở cửa, một chú mèo con lặng lẽ bước vào góc phòng, mắt tròn ngó quanh như đang khám phá thế giới mới.  \nĐặt chậu cát vệ sinh ở góc yên tĩnh, giúp bé làm quen tự nhiên với thói quen đi vệ sinh.  \nĐảm bảo bát ăn và nước uống luôn ở vị trí quen thuộc, để bé không phải tìm kiếm.  \nTrong 24‑48 giờ đầu, để mèo có không gian riêng, tránh việc vồ vập bế ép khiến bé căng thẳng.  \nKhi bé cảm thấy an toàn, bạn mới từ từ tăng cường tương tác nhẹ nhàng.  \nNhững bước đơn giản này giúp giảm stress cho cả bạn và mèo mới về nhà.  \nBạn có kinh nghiệm nào khác? Hãy chia sẻ trong bình luận nhé.",
+        "claimsFlaggedBeforeCorrection": [],
+        "charLength": 440,
+        "wordCount": 97,
+        "validatorBlocked": false,
+        "violations": [],
+        "safetyState": "READY_FOR_APPROVAL",
+        "forceReview": false,
+        "totalClaims": 5,
+        "unbackedClaimsCount": 0,
+        "type1UnbackedCount": 0,
+        "unbackedClaims": [],
+        "scores": {
+          "hook": 5,
+          "gia_tri": 5,
+          "giong_van": 5,
+          "nhip_va_do_dai": 5,
+          "cta": 5,
+          "sach_sao_rong": 5,
+          "trung_thuc": 5
+        },
+        "avgScore": 5,
+        "failedHonesty": false,
+        "evidence": {
+          "hook": "Bạn mở cửa, một chú mèo con lặng lẽ bước vào góc phòng, mắt tròn ngó quanh như đang khám phá thế giới mới.",
+          "gia_tri": "Trong 24‑48 giờ đầu, để mèo có không gian riêng, tránh việc vồ vập bế ép khiến bé căng thẳng.",
+          "giong_van": "Đảm bảo bát ăn và nước uống luôn ở vị trí quen thuộc, để bé không phải tìm kiếm.",
+          "nhip_va_do_dai": "Bài viết ngắn gọn, mỗi ý một dòng, ví dụ: 'Đặt chậu cát vệ sinh ở góc yên tĩnh, giúp bé làm quen tự nhiên với thói quen đi vệ sinh.'",
+          "cta": "Bạn có kinh nghiệm nào khác? Hãy chia sẻ trong bình luận nhé.",
+          "sach_sao_rong": "Không có",
+          "trung_thuc": "Trong 24‑48 giờ đầu, để mèo có không gian riêng, tránh việc vồ vập bế ép khiến bé căng thẳng."
+        },
+        "comment": "Bài viết đạt điểm tuyệt đối nhờ tuân thủ nghiêm ngặt các facts, giọng văn tự nhiên như người thật chia sẻ kinh nghiệm, cấu trúc thoáng đãng và không hề có sáo rỗng hay bịa đặt social proof."
+      }
+    ],
+    "stats": {},
+    "groupStats": {}
+  }
+}
