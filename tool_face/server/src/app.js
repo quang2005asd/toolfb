@@ -655,9 +655,13 @@ app.post('/api/ai/generate-posts', requireAuth, async (req, res) => {
     });
     return res.json({ success: true, ...result });
   } catch (error) {
-    console.error('[AI Generate Posts Error]', error.message);
+    console.error('[AI Generate Posts Error]', error.message, error.response?.data || '');
     const status = error.response?.status === 429 ? 429 : 500;
-    return res.status(status).json({ success: false, message: error.message });
+    let message = error.message;
+    if (error.response?.status === 401) {
+      message = 'API Key AI (Groq/Gemini) trên server không hợp lệ hoặc đã hết hạn (401). Vui lòng cập nhật key AI mới.';
+    }
+    return res.status(status).json({ success: false, message });
   }
 });
 

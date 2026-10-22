@@ -24,7 +24,8 @@ import {
   X,
   FileText,
   Plus,
-  Stamp
+  Stamp,
+  Image as ImageIcon
 } from 'lucide-react';
 import MainLayout from '../../components/layout/MainLayout';
 import AiImageStudioModal, { resolveMediaUrl } from '../../components/AiImageStudioModal';
