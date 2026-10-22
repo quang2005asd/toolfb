@@ -458,14 +458,13 @@ app.get('/api/media/:filename', (req, res) => {
 
 app.get('/api/ai/status', requireAuth, async (_req, res) => {
   const settings = await getSettings().catch(() => ({}));
-  const effectiveKey = settings.ai_api_key || process.env.AI_API_KEY;
-  let effectiveModel = settings.ai_model || process.env.AI_MODEL || 'gpt-4o-mini';
-  if (effectiveKey?.startsWith('gsk_') && (effectiveModel === 'llama-3.3-70b-versatile' || effectiveModel === 'gpt-4o-mini')) {
+  let effectiveModel = settings.ai_model || process.env.AI_MODEL || 'openai/gpt-oss-120b';
+  if (effectiveModel === 'llama-3.3-70b-versatile' || effectiveModel === 'gpt-4o-mini' || effectiveModel.includes('gpt-4') || effectiveModel.includes('gpt-3')) {
     effectiveModel = 'openai/gpt-oss-120b';
   }
   return res.json({
     success: true,
-    configured: Boolean(effectiveKey),
+    configured: true,
     model: effectiveModel
   });
 });

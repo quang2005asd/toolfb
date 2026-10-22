@@ -162,7 +162,11 @@ async function callAiChat({ messages, temperature = 0.7, max_tokens = 4096, json
     groqBaseUrl = 'https://api.groq.com/openai/v1';
   }
 
-  const targetGroqModel = (model && !model.startsWith('gemini')) ? model : (settings.ai_model || process.env.AI_MODEL || 'openai/gpt-oss-120b');
+  let targetGroqModel = (model && !model.startsWith('gemini')) ? model : (settings.ai_model || process.env.AI_MODEL || 'openai/gpt-oss-120b');
+  if (targetGroqModel === 'gpt-4o-mini' || targetGroqModel === 'gpt-4o' || targetGroqModel === 'llama-3.3-70b-versatile' || !targetGroqModel || targetGroqModel.includes('gpt-4') || targetGroqModel.includes('gpt-3')) {
+    targetGroqModel = 'openai/gpt-oss-120b';
+  }
+
   if (forceProvider === 'groq' || (model && !model.startsWith('gemini')) || isGeminiAvailable === false || groqKey) {
     let targetModel = targetGroqModel;
     for (let retry = 0; retry < 20; retry++) {
@@ -196,7 +200,11 @@ async function callAiChat({ messages, temperature = 0.7, max_tokens = 4096, json
           return { content: reply, provider: 'groq', model: targetModel, finishReason };
         }
       } catch (err) {
-        if (err.response?.status === 401) {
+        if (err.response?.status === 404 && targetModel !== 'openai/gpt-oss-120b') {
+          console.warn(`[AiClientService] Model '${targetModel}' không tồn tại trên Groq (404). Tự động chuyển về 'openai/gpt-oss-120b'...`);
+          targetModel = 'openai/gpt-oss-120b';
+          continue;
+        } else if (err.response?.status === 401) {
           console.warn(`[AiClientService] Groq key (${activeKey ? activeKey.slice(0, 10) : 'none'}...) trả về 401. Tự động chuyển sang key khác trong pool...`);
           if (activeKey) {
             groqKeyCooldowns.set(activeKey, Date.now() + 86400000);
@@ -313,7 +321,7 @@ async function callAiChat({ messages, temperature = 0.7, max_tokens = 4096, json
   if (activeGroqKey.startsWith('gsk_') || !settings.ai_base_url) {
     groqBaseUrl = 'https://api.groq.com/openai/v1';
   }
-  if (groqModel === 'llama-3.3-70b-versatile' || groqModel === 'gpt-4o-mini' || !groqModel) {
+  if (groqModel === 'llama-3.3-70b-versatile' || groqModel === 'gpt-4o-mini' || !groqModel || groqModel.includes('gpt-4') || groqModel.includes('gpt-3')) {
     groqModel = 'openai/gpt-oss-120b';
   }
 
