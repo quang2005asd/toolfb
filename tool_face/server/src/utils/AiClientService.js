@@ -158,12 +158,18 @@ async function callAiChat({ messages, temperature = 0.7, max_tokens = 4096, json
   const settings = await getSettings().catch(() => ({}));
   let groqKey = getGroqKey(settings.ai_api_key);
   let groqBaseUrl = (settings.ai_base_url || process.env.AI_API_BASE_URL || 'https://api.groq.com/openai/v1').replace(/\/$/, '');
+  if (groqBaseUrl.includes('api.openai.com') || !groqBaseUrl) {
+    groqBaseUrl = 'https://api.groq.com/openai/v1';
+  }
 
   const targetGroqModel = (model && !model.startsWith('gemini')) ? model : (settings.ai_model || process.env.AI_MODEL || 'openai/gpt-oss-120b');
-  if (forceProvider === 'groq' || (model && !model.startsWith('gemini')) || (groqKey && isGeminiAvailable === false)) {
+  if (forceProvider === 'groq' || (model && !model.startsWith('gemini')) || isGeminiAvailable === false || groqKey) {
     let targetModel = targetGroqModel;
     for (let retry = 0; retry < 20; retry++) {
-      let activeKey = getGroqKey();
+      let activeKey = getGroqKey(settings.ai_api_key);
+      if (!activeKey || !activeKey.startsWith('gsk_')) {
+        activeKey = getGroqKey();
+      }
       try {
         const payload = {
           model: targetModel,
@@ -190,7 +196,14 @@ async function callAiChat({ messages, temperature = 0.7, max_tokens = 4096, json
           return { content: reply, provider: 'groq', model: targetModel, finishReason };
         }
       } catch (err) {
-        if (err.response?.status === 429) {
+        if (err.response?.status === 401) {
+          console.warn(`[AiClientService] Groq key (${activeKey ? activeKey.slice(0, 10) : 'none'}...) trả về 401. Tự động chuyển sang key khác trong pool...`);
+          if (activeKey) {
+            groqKeyCooldowns.set(activeKey, Date.now() + 86400000);
+          }
+          rotateGroqKey();
+          continue;
+        } else if (err.response?.status === 429) {
           const bodyMsg = err.response?.data?.error?.message || '';
 
           // Nếu model 20B chạm trần TPM, tự động chuyển ngay sang Qwen 27B để chạy thông suốt ngay lập tức!

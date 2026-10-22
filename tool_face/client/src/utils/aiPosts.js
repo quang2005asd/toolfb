@@ -12,6 +12,7 @@ export function stripMarkdown(text) {
     .replace(/^\s*[*+]\s+/gm, '• ')                           // * gạch đầu dòng
     .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '$1 ($2)') // [chữ](link)
     .replace(/\*\*/g, '')                                    // ** còn sót
+    .replace(/\*/g, '')                                      // * còn sót
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }

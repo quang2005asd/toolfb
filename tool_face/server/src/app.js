@@ -67,6 +67,8 @@ const {
 } = require('./utils/AppUserService');
 const { PERMISSIONS, assignableRoles, hasPermission, isTopRole, publicRoles, rolesAtOrAbove, rolesBelow } = require('./utils/Roles');
 const aiContentGenerator = require('./utils/AiContentGenerator');
+const { cleanFacebookContent } = aiContentGenerator;
+const { callAiChat } = require('./utils/AiClientService');
 const aiImageService = require('./utils/AiImageService');
 const webSearchService = require('./utils/WebSearchService');
 const {
@@ -537,22 +539,9 @@ app.post('/api/ai/chat', requireAuth, async (req, res) => {
     ? req.body.conversation_id.trim()
     : null;
   const settings = await getSettings().catch(() => ({}));
-  let apiKey = settings.ai_api_key || process.env.AI_API_KEY;
-  let model = settings.ai_model || process.env.AI_MODEL || 'gpt-4o-mini';
-  let baseUrl = (settings.ai_base_url || process.env.AI_API_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
   const systemPrompt = settings.ai_system_prompt || 'Bạn là trợ lý AI chuyên nghiệp hỗ trợ viết bài đăng Facebook.';
 
-  if (apiKey?.startsWith('gsk_')) {
-    if (baseUrl.includes('api.openai.com')) {
-      baseUrl = 'https://api.groq.com/openai/v1';
-    }
-    if (model === 'llama-3.3-70b-versatile' || model === 'gpt-4o-mini') {
-      model = 'openai/gpt-oss-120b';
-    }
-  }
-
   if (!message) return res.status(400).json({ success: false, message: 'Tin nhắn không được để trống.' });
-  if (!apiKey) return res.status(503).json({ success: false, message: 'AI chưa được cấu hình. Hãy vào Cài đặt để thêm AI API Key.' });
 
   // Load existing conversation if id provided
   let conv = null;
@@ -592,25 +581,29 @@ app.post('/api/ai/chat', requireAuth, async (req, res) => {
     }
   }
 
-  const antiHallucinationRules = `\n\nQUY TẮC BẮT BUỘC KHI VIẾT VỀ NHÂN VẬT / SỰ KIỆN THẬT / TIN TỨC:
-1. TUYỆT ĐỐI KHÔNG tự bịa đặt các chi tiết sai thực tế (như tỷ số, bàn thắng, sự việc chưa từng xảy ra).
-2. Nếu có thông tin báo chí hoặc sự kiện người dùng cung cấp ở dưới, BẮT BUỘC phải dựa theo các dữ kiện đó để viết.
-3. Nếu không có dữ kiện cụ thể, hãy tập trung vào chiều sâu cảm xúc, tri ân và hành trình thay vì bịa tình tiết giả định.`;
+  const antiHallucinationRules = `\n\nQUY TẮC BẮT BUỘC KHI VIẾT BÀI ĐĂNG FACEBOOK:
+1. TUYỆT ĐỐI KHÔNG dùng ký hiệu Markdown như **in đậm**, *in nghiêng*, hoặc bất kỳ dấu sao (*) nào. Facebook không hỗ trợ định dạng này và sẽ biến thành chữ xấu. Khi cần nhấn mạnh hãy viết HOA hoặc thêm emoji sinh động.
+2. TUYỆT ĐỐI KHÔNG tự bịa đặt các chi tiết sai thực tế (như tỷ số, bàn thắng, sự việc chưa từng xảy ra).
+3. Nếu có thông tin báo chí hoặc sự kiện người dùng cung cấp ở dưới, BẮT BUỘC phải dựa theo các dữ kiện đó để viết.
+4. Nếu không có dữ kiện cụ thể, hãy tập trung vào chiều sâu cảm xúc, tri ân và hành trình thay vì bịa tình tiết giả định.`;
   const finalSystemPrompt = `${systemPrompt}${antiHallucinationRules}`;
   const userMessageToSend = newsContext ? `${message}\n${newsContext}` : message;
 
   try {
-    const response = await axios.post(`${baseUrl}/chat/completions`, {
-      model,
+    const { content: rawReply } = await callAiChat({
       messages: [
         { role: 'system', content: finalSystemPrompt },
         ...history,
         { role: 'user', content: userMessageToSend }
       ],
-      temperature: 0.7
-    }, { headers: { Authorization: `Bearer ${apiKey}` }, timeout: 60000 });
-    const reply = response.data.choices?.[0]?.message?.content;
-    if (!reply) throw new Error('AI provider returned an empty response.');
+      temperature: 0.7,
+      max_tokens: 3000
+    });
+
+    if (!rawReply) throw new Error('AI provider returned an empty response.');
+
+    // Làm sạch toàn bộ dấu ** và * không để sót lại cho bài viết Facebook
+    const reply = cleanFacebookContent(rawReply);
 
     // Save both messages into conversation history in DB
     const existingMessages = conv?.messages || [];

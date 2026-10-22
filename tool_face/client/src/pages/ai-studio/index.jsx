@@ -32,6 +32,16 @@ import aiApi from '../../services/aiApi';
 import channelApi from '../../services/channelApi';
 import commentAiApi, { apiMessage } from '../../services/commentAiApi';
 
+function stripAsterisks(text) {
+  if (!text || typeof text !== 'string') return '';
+  return text
+    .replace(/\*\*([^*\n]+?)\*\*/g, '$1')
+    .replace(/\*([^*\n]+?)\*/g, '$1')
+    .replace(/\*\*/g, '')
+    .replace(/\*/g, '')
+    .trim();
+}
+
 /* ── Prompt Templates ── */
 const promptTemplates = [
   {
@@ -182,7 +192,7 @@ export default function AIStudioPage() {
       if (res.success && res.conversation) {
         const msgs = (res.conversation.messages || []).map((m) => ({
           role: m.role,
-          text: m.content || m.text || ''
+          text: m.role === 'assistant' ? stripAsterisks(m.content || m.text || '') : (m.content || m.text || '')
         }));
         setMessages(msgs);
         setCurrentTitle(res.conversation.title);
@@ -232,7 +242,8 @@ export default function AIStudioPage() {
 
     try {
       const result = await aiApi.chat(message, history, currentConversationId);
-      setMessages((current) => [...current, { role: 'assistant', text: result.reply }]);
+      const cleanReply = stripAsterisks(result.reply);
+      setMessages((current) => [...current, { role: 'assistant', text: cleanReply }]);
 
       if (result.conversation_id) {
         setCurrentConversationId(result.conversation_id);
@@ -585,7 +596,7 @@ export default function AIStudioPage() {
                     <div
                       className={`ai-msg-content ${msg.isError ? 'error' : ''}`}
                     >
-                      {msg.text}
+                      {msg.role === 'assistant' ? stripAsterisks(msg.text) : msg.text}
                     </div>
 
                     {/* AI Generated / Watermarked Media Card in Chat */}
@@ -606,7 +617,7 @@ export default function AIStudioPage() {
                           borderTop: '1px solid rgba(255,255,255,0.08)'
                         }}>
                           <Link
-                            href={`/post-planner/compose?content=${encodeURIComponent(msg.sourceContent || msg.text || '')}&mediaLink=${encodeURIComponent(msg.media.mediaLink)}&previewUrl=${encodeURIComponent(resolveMediaUrl(msg.media.previewUrl))}`}
+                            href={`/post-planner/compose?content=${encodeURIComponent(stripAsterisks(msg.sourceContent || msg.text || ''))}&mediaLink=${encodeURIComponent(msg.media.mediaLink)}&previewUrl=${encodeURIComponent(resolveMediaUrl(msg.media.previewUrl))}`}
                             className="ai-action-btn primary"
                             style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, flex: 1, justifyContent: 'center' }}
                           >
@@ -617,8 +628,8 @@ export default function AIStudioPage() {
                             className="ai-action-btn"
                             onClick={() => {
                               setActiveDraftForStudio({
-                                title: msg.text?.slice(0, 60),
-                                content: msg.sourceContent || msg.text,
+                                title: stripAsterisks(msg.text)?.slice(0, 60),
+                                content: stripAsterisks(msg.sourceContent || msg.text),
                                 mediaList: [msg.media]
                               });
                               setStudioOpen(true);
@@ -637,7 +648,7 @@ export default function AIStudioPage() {
                         <button
                           type="button"
                           className="ai-action-btn"
-                          onClick={() => handleCopy(msg.text, idx)}
+                          onClick={() => handleCopy(stripAsterisks(msg.text), idx)}
                         >
                           {copiedIdx === idx ? (
                             <><Check size={13} /> Đã chép</>
@@ -649,13 +660,13 @@ export default function AIStudioPage() {
                           type="button"
                           className="ai-action-btn"
                           style={{ color: '#00f2fe', borderColor: 'rgba(0,242,254,0.3)', display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                          onClick={() => handleOpenStudioForMessage(msg.text)}
+                          onClick={() => handleOpenStudioForMessage(stripAsterisks(msg.text))}
                           title="Tự động vẽ ảnh minh họa AI phù hợp với bài viết này"
                         >
                           <Sparkles size={13} color="#00f2fe" /> Vẽ ảnh AI
                         </button>
                         <Link
-                          href={`/post-planner/compose?content=${encodeURIComponent(msg.text)}`}
+                          href={`/post-planner/compose?content=${encodeURIComponent(stripAsterisks(msg.text))}`}
                           className="ai-action-btn primary"
                         >
                           <PenSquare size={13} /> Tạo bài viết

@@ -33,6 +33,16 @@ import aiApi from '../../services/aiApi';
 import channelApi from '../../services/channelApi';
 import postApi from '../../services/postApi';
 
+function stripAsterisks(text) {
+  if (!text || typeof text !== 'string') return '';
+  return text
+    .replace(/\*\*([^*\n]+?)\*\*/g, '$1')
+    .replace(/\*([^*\n]+?)\*/g, '$1')
+    .replace(/\*\*/g, '')
+    .replace(/\*/g, '')
+    .trim();
+}
+
 /* ── Quick Templates ── */
 const quickTemplates = [
   { label: '3 bài bán hàng', prompt: 'Tạo 3 bài đăng Facebook bán hàng hấp dẫn cho 3 sản phẩm khác nhau: áo thun, giày sneaker, và balo laptop. Mỗi bài có phong cách khác nhau.', icon: '🛍️' },
@@ -131,6 +141,8 @@ export default function AIGeneratePage() {
         const defaultPages = channels.length > 0 ? channels.map(c => c.id) : [];
         const initializedDrafts = res.drafts.map(d => ({
           ...d,
+          title: stripAsterisks(d.title),
+          content: stripAsterisks(d.content),
           selected_page_ids: d.selected_page_ids?.length ? d.selected_page_ids : defaultPages,
           scheduled_at: null,
           editing: false
@@ -163,7 +175,13 @@ export default function AIGeneratePage() {
     try {
       const res = await aiApi.regenerateDraft(draftId);
       if (res.success && res.draft) {
-        setDrafts(prev => prev.map((d, i) => i === index ? { ...res.draft, selected_page_ids: d.selected_page_ids, scheduled_at: d.scheduled_at } : d));
+        setDrafts(prev => prev.map((d, i) => i === index ? {
+          ...res.draft,
+          title: stripAsterisks(res.draft.title),
+          content: stripAsterisks(res.draft.content),
+          selected_page_ids: d.selected_page_ids,
+          scheduled_at: d.scheduled_at
+        } : d));
       }
     } catch (err) {
       console.error('Regenerate failed:', err);
@@ -182,7 +200,7 @@ export default function AIGeneratePage() {
   };
 
   const handleCopyContent = (content, id) => {
-    navigator.clipboard.writeText(content);
+    navigator.clipboard.writeText(stripAsterisks(content));
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
