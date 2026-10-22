@@ -172,8 +172,11 @@ CREATE TABLE IF NOT EXISTS AiGeneratedDrafts (
   hashtags TEXT NOT NULL DEFAULT '[]',
   suggested_time TEXT NOT NULL DEFAULT '',
   topic TEXT NOT NULL DEFAULT '',
+  topic_key TEXT DEFAULT 'general',
   tone TEXT NOT NULL DEFAULT '',
   status TEXT NOT NULL DEFAULT 'draft',
+  force_review INTEGER NOT NULL DEFAULT 0,
+  safety_notes TEXT,
   selected_page_ids TEXT NOT NULL DEFAULT '[]',
   scheduled_at TEXT,
   original_prompt TEXT NOT NULL DEFAULT '',
@@ -322,7 +325,8 @@ const COLUMN_MIGRATIONS = {
   },
   AiGeneratedDrafts: {
     topic_key: 'TEXT',
-    force_review: 'INTEGER NOT NULL DEFAULT 0'
+    force_review: 'INTEGER NOT NULL DEFAULT 0',
+    safety_notes: 'TEXT'
   },
   AppUsers: {
     email: 'TEXT',
