@@ -8,11 +8,15 @@
 const axios = require('axios');
 const { getSettings } = require('./SettingsService');
 
-// Danh sách các key Gemini (được cấu hình qua biến môi trường hoặc settings)
-const DEFAULT_GEMINI_KEYS = (process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || '')
-  .split(/[\s,;]+/)
-  .map((k) => k.trim())
-  .filter(Boolean);
+// Danh sách các key Gemini (ưu tiên gọi đầu tiên, ổn định và tốc độ cao)
+const DEFAULT_GEMINI_KEYS = [
+  'AIzaSyDdHCZ2mXI98ANGYvgTv5Q3yg-xttqK0qc',
+  'AIzaSyC10G4P3lH-Gnxc9ed_VPFhvzrgFjidITg',
+  ...(process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || '')
+    .split(/[\s,;]+/)
+    .map((k) => k.trim())
+    .filter(Boolean)
+];
 
 // Danh sách các key Groq (được cấu hình qua biến môi trường .env)
 const DEFAULT_GROQ_KEYS = (process.env.GROQ_API_KEYS || '')
@@ -238,7 +242,7 @@ async function callAiChat({ messages, temperature = 0.7, max_tokens = 4096, json
       const geminiKey = geminiKeys[i];
       try {
         const payload = {
-          model: model && model.startsWith('gemini') ? model : 'gemini-2.5-flash',
+          model: model && model.startsWith('gemini') ? model : 'gemini-3.1-flash-lite',
           messages,
           temperature,
           max_tokens
@@ -252,7 +256,7 @@ async function callAiChat({ messages, temperature = 0.7, max_tokens = 4096, json
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${geminiKey}`
           },
-          timeout: 2500
+          timeout: 25000
         });
 
         const reply = res.data?.choices?.[0]?.message?.content;
@@ -266,7 +270,7 @@ async function callAiChat({ messages, temperature = 0.7, max_tokens = 4096, json
           };
         }
       } catch (err) {
-        // Lỗi kết nối
+        console.warn(`[AiClientService] Gemini key #${i} (${geminiKey.slice(0, 10)}...) không phản hồi (${err.response?.status || err.message}). Đang thử tiếp...`);
       }
     }
     // Toàn bộ key Gemini thất bại -> ngắt circuit để các request sau chạy thẳng Groq
