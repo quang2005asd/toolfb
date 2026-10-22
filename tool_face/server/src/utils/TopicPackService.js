@@ -408,62 +408,96 @@ let schemaReady = null;
 async function ensureTopicPackSchema() {
   if (!schemaReady) {
     schemaReady = getPool().then(async (pool) => {
-      // 1. Tạo bảng TopicPacks nếu chưa có
-      await pool.request().query(`
-        IF OBJECT_ID(N'dbo.TopicPacks', N'U') IS NULL
-        BEGIN
-          CREATE TABLE dbo.TopicPacks (
-            id INT IDENTITY(1,1) PRIMARY KEY,
-            topic_key VARCHAR(100) NOT NULL UNIQUE,
-            display_name NVARCHAR(200) NOT NULL,
-            parent_key VARCHAR(100) NULL,
-            sensitivity VARCHAR(10) NOT NULL,
-            status VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
-            pack_json NVARCHAR(MAX) NOT NULL,
-            generated_by VARCHAR(20) NOT NULL,
-            confirmed_by VARCHAR(64) NULL,
-            confirmed_at DATETIME2 NULL,
-            usage_count INT NOT NULL DEFAULT 0,
-            edit_rate DECIMAL(5,2) NULL,
-            version INT NOT NULL DEFAULT 1,
-            created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+      if (process.env.USE_SQLITE === 'true') {
+        // ═══ CHẾ ĐỘ SQLITE (CHO VPS / LOCAL SQLITE) ═══
+        await pool.request().query(`
+          CREATE TABLE IF NOT EXISTS TopicPacks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            topic_key TEXT NOT NULL UNIQUE,
+            display_name TEXT NOT NULL,
+            parent_key TEXT,
+            sensitivity TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'DRAFT',
+            pack_json TEXT NOT NULL,
+            generated_by TEXT NOT NULL,
+            confirmed_by TEXT,
+            confirmed_at TEXT,
+            usage_count INTEGER NOT NULL DEFAULT 0,
+            edit_rate REAL,
+            version INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT DEFAULT (datetime('now', 'localtime'))
           );
-          CREATE INDEX IX_TopicPacks_topic_key ON dbo.TopicPacks (topic_key);
-          CREATE INDEX IX_TopicPacks_status ON dbo.TopicPacks (status);
-        END;
-      `);
-
-      // 2. Tạo bảng PostFeedback nếu chưa có
-      await pool.request().query(`
-        IF OBJECT_ID(N'dbo.PostFeedback', N'U') IS NULL
-        BEGIN
-          CREATE TABLE dbo.PostFeedback (
-            id INT IDENTITY(1,1) PRIMARY KEY,
-            post_id INT NULL,
-            topic_key VARCHAR(100) NOT NULL,
-            ai_version NVARCHAR(MAX) NOT NULL,
-            final_version NVARCHAR(MAX) NOT NULL,
-            change_type VARCHAR(50) NULL,
-            created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+        `);
+        await pool.request().query(`
+          CREATE TABLE IF NOT EXISTS PostFeedback (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            post_id INTEGER,
+            topic_key TEXT NOT NULL,
+            ai_version TEXT NOT NULL,
+            final_version TEXT NOT NULL,
+            change_type TEXT,
+            created_at TEXT DEFAULT (datetime('now', 'localtime'))
           );
-          CREATE INDEX IX_PostFeedback_topic ON dbo.PostFeedback (topic_key);
-        END;
-      `);
+        `);
+      } else {
+        // ═══ CHẾ ĐỘ MICROSOFT SQL SERVER ═══
+        // 1. Tạo bảng TopicPacks nếu chưa có
+        await pool.request().query(`
+          IF OBJECT_ID(N'dbo.TopicPacks', N'U') IS NULL
+          BEGIN
+            CREATE TABLE dbo.TopicPacks (
+              id INT IDENTITY(1,1) PRIMARY KEY,
+              topic_key VARCHAR(100) NOT NULL UNIQUE,
+              display_name NVARCHAR(200) NOT NULL,
+              parent_key VARCHAR(100) NULL,
+              sensitivity VARCHAR(10) NOT NULL,
+              status VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
+              pack_json NVARCHAR(MAX) NOT NULL,
+              generated_by VARCHAR(20) NOT NULL,
+              confirmed_by VARCHAR(64) NULL,
+              confirmed_at DATETIME2 NULL,
+              usage_count INT NOT NULL DEFAULT 0,
+              edit_rate DECIMAL(5,2) NULL,
+              version INT NOT NULL DEFAULT 1,
+              created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+            );
+            CREATE INDEX IX_TopicPacks_topic_key ON dbo.TopicPacks (topic_key);
+            CREATE INDEX IX_TopicPacks_status ON dbo.TopicPacks (status);
+          END;
+        `);
 
-      // 3. Thêm cột topic_key và force_review vào Posts và AiGeneratedDrafts nếu chưa có
-      await pool.request().query(`
-        IF COL_LENGTH(N'dbo.Posts', N'topic_key') IS NULL
-          ALTER TABLE dbo.Posts ADD topic_key VARCHAR(100) NULL;
+        // 2. Tạo bảng PostFeedback nếu chưa có
+        await pool.request().query(`
+          IF OBJECT_ID(N'dbo.PostFeedback', N'U') IS NULL
+          BEGIN
+            CREATE TABLE dbo.PostFeedback (
+              id INT IDENTITY(1,1) PRIMARY KEY,
+              post_id INT NULL,
+              topic_key VARCHAR(100) NOT NULL,
+              ai_version NVARCHAR(MAX) NOT NULL,
+              final_version NVARCHAR(MAX) NOT NULL,
+              change_type VARCHAR(50) NULL,
+              created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+            );
+            CREATE INDEX IX_PostFeedback_topic ON dbo.PostFeedback (topic_key);
+          END;
+        `);
 
-        IF COL_LENGTH(N'dbo.Posts', N'force_review') IS NULL
-          ALTER TABLE dbo.Posts ADD force_review BIT NOT NULL CONSTRAINT DF_Posts_force_review DEFAULT 0;
+        // 3. Thêm cột topic_key và force_review vào Posts và AiGeneratedDrafts nếu chưa có
+        await pool.request().query(`
+          IF COL_LENGTH(N'dbo.Posts', N'topic_key') IS NULL
+            ALTER TABLE dbo.Posts ADD topic_key VARCHAR(100) NULL;
 
-        IF COL_LENGTH(N'dbo.AiGeneratedDrafts', N'topic_key') IS NULL
-          ALTER TABLE dbo.AiGeneratedDrafts ADD topic_key VARCHAR(100) NULL;
+          IF COL_LENGTH(N'dbo.Posts', N'force_review') IS NULL
+            ALTER TABLE dbo.Posts ADD force_review BIT NOT NULL CONSTRAINT DF_Posts_force_review DEFAULT 0;
 
-        IF COL_LENGTH(N'dbo.AiGeneratedDrafts', N'force_review') IS NULL
-          ALTER TABLE dbo.AiGeneratedDrafts ADD force_review BIT NOT NULL CONSTRAINT DF_AiDrafts_force_review DEFAULT 0;
-      `);
+          IF COL_LENGTH(N'dbo.AiGeneratedDrafts', N'topic_key') IS NULL
+            ALTER TABLE dbo.AiGeneratedDrafts ADD topic_key VARCHAR(100) NULL;
+
+          IF COL_LENGTH(N'dbo.AiGeneratedDrafts', N'force_review') IS NULL
+            ALTER TABLE dbo.AiGeneratedDrafts ADD force_review BIT NOT NULL CONSTRAINT DF_AiDrafts_force_review DEFAULT 0;
+        `);
+      }
     });
   }
   return schemaReady;

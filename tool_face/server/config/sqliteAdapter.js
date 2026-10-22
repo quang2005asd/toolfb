@@ -277,9 +277,37 @@ CREATE INDEX IF NOT EXISTS IX_Posts_status_scheduled ON Posts(status, scheduled_
 CREATE INDEX IF NOT EXISTS IX_PostComments_post_id ON PostComments(post_id);
 CREATE INDEX IF NOT EXISTS IX_FacebookPages_page_id ON FacebookPages(page_id, updated_at DESC);
 CREATE INDEX IF NOT EXISTS IX_AppUsers_username ON AppUsers(username);
-CREATE INDEX IF NOT EXISTS IX_AiConversations_user_updated ON AiConversations(user_id, updated_at DESC);
+CREATE TABLE IF NOT EXISTS TopicPacks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  topic_key TEXT NOT NULL UNIQUE,
+  display_name TEXT NOT NULL,
+  parent_key TEXT,
+  sensitivity TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'DRAFT',
+  pack_json TEXT NOT NULL,
+  generated_by TEXT NOT NULL,
+  confirmed_by TEXT,
+  confirmed_at TEXT,
+  usage_count INTEGER NOT NULL DEFAULT 0,
+  edit_rate REAL,
+  version INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS PostFeedback (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  post_id INTEGER,
+  topic_key TEXT NOT NULL,
+  ai_version TEXT NOT NULL,
+  final_version TEXT NOT NULL,
+  change_type TEXT,
+  created_at TEXT DEFAULT (datetime('now', 'localtime'))
+);
+
 CREATE INDEX IF NOT EXISTS IX_AiDrafts_user_batch ON AiGeneratedDrafts(user_id, batch_id);
 CREATE INDEX IF NOT EXISTS IX_AiDrafts_user_status ON AiGeneratedDrafts(user_id, status);
+CREATE INDEX IF NOT EXISTS IX_TopicPacks_topic_key ON TopicPacks(topic_key);
+CREATE INDEX IF NOT EXISTS IX_PostFeedback_topic ON PostFeedback(topic_key);
 `;
 
 // Bổ sung cột mới cho các CSDL đã được tạo từ phiên bản cũ (CREATE TABLE IF NOT EXISTS không tự thêm cột)
@@ -288,7 +316,13 @@ const COLUMN_MIGRATIONS = {
     published_at: 'TEXT',
     platform: "TEXT NOT NULL DEFAULT 'facebook'",
     tiktok_account_id: 'TEXT',
-    tiktok_publish_id: 'TEXT'
+    tiktok_publish_id: 'TEXT',
+    topic_key: 'TEXT',
+    force_review: 'INTEGER NOT NULL DEFAULT 0'
+  },
+  AiGeneratedDrafts: {
+    topic_key: 'TEXT',
+    force_review: 'INTEGER NOT NULL DEFAULT 0'
   },
   AppUsers: {
     email: 'TEXT',

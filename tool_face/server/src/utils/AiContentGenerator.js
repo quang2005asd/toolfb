@@ -39,6 +39,7 @@ const {
 const {
   POST_STATES,
   evaluateContentSafety,
+  evaluateContentSafetyAsync,
   handleContentMutation
 } = require('./PostStateMachine');
 
@@ -59,6 +60,87 @@ function cleanFacebookContent(text) {
     // Chuẩn hóa khoảng trống xuống dòng liên tiếp (tối đa 2 dấu enter)
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+}
+
+// ═══ BỘ PHỤC HỒI & PARSE JSON AI ĐA TẦNG (CHỐNG LỖI CẤU TRÚC GENERATION_FAILED) ═══
+function robustParseAiPostsJson(rawReply, targetCount = 3) {
+  if (!rawReply || typeof rawReply !== 'string') return [];
+  let text = rawReply.trim();
+
+  // 1. Trích xuất code block nếu có
+  const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (codeBlockMatch) {
+    text = codeBlockMatch[1].trim();
+  }
+
+  // 2. Thử parse trực tiếp
+  try {
+    const directParsed = JSON.parse(text);
+    if (Array.isArray(directParsed?.posts)) return directParsed.posts;
+    if (Array.isArray(directParsed)) return directParsed;
+    if (directParsed && typeof directParsed === 'object' && directParsed.title && directParsed.content) {
+      return [directParsed];
+    }
+  } catch {}
+
+  // 3. Cắt gọt text thừa trước và sau JSON (tìm { đầu tiên và } cuối cùng, hoặc [ đầu tiên và ] cuối cùng)
+  let candidate = text;
+  const firstBrace = candidate.indexOf('{');
+  const lastBrace = candidate.lastIndexOf('}');
+  const firstBracket = candidate.indexOf('[');
+  const lastBracket = candidate.lastIndexOf(']');
+
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    candidate = candidate.slice(firstBrace, lastBrace + 1);
+  } else if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+    candidate = candidate.slice(firstBracket, lastBracket + 1);
+  }
+
+  try {
+    const cleanedParsed = JSON.parse(candidate);
+    if (Array.isArray(cleanedParsed?.posts)) return cleanedParsed.posts;
+    if (Array.isArray(cleanedParsed)) return cleanedParsed;
+  } catch {}
+
+  // 4. Sửa lỗi trailing comma và control chars trong JSON
+  try {
+    let sanitized = candidate
+      .replace(/,\s*([\]}])/g, '$1') // Xóa trailing comma
+      .replace(/[\u0000-\u001F]+/g, (match) => (match === '\n' || match === '\r' ? match : ' '));
+
+    // Xử lý unescaped newline trong string JSON
+    sanitized = sanitized.replace(/"([^"\\]*(?:\\.[^"\\]*)*)"/g, (m) => m.replace(/\n/g, '\\n').replace(/\r/g, '\\r'));
+
+    const sanitizedParsed = JSON.parse(sanitized);
+    if (Array.isArray(sanitizedParsed?.posts)) return sanitizedParsed.posts;
+    if (Array.isArray(sanitizedParsed)) return sanitizedParsed;
+  } catch {}
+
+  // 5. CỨU CÁNH CUỐI CÙNG: Fallback Regex Extractor khi JSON bị cắt cụt (truncated) hoặc sai cú pháp
+  const extractedPosts = [];
+  const postBlockRegex = /\{\s*"title"\s*:\s*"([^"]+)"\s*,\s*"content"\s*:\s*"((?:[^"\\]|\\.)*)"/gi;
+  let match;
+  while ((match = postBlockRegex.exec(rawReply)) !== null) {
+    const title = match[1].replace(/\\"/g, '"').replace(/\\n/g, '\n').trim();
+    const content = match[2].replace(/\\"/g, '"').replace(/\\n/g, '\n').trim();
+    if (title && content) {
+      extractedPosts.push({
+        title,
+        content,
+        hashtags: [],
+        suggestedTime: '09:00',
+        topic: title,
+        contentType: 'general'
+      });
+    }
+  }
+
+  if (extractedPosts.length > 0) {
+    console.warn(`[AiContentGenerator] Đã phục hồi thành công ${extractedPosts.length} bài viết qua Regex Extractor!`);
+    return extractedPosts;
+  }
+
+  return [];
 }
 
 // ═══ SCHEMA DATABASE DRAFTS & POSTS ═══
@@ -387,24 +469,12 @@ ${layer3Constraints}
 
   if (!rawReply) throw new Error('AI không trả về kết quả. Vui lòng thử lại.');
 
-  // BƯỚC 2: TRẠNG THÁI VALIDATING (KIỂM TRA SCHEMA JSON)
-  let parsed;
-  try {
-    let jsonStr = rawReply.trim();
-    const codeBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (codeBlockMatch) {
-      jsonStr = codeBlockMatch[1].trim();
-    }
-    parsed = JSON.parse(jsonStr);
-  } catch (parseErr) {
-    console.error('[AiContentGenerator] Parse error:', rawReply.slice(0, 400));
+  // BƯỚC 2: TRẠNG THÁI VALIDATING (KIỂM TRA SCHEMA JSON BẰNG BỘ PHỤC HỒI ĐA TẦNG)
+  const postsArray = robustParseAiPostsJson(rawReply, targetCount);
+  if (!Array.isArray(postsArray) || postsArray.length === 0) {
+    console.error('[AiContentGenerator] Parse error raw output:', rawReply.slice(0, 500));
     // Schema thất bại -> GENERATION_FAILED
     throw new Error('AI trả về dữ liệu lỗi cấu trúc (GENERATION_FAILED). Vui lòng bấm tạo lại.');
-  }
-
-  const postsArray = Array.isArray(parsed?.posts) ? parsed.posts : [];
-  if (postsArray.length === 0) {
-    throw new Error('AI không tạo được bài viết nào (GENERATION_FAILED). Vui lòng mô tả chi tiết hơn.');
   }
 
   // BƯỚC 3: TRẠNG THÁI SAFETY_CHECK, FORCE REVIEW & LƯU TRỮ DATABASE
@@ -418,8 +488,8 @@ ${layer3Constraints}
     const cleanContent = cleanFacebookContent(post.content || '');
     const hashtagsArray = Array.isArray(post.hashtags) ? post.hashtags : [];
 
-    // Chạy bộ lọc an toàn chính sách Meta (Safety Check Engine)
-    const safetyResult = evaluateContentSafety(cleanTitle, cleanContent);
+    // Chạy bộ lọc an toàn chính sách Meta (Safety Check Engine - Hợp bằng OR từ khóa + AI)
+    const safetyResult = await evaluateContentSafetyAsync(cleanTitle, cleanContent, prompt);
 
     // Gán trạng thái theo kết quả kiểm tra an toàn và quy tắc Topic Pack:
     // 1. Nếu BLOCKED (rủi ro nghiêm trọng) -> Luôn giữ BLOCKED
@@ -531,22 +601,18 @@ QUY TẮC BẮT BUỘC:
 
   if (!rawReply) throw new Error('AI không trả về kết quả viết lại.');
 
-  let parsed;
-  try {
-    let jsonStr = rawReply.trim();
-    const match = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (match) jsonStr = match[1].trim();
-    parsed = JSON.parse(jsonStr);
-  } catch (err) {
-    throw new Error('AI trả về định dạng chưa khớp JSON (GENERATION_FAILED).');
+  const posts = robustParseAiPostsJson(rawReply, 1);
+  const parsed = posts[0] || {};
+  if (!parsed.content) {
+    throw new Error('AI trả về định dạng chưa khớp JSON (GENERATION_FAILED). Vui lòng bấm thử lại.');
   }
 
   const cleanTitle = cleanFacebookContent(parsed.title || draft.title);
   const cleanContent = cleanFacebookContent(parsed.content || draft.content);
   const hashtagsArray = Array.isArray(parsed.hashtags) ? parsed.hashtags : JSON.parse(draft.hashtags || '[]');
 
-  // Chạy lại kiểm tra an toàn chính sách
-  const safetyResult = evaluateContentSafety(cleanTitle, cleanContent);
+  // Chạy lại kiểm tra an toàn chính sách (Hợp bằng OR từ khóa + AI)
+  const safetyResult = await evaluateContentSafetyAsync(cleanTitle, cleanContent, draft.topic_key || draft.title);
   const safetyNotes = `[${safetyResult.state}] Điểm an toàn: ${safetyResult.score}/100. ${safetyResult.notes}`;
 
   const updated = await pool.request()
@@ -860,15 +926,6 @@ function formatDraft(row) {
   };
 }
 
-async function getAiConfig() {
-  const { getSettings } = require('./SettingsService');
-  const settings = await getSettings().catch(() => ({}));
-  let apiKey = settings.ai_api_key || process.env.AI_API_KEY || process.env.AI_API_KEY_1;
-  let model = settings.ai_model || process.env.AI_MODEL || 'openai/gpt-oss-120b';
-  let baseUrl = (settings.ai_base_url || process.env.AI_API_BASE_URL || 'https://api.groq.com/openai/v1').replace(/\/$/, '');
-  return { apiKey, model, baseUrl };
-}
-
 module.exports = {
   POST_STATES,
   generatePosts,
@@ -884,7 +941,6 @@ module.exports = {
   deleteBatch,
   formatDraft,
   cleanFacebookContent,
-  getAiConfig,
   // Export TopicPack utilities
   topicPackService,
   resolveTopicPack,

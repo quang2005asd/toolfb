@@ -8,16 +8,18 @@
 const axios = require('axios');
 const { getSettings } = require('./SettingsService');
 
-// Danh sách các key Gemini (đọc từ biến môi trường .env)
-const DEFAULT_GEMINI_KEYS = [
-  process.env.GEMINI_API_KEY_1,
-  process.env.GEMINI_API_KEY_2,
-  process.env.GEMINI_API_KEY
-].filter(Boolean);
+// Danh sách các key Gemini (được cấu hình qua biến môi trường hoặc settings)
+const DEFAULT_GEMINI_KEYS = (process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || '')
+  .split(/[\s,;]+/)
+  .map((k) => k.trim())
+  .filter(Boolean);
 
-const DEFAULT_GROQ_KEYS = [];
+// Danh sách các key Groq (được cấu hình qua biến môi trường .env)
+const DEFAULT_GROQ_KEYS = (process.env.GROQ_API_KEYS || '')
+  .split(/[\s,;]+/)
+  .map((k) => k.trim())
+  .filter((k) => k.startsWith('gsk_'));
 
-// Khởi tạo cooldown cho các key khi gặp rate limit
 const groqKeyCooldowns = new Map();
 
 function getGroqPool(customKey) {
@@ -151,7 +153,7 @@ async function callAiChat({ messages, temperature = 0.7, max_tokens = 4096, json
           model: targetModel,
           messages,
           temperature,
-          max_tokens: Math.min(max_tokens || 4096, 4096)
+          max_tokens: Math.min(max_tokens, 4096)
         };
         if (jsonMode) {
           payload.response_format = { type: 'json_object' };
@@ -298,7 +300,7 @@ async function callAiChat({ messages, temperature = 0.7, max_tokens = 4096, json
           model: modelToTry,
           messages,
           temperature,
-          max_tokens: Math.min(max_tokens || 4096, 4096)
+          max_tokens: Math.min(max_tokens, 4096)
         };
         if (jsonMode) {
           payload.response_format = { type: 'json_object' };
