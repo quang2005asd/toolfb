@@ -252,17 +252,24 @@ app.get('/api/auth/me', async (req, res) => {
   });
 });
 
+// Đăng nhập Facebook mở trong cửa sổ phụ (?popup=1): kết quả trả về trang /facebook-login-done để báo lại cho tab Tool Face
+const FB_POPUP_STATE_SUFFIX = '.popup';
+function facebookLoginReturn(popup, query) {
+  return `${clientOrigin()}${popup ? '/facebook-login-done' : '/channels'}?${query}`;
+}
+
 // Facebook Login: liên kết / đăng nhập lại Facebook cho tài khoản đang đăng nhập (1 chạm lấy lại token)
 app.get('/api/auth/facebook', async (req, res) => {
   if (!req.user) {
     return res.redirect(302, `${clientOrigin()}/login?error=session_required`);
   }
+  const popup = req.query.popup === '1';
   const creds = await tokenService.getMetaAppCredentials();
   if (!creds.configured) {
-    return res.redirect(302, `${clientOrigin()}/channels?error=app_not_configured`);
+    return res.redirect(302, facebookLoginReturn(popup, 'error=app_not_configured'));
   }
 
-  const state = crypto.randomBytes(32).toString('base64url');
+  const state = crypto.randomBytes(32).toString('base64url') + (popup ? FB_POPUP_STATE_SUFFIX : '');
   setCookie(req, res, OAUTH_STATE_COOKIE, state, 10 * 60);
   const graphVersion = process.env.FB_GRAPH_VERSION || 'v19.0';
   const authorizationUrl = new URL(`https://www.facebook.com/${graphVersion}/dialog/oauth`);
@@ -283,14 +290,16 @@ app.get('/api/auth/facebook/callback', async (req, res) => {
     && requestState.length === cookieState.length
     && crypto.timingSafeEqual(requestState, cookieState);
   clearCookie(req, res, OAUTH_STATE_COOKIE);
+  const popup = (typeof req.query.state === 'string' && req.query.state.endsWith(FB_POPUP_STATE_SUFFIX))
+    || String(cookies[OAUTH_STATE_COOKIE] || '').endsWith(FB_POPUP_STATE_SUFFIX);
   if (!req.user) {
     return res.redirect(`${clientOrigin()}/login?error=session_required`);
   }
   if (req.query.error) {
-    return res.redirect(`${clientOrigin()}/channels?error=oauth_denied`);
+    return res.redirect(facebookLoginReturn(popup, 'error=oauth_denied'));
   }
   if (!stateMatches || typeof req.query.code !== 'string') {
-    return res.redirect(`${clientOrigin()}/channels?error=oauth_state_invalid`);
+    return res.redirect(facebookLoginReturn(popup, 'error=oauth_state_invalid'));
   }
 
   try {
@@ -308,10 +317,20 @@ app.get('/api/auth/facebook/callback', async (req, res) => {
     // Đổi sang token dài hạn, lưu nick Facebook và lấy lại toàn bộ token Fanpage
     const result = await tokenService.connectUserToken(req.user.sub, codeResponse.data.access_token);
     console.log(`[Facebook OAuth] Kết nối lại ${result.pages.length} Fanpage cho ${req.user.username} (FB: ${result.fbAccount.id}, token ${result.tokenType}).`);
-    return res.redirect(`${clientOrigin()}/channels?connected=${result.pages.length}&token=${encodeURIComponent(result.tokenType)}`);
+    // Đăng nhập được nhưng chưa có Fanpage → tool hiện hướng dẫn tạo Fanpage; thiếu quyền một số tính năng → báo kèm
+    const query = new URLSearchParams({ connected: String(result.pages.length), token: result.tokenType });
+    if (!result.pages.length) query.set('reason', 'no_pages');
+    if (result.missingScopes.length) query.set('missing', result.missingScopes.join(','));
+    return res.redirect(facebookLoginReturn(popup, query.toString()));
   } catch (error) {
+    if (error.code === 'no_permission') {
+      // Facebook không cấp quyền Fanpage (bỏ tích, hoặc app chưa được Meta duyệt quyền nâng cao) → tool hướng dẫn tự tạo token
+      console.log(`[Facebook OAuth] ${req.user.username}: đăng nhập được nhưng thiếu quyền ${error.missingScopes.join(',')}.`);
+      const query = new URLSearchParams({ connected: '0', reason: 'no_permission', missing: error.missingScopes.join(',') });
+      return res.redirect(facebookLoginReturn(popup, query.toString()));
+    }
     console.error('[Facebook OAuth Error]', error.response?.data?.error?.message || error.message);
-    return res.redirect(`${clientOrigin()}/channels?error=oauth_failed`);
+    return res.redirect(facebookLoginReturn(popup, 'error=oauth_failed'));
   }
 });
 
@@ -1271,12 +1290,22 @@ app.post('/api/channels/connect-facebook', requireAuth, async (req, res) => {
       fbUser: result.fbAccount,
       count: connectedPages.length,
       pages: connectedPages,
+      reason: connectedPages.length ? null : 'no_pages',
+      missingScopes: result.missingScopes,
       tokenType: result.tokenType,
       expiresAt: result.expiresAt,
       exchanged: result.exchanged,
       message: `Kết nối thành công tài khoản Facebook "${result.fbAccount.name}"! Đã đồng bộ ${connectedPages.length} Fanpage.${tokenNote}`
     });
   } catch (error) {
+    if (error.code === 'no_permission') {
+      return res.status(400).json({
+        success: false,
+        code: 'no_permission',
+        missingScopes: error.missingScopes,
+        message: 'Token này chưa có quyền quản lý Fanpage (thiếu pages_show_list). Tạo lại token và tích đủ quyền theo hướng dẫn.'
+      });
+    }
     const errMsg = error.response?.data?.error?.message || error.message || 'Không thể xác thực Facebook Token.';
     return res.status(400).json({ success: false, message: errMsg });
   }
@@ -1295,7 +1324,15 @@ app.get('/api/channels/token-status', requireAuth, async (req, res) => {
 app.get('/api/channels/facebook-status', requireAuth, async (req, res) => {
   try {
     const status = await facebookLoginStatus.getLoginStatus(req.user.sub, { force: req.query.refresh === '1' });
-    return res.json({ success: true, ...status, canConfigure: hasPermission(req.user.role, PERMISSIONS.SETTINGS_SYSTEM) });
+    const canConfigure = hasPermission(req.user.role, PERMISSIONS.SETTINGS_SYSTEM);
+    // Chỉ Quản trị viên thấy thông số Webhook để dán vào Meta App
+    const webhook = canConfigure ? {
+      callbackUrl: `${clientOrigin()}/api/webhooks/messenger`,
+      verifyToken: process.env.MESSENGER_VERIFY_TOKEN || null,
+      pageFields: ['messages', 'message_echoes', 'feed'],
+      instagramFields: ['messages', 'comments']
+    } : null;
+    return res.json({ success: true, ...status, canConfigure, webhook });
   } catch (error) {
     return sendApiError(res, 'Facebook Status Error', error, 'Không thể kiểm tra trạng thái đăng nhập Facebook.');
   }
@@ -1875,8 +1912,9 @@ app.get('/api/webhooks/messenger', (req, res) => {
 });
 
 app.post('/api/webhooks/messenger', async (req, res) => {
-  const { appSecret } = await tokenService.getMetaAppCredentials().catch(() => ({}));
-  if (!messengerService.verifyWebhookSignature(req.rawBody, req.get('x-hub-signature-256'), appSecret || process.env.FACEBOOK_APP_SECRET)) {
+  // Nhận Webhook của Meta App đang dùng, và của app cũ trong thời gian chuyển app
+  const secrets = await tokenService.webhookSecrets().catch(() => []);
+  if (!secrets.some((secret) => messengerService.verifyWebhookSignature(req.rawBody, req.get('x-hub-signature-256'), secret))) {
     return res.sendStatus(403);
   }
   res.status(200).send('EVENT_RECEIVED');

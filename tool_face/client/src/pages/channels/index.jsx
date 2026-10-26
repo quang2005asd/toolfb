@@ -31,10 +31,12 @@ import TikTokChannels from '../../components/channels/TikTokChannels';
 import TokenHealthBanner from '../../components/channels/TokenHealthBanner';
 import FacebookConnectPanel from '../../components/channels/FacebookConnectPanel';
 import FacebookGuideModal from '../../components/channels/FacebookGuideModal';
+import FacebookLoginDialog from '../../components/channels/FacebookLoginDialog';
 import useAuth from '../../hooks/useAuth';
 import { PERMISSIONS } from '../../utils/permissions';
 import channelApi from '../../services/channelApi';
 import channelGroupApi from '../../services/channelGroupApi';
+import { markRedirectLogin, openLoginPopup, subscribeLoginResult, takeRedirectLoginPending } from '../../utils/facebookLoginBridge';
 
 const PRESET_COLORS = ['#00f2fe', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#3b82f6', '#f43f5e'];
 
@@ -60,7 +62,12 @@ export default function ChannelsPage() {
   const [fbStatusError, setFbStatusError] = useState('');
   const [fbStatusChecking, setFbStatusChecking] = useState(false);
   const [guideTab, setGuideTab] = useState(null);
-  const [oauthHelp, setOauthHelp] = useState(null); // { code, message } lỗi trả về từ Facebook Login
+
+  // Đăng nhập Facebook trong cửa sổ phụ: tab này luôn ở lại tool để báo kết quả / hướng dẫn khi Facebook chặn
+  const [fbLogin, setFbLogin] = useState(null); // { phase: 'waiting' | 'incomplete' | 'no-pages' | 'error', code }
+  const popupRef = useRef(null);
+  const loginAttemptRef = useRef({ active: false, openedAt: 0, incompleteTimer: null });
+  const loginResultHandlerRef = useRef(null);
 
   const loadFbStatus = async (refresh = false) => {
     setFbStatusChecking(true);
@@ -156,43 +163,132 @@ export default function ChannelsPage() {
     loadFbStatus();
   }, []);
 
-  // Kết quả trả về từ Facebook Login (đăng nhập lại để lấy token mới)
+  // Kết quả Facebook Login (từ cửa sổ phụ hoặc khi cả trang quay về): báo thành công hoặc mở hộp thoại hướng dẫn
+  // reason: 'no_permission' (Facebook không cấp quyền Fanpage) | 'no_pages' (nick chưa có Fanpage); missing: quyền còn thiếu
+  const handleLoginResult = ({ connected, token, error: code, reason, missing }) => {
+    const attempt = loginAttemptRef.current;
+    attempt.active = false;
+    clearTimeout(attempt.incompleteTimer);
+    try { popupRef.current?.close(); } catch {}
+    popupRef.current = null;
+    if (code === 'app_not_configured') {
+      setFbLogin(null);
+      setGuideTab('setup');
+      loadFbStatus(true);
+      return;
+    }
+    if (code) {
+      setFbLogin({ phase: 'error', code: String(code) });
+      return;
+    }
+    const missingScopes = String(missing || '').split(',').filter(Boolean);
+    if (reason === 'no_permission') {
+      setFbLogin({ phase: 'no-permission', missing: missingScopes, source: 'login' });
+      return;
+    }
+    loadData();
+    handleCheckTokens({ quiet: true });
+    loadFbStatus(true);
+    if (Number(connected) > 0) {
+      const longLived = token === 'long' || token === 'never';
+      setFbLogin(null);
+      setNotice(`✅ Đã đăng nhập Facebook và liên kết ${connected} Fanpage.${longLived ? ' Token dài hạn — token Fanpage sẽ không hết hạn.' : ''}${missingScopes.length ? ' Một số tính năng còn thiếu quyền — xem bảng trạng thái phía trên.' : ''}`);
+    } else {
+      setFbLogin({ phase: 'no-pages', source: 'login' });
+    }
+  };
+  loginResultHandlerRef.current = handleLoginResult;
+
+  useEffect(() => subscribeLoginResult((result) => {
+    // Kết quả của lần đăng nhập mở từ tab khác: chỉ cần tải lại dữ liệu
+    if (!loginAttemptRef.current.active) {
+      loadData();
+      loadFbStatus(true);
+      return;
+    }
+    loginResultHandlerRef.current(result);
+  }), []);
+
+  // Cả trang quay về từ Facebook (khi trình duyệt chặn cửa sổ phụ)
   useEffect(() => {
     if (!router.isReady) return;
-    const { connected, token, error: oauthError } = router.query;
-    if (connected === undefined && !oauthError) return;
-    if (connected !== undefined) {
-      const longLived = token === 'long' || token === 'never';
-      setNotice(`✅ Đã đăng nhập lại Facebook và lấy lại token cho ${connected} Fanpage.${longLived ? ' Token dài hạn — token Fanpage sẽ không hết hạn.' : ''}`);
-      loadData();
-      handleCheckTokens();
-      loadFbStatus(true);
-    } else {
-      const messages = {
-        oauth_denied: 'Bạn đã hủy đăng nhập Facebook hoặc chưa cấp đủ quyền.',
-        oauth_failed: 'Facebook không hoàn tất đăng nhập. Kiểm tra App ID / App Secret và “Valid OAuth Redirect URIs” trong Meta App.',
-        oauth_state_invalid: 'Phiên đăng nhập Facebook đã hết hạn, hãy thử lại.',
-        app_not_configured: 'Chưa cấu hình App ID & App Secret nên chưa đăng nhập Facebook được. Quản trị viên vào Cài đặt → Hồ sơ & bảo mật để cấu hình.'
-      };
-      const message = messages[oauthError] || 'Không đăng nhập được Facebook.';
-      setError(message);
-      setOauthHelp({ code: String(oauthError), message });
+    const { connected, token, error: oauthError, reason, missing } = router.query;
+    const pending = takeRedirectLoginPending();
+    if (connected === undefined && !oauthError) {
+      // Bấm Quay lại từ trang lỗi của Facebook (vd. “Ứng dụng không hoạt động”) mà chưa đăng nhập xong
+      if (pending) setFbLogin({ phase: 'incomplete' });
+      return;
     }
+    handleLoginResult({ connected, token, error: oauthError, reason, missing });
     const rest = { ...router.query };
     delete rest.connected;
     delete rest.token;
     delete rest.error;
+    delete rest.reason;
+    delete rest.missing;
     router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
   }, [router.isReady]);
+
+  useEffect(() => {
+    const onPageShow = (event) => {
+      if (event.persisted && takeRedirectLoginPending()) setFbLogin({ phase: 'incomplete' });
+    };
+    window.addEventListener('pageshow', onPageShow);
+    return () => window.removeEventListener('pageshow', onPageShow);
+  }, []);
+
+  // Cửa sổ Facebook đã đóng (hoặc người dùng quay lại tab tool) mà chưa có kết quả → hướng dẫn xử lý.
+  // Trang đăng nhập Facebook có thể cắt liên kết với cửa sổ phụ khiến popup.closed báo sai, nên chỉ kết luận khi tab tool đang được dùng.
+  useEffect(() => {
+    if (fbLogin?.phase !== 'waiting') return undefined;
+    const attempt = loginAttemptRef.current;
+    const check = () => {
+      const popup = popupRef.current;
+      if (!attempt.active || !popup || attempt.incompleteTimer) return;
+      if (Date.now() - attempt.openedAt < 1000 || !popup.closed || !document.hasFocus()) return;
+      // Chờ thêm chút để kết quả gửi về (nếu có) tới trước
+      attempt.incompleteTimer = setTimeout(() => {
+        attempt.incompleteTimer = null;
+        if (attempt.active) setFbLogin((current) => (current?.phase === 'waiting' ? { phase: 'incomplete' } : current));
+      }, 900);
+    };
+    const timer = setInterval(check, 500);
+    window.addEventListener('focus', check);
+    document.addEventListener('visibilitychange', check);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('focus', check);
+      document.removeEventListener('visibilitychange', check);
+    };
+  }, [fbLogin?.phase]);
 
   const reconnectFacebook = () => {
     window.location.href = channelApi.facebookLoginUrl;
   };
 
-  // Chưa thiết lập Meta App thì mở hướng dẫn thay vì chuyển sang trang lỗi của Facebook
+  // Chưa thiết lập Meta App thì mở hướng dẫn; đã thiết lập thì đăng nhập trong cửa sổ phụ, tab này ở lại tool
   const startFacebookLogin = () => {
     if (fbStatus?.level === 'setup') return setGuideTab('setup');
-    return reconnectFacebook();
+    const attempt = loginAttemptRef.current;
+    clearTimeout(attempt.incompleteTimer);
+    attempt.incompleteTimer = null;
+    const popup = openLoginPopup(`${channelApi.facebookLoginUrl}?popup=1`);
+    if (!popup) {
+      markRedirectLogin();
+      return reconnectFacebook();
+    }
+    popupRef.current = popup;
+    attempt.active = true;
+    attempt.openedAt = Date.now();
+    setGuideTab(null);
+    setFbLogin({ phase: 'waiting' });
+    return undefined;
+  };
+
+  const focusLoginPopup = () => {
+    const popup = popupRef.current;
+    if (popup && !popup.closed) popup.focus();
+    else startFacebookLogin();
   };
 
   const openPasteToken = () => {
@@ -222,7 +318,7 @@ export default function ChannelsPage() {
 
   // Nút "Cập nhật" trên thẻ Fanpage: ưu tiên đăng nhập lại 1 chạm, sau đó tới dán token tài khoản
   const handleFixPageToken = (channel) => {
-    if (tokenInfo?.oauthAvailable) return reconnectFacebook();
+    if (tokenInfo?.oauthAvailable) return startFacebookLogin();
     if (channel.fbAccountId) return openPasteToken();
     return openUpdateTokenModal(channel.id);
   };
@@ -351,12 +447,22 @@ export default function ChannelsPage() {
     setNotice('');
     try {
       const res = await channelApi.connectFacebookToken(fbAccountToken.trim());
-      setNotice(res.message || `Đã kết nối thành công ${res.count || 0} Fanpage!`);
-      setShowFbAccountModal(false);
       setFbAccountToken('');
       await loadData();
       loadFbStatus(true);
+      if (!res.count) {
+        // Token hợp lệ nhưng nick chưa có Fanpage → hướng dẫn tạo Fanpage
+        setFbLogin({ phase: 'no-pages', source: 'token' });
+        return;
+      }
+      setNotice(res.message || `Đã kết nối thành công ${res.count || 0} Fanpage!`);
+      setShowFbAccountModal(false);
     } catch (err) {
+      if (err.response?.data?.code === 'no_permission') {
+        // Token thiếu quyền Fanpage → hướng dẫn tạo lại token có đủ quyền
+        setFbLogin({ phase: 'no-permission', missing: err.response.data.missingScopes || [], source: 'token' });
+        return;
+      }
       setError(err.response?.data?.message || err.message || 'Lỗi kết nối tài khoản Facebook.');
     } finally {
       setFbAccountSaving(false);
@@ -628,7 +734,7 @@ export default function ChannelsPage() {
         status={fbStatus}
         error={fbStatusError}
         checking={fbStatusChecking}
-        onLogin={reconnectFacebook}
+        onLogin={startFacebookLogin}
         onOpenGuide={setGuideTab}
         onPasteToken={openPasteToken}
         onRefresh={() => loadFbStatus(true)}
@@ -641,25 +747,22 @@ export default function ChannelsPage() {
           canConfigureApp={can(PERMISSIONS.SETTINGS_SYSTEM)}
           renewing={renewingTokens}
           onRenew={handleRenewTokens}
-          onReconnect={reconnectFacebook}
+          onReconnect={startFacebookLogin}
           onPasteToken={openPasteToken}
         />
       )}
       {notice && <div className="notice" style={{ marginBottom: 14, borderColor: 'rgba(16, 185, 129, 0.4)', color: '#10b981' }}>{notice}</div>}
-      {error && (
-        <div className="notice" style={{ marginBottom: 14, borderColor: 'rgba(239, 68, 68, 0.4)', color: '#ef4444' }}>
-          {error}
-          {oauthHelp?.message === error && (
-            <>
-              {' '}
-              <button type="button" className="auth-inline-link" onClick={() => setGuideTab(oauthHelp.code === 'app_not_configured' ? 'setup' : 'login-errors')}>
-                Xem cách xử lý
-              </button>
-            </>
-          )}
-        </div>
-      )}
+      {error && <div className="notice" style={{ marginBottom: 14, borderColor: 'rgba(239, 68, 68, 0.4)', color: '#ef4444' }}>{error}</div>}
       <FacebookGuideModal open={Boolean(guideTab)} tab={guideTab} onTabChange={setGuideTab} onClose={() => setGuideTab(null)} status={fbStatus} />
+      <FacebookLoginDialog
+        state={fbLogin}
+        status={fbStatus}
+        onRetry={startFacebookLogin}
+        onFocusPopup={focusLoginPopup}
+        onOpenGuide={(tab) => { setFbLogin(null); setGuideTab(tab); }}
+        onPasteToken={() => { setFbLogin(null); openTokenForm('account'); }}
+        onClose={() => setFbLogin(null)}
+      />
 
       {/* Tabs chuyển đổi giữa Kênh, Nhóm kênh và Tài khoản Facebook (Apple Frosted Glass) */}
       <div className="step-strip" role="tablist" style={{ marginBottom: 20 }}>
@@ -729,7 +832,7 @@ export default function ChannelsPage() {
                 ? ' Tool sẽ tự đổi sang token dài hạn để token Fanpage không hết hạn.'
                 : ' Token này chỉ sống 1–2 giờ nếu chưa cấu hình App ID & App Secret (Cài đặt) để tool tự đổi sang token dài hạn.'}
               {tokenInfo?.oauthAvailable && (
-                <> Hoặc nhanh hơn: <button type="button" className="auth-inline-link" style={{ marginLeft: 0 }} onClick={reconnectFacebook}>đăng nhập Facebook</button>.</>
+                <> Hoặc nhanh hơn: <button type="button" className="auth-inline-link" style={{ marginLeft: 0 }} onClick={startFacebookLogin}>đăng nhập Facebook</button>.</>
               )}
             </p>
           </form>

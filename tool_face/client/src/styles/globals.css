@@ -8664,3 +8664,44 @@ body.dark-mode .token-menu-item:hover, body.dark-mode .token-menu-item:focus-vis
   .fb-guide-fields { grid-template-columns: minmax(0, 1fr); gap: 2px; }
   .fb-guide-fields dd { margin-bottom: 6px; }
 }
+
+/* ═══ ĐĂNG NHẬP FACEBOOK TRONG CỬA SỔ PHỤ: hộp thoại chờ / chưa xong / không có Fanpage / lỗi ═══ */
+.fb-login-dialog { max-width: 580px; }
+.fb-login-dialog .fb-guide-head h2 { display: flex; align-items: center; gap: 8px; }
+.fb-login-dialog .fb-guide-head h2 svg { flex: none; }
+.fb-login-dialog.is-info .fb-guide-head h2 svg { color: var(--blue); }
+.fb-login-dialog.is-warn .fb-guide-head h2 svg { color: #d97706; }
+.fb-login-dialog.is-error .fb-guide-head h2 svg { color: #dc2626; }
+.fb-login-lead { margin: 0 0 12px; color: var(--ink); }
+.fb-login-cause { display: grid; gap: 4px; margin-top: 10px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-elevated); }
+.fb-login-cause > span { color: var(--muted); }
+.fb-login-cause.is-main { border-color: var(--amber-border); background: var(--amber-bg); }
+.fb-login-cause.is-main > span { color: var(--ink); }
+.fb-login-cause .fb-guide-steps { margin-top: 8px; gap: 10px; }
+.fb-login-cause .fb-guide-steps > li > span { color: var(--ink); opacity: 0.86; }
+.fb-login-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--line); }
+.fb-login-actions .button { min-height: 36px; padding: 0 14px; font-size: 12.5px; }
+[data-theme="dark"] .fb-login-dialog.is-warn .fb-guide-head h2 svg, body.dark-mode .fb-login-dialog.is-warn .fb-guide-head h2 svg { color: #fbbf24; }
+[data-theme="dark"] .fb-login-dialog.is-error .fb-guide-head h2 svg, body.dark-mode .fb-login-dialog.is-error .fb-guide-head h2 svg { color: #f87171; }
+
+.fb-login-done { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; }
+.fb-login-done section { display: grid; justify-items: center; gap: 8px; max-width: 420px; padding: 28px 24px; border-radius: 16px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); text-align: center; }
+.fb-login-done section > svg { color: #059669; }
+.fb-login-done h1 { margin: 0; font-size: 18px; }
+.fb-login-done p { margin: 0; color: var(--muted); font-size: 13.5px; }
+.fb-login-done-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 8px; }
+
+@media (max-width: 600px) {
+  .fb-login-actions { padding: 12px 14px; }
+  .fb-login-actions .button { flex: 1 1 calc(50% - 4px); justify-content: center; }
+}
+
+/* Danh sách quyền trong bảng tự tạo token: quyền tool đang thiếu được tô đậm */
+.fb-guide-scopes { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+/* !important: giao diện sáng ép màu chung cho mọi thẻ code */
+.fb-guide-scopes code.is-missing { border-color: #f87171 !important; background: #fee2e2 !important; color: #b91c1c !important; font-weight: 700 !important; }
+[data-theme="dark"] .fb-guide-scopes code.is-missing, body.dark-mode .fb-guide-scopes code.is-missing { border-color: rgba(248, 113, 113, 0.6) !important; background: rgba(239, 68, 68, 0.18) !important; color: #fca5a5 !important; }
+/* Trong hộp thoại hẹp: nhãn nằm trên, ô chép giá trị chiếm hết chiều ngang */
+.fb-login-dialog .fb-guide-fields { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+.fb-login-dialog .fb-guide-fields dd { margin-bottom: 6px; }
+.fb-login-lead code { display: inline-block; margin: 2px 4px 0 0; }

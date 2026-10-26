@@ -21,6 +21,7 @@ const GRAPH = `https://graph.facebook.com/${process.env.FB_GRAPH_VERSION || 'v19
 const RENEW_INTERVAL_MS = 30 * 60 * 1000;
 const RENEW_THROTTLE_MS = 2 * 60 * 1000;
 const LONG_LIVED_MIN_SECONDS = 7 * 24 * 60 * 60;
+const PREVIOUS_APP_GRACE_MS = 14 * 24 * 60 * 60 * 1000;
 // Quyền cần cho đăng bài, đọc số liệu, hộp thư Messenger và Instagram
 const DEFAULT_LOGIN_SCOPES = [
   'public_profile', 'pages_show_list', 'pages_read_engagement', 'pages_read_user_content', 'pages_manage_posts',
@@ -28,11 +29,18 @@ const DEFAULT_LOGIN_SCOPES = [
   'instagram_basic', 'instagram_manage_messages', 'instagram_manage_comments', 'instagram_content_publish'
 ].join(',');
 
+// Quyền Fanpage mà các tính năng đăng bài / hộp thư / bình luận cần (Instagram & Business là tùy chọn)
+const REQUIRED_PAGE_SCOPES = [
+  'pages_show_list', 'pages_read_engagement', 'pages_manage_posts', 'pages_messaging',
+  'pages_manage_metadata', 'pages_read_user_content', 'pages_manage_engagement'
+];
+
 class TokenError extends Error {
-  constructor(message, status = 400, code = 'token_error') {
+  constructor(message, status = 400, code = 'token_error', details = {}) {
     super(message);
     this.status = status;
     this.code = code;
+    Object.assign(this, details);
   }
 }
 
@@ -101,8 +109,23 @@ async function saveMetaAppCredentials({ appId, appSecret }) {
   } catch (error) {
     throw new TokenError(`Facebook từ chối App ID / App Secret: ${graphMessage(error)}`, 400, 'invalid_app_credentials');
   }
-  await saveMultipleSettings({ fb_app_id: cleanId, fb_app_secret_encrypted: encryptToken(cleanSecret) });
+  // Đổi sang Meta App khác: giữ App Secret của app cũ thêm 14 ngày để Webhook của app cũ vẫn được nhận trong lúc chuyển
+  const previous = current.configured && current.appId !== cleanId
+    ? { fb_prev_app_id: current.appId, fb_prev_app_secret_encrypted: encryptToken(current.appSecret), fb_prev_app_until: new Date(Date.now() + PREVIOUS_APP_GRACE_MS).toISOString() }
+    : {};
+  await saveMultipleSettings({ fb_app_id: cleanId, fb_app_secret_encrypted: encryptToken(cleanSecret), ...previous });
   return { appId: cleanId };
+}
+
+// App Secret dùng để kiểm chữ ký Webhook: app đang cấu hình, FACEBOOK_APP_SECRET và app cũ (trong 14 ngày sau khi đổi app)
+async function webhookSecrets() {
+  const settings = await getSettings().catch(() => ({}));
+  const creds = await getMetaAppCredentials();
+  const secrets = [creds.appSecret, process.env.FACEBOOK_APP_SECRET];
+  if (settings.fb_prev_app_secret_encrypted && Date.parse(settings.fb_prev_app_until || '') > Date.now()) {
+    secrets.push(decryptToken(settings.fb_prev_app_secret_encrypted));
+  }
+  return [...new Set(secrets.filter(Boolean))];
 }
 
 function loginScopes() {
@@ -213,12 +236,38 @@ async function notifyRenewed(appUserId) {
   }
 }
 
+// Quyền đã cấp cho token người dùng; null khi không đọc được (vd. token của Page)
+async function grantedPermissions(token) {
+  try {
+    const response = await axios.get(`${GRAPH}/me/permissions`, { params: { access_token: token, limit: 200 }, timeout: 15000 });
+    const rows = response.data?.data || [];
+    return {
+      granted: rows.filter((row) => row.status === 'granted').map((row) => row.permission),
+      declined: rows.filter((row) => row.status === 'declined').map((row) => row.permission)
+    };
+  } catch {
+    return null;
+  }
+}
+
 // ═══ KẾT NỐI TOKEN MỚI (dán token hoặc Facebook Login) ═══
 async function connectUserToken(appUserId, rawToken) {
   await ensureTokenSchema();
   const creds = await getMetaAppCredentials();
   const first = await inspectUserToken(rawToken, creds);
   if (!first.valid) throw new TokenError(first.error || 'Facebook Access Token không hợp lệ.', 400, 'invalid_token');
+
+  // Chưa có quyền xem Fanpage thì dừng trước khi đồng bộ (không xóa Fanpage đã lưu của nick này)
+  const permissions = await grantedPermissions(rawToken);
+  const missingScopes = permissions ? REQUIRED_PAGE_SCOPES.filter((scope) => !permissions.granted.includes(scope)) : [];
+  if (permissions && missingScopes.includes('pages_show_list')) {
+    throw new TokenError(
+      'Facebook chưa cấp quyền quản lý Fanpage cho nick này (thiếu pages_show_list).',
+      400,
+      'no_permission',
+      { missingScopes, fbName: first.profile?.name || null }
+    );
+  }
 
   let token = rawToken;
   let info = first;
@@ -248,6 +297,7 @@ async function connectUserToken(appUserId, rawToken) {
     token,
     fbAccount,
     pages,
+    missingScopes,
     tokenType: info.type,
     expiresAt: info.expiresAt,
     exchanged: token !== rawToken,
@@ -430,5 +480,6 @@ module.exports = {
   renewAll,
   requestRenewForPage,
   saveMetaAppCredentials,
-  startTokenAutoRenew
+  startTokenAutoRenew,
+  webhookSecrets
 };

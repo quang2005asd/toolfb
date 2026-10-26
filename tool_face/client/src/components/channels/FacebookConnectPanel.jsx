@@ -1,18 +1,5 @@
 import Link from 'next/link';
-import { AlertTriangle, BookOpen, CheckCircle2, CircleAlert, ExternalLink, KeyRound, LogIn, RefreshCw, ShieldAlert, UserPlus } from 'lucide-react';
-
-const ROLE_LABELS = {
-  administrators: 'Quản trị viên',
-  developers: 'Nhà phát triển',
-  testers: 'Người thử nghiệm',
-  'insights users': 'Người dùng phân tích'
-};
-
-function describeRoles(roles) {
-  if (!roles) return null;
-  const parts = Object.entries(roles).map(([role, count]) => `${count} ${ROLE_LABELS[role] || role}`);
-  return parts.length ? parts.join(', ') : 'chưa có ai';
-}
+import { AlertTriangle, BookOpen, CheckCircle2, CircleAlert, KeyRound, LogIn, RefreshCw, ShieldAlert } from 'lucide-react';
 
 // Trạng thái từng bước: done / current / error / todo
 function buildSteps(status) {
@@ -112,8 +99,6 @@ export default function FacebookConnectPanel({ status, error, checking, onLogin,
 
   const { level, app, accounts } = status;
   const steps = buildSteps(status);
-  const roles = describeRoles(app.roles);
-  const appLink = app.appId ? `https://developers.facebook.com/apps/${app.appId}` : 'https://developers.facebook.com/apps/';
   const refreshButton = (
     <button type="button" className="button button-quiet" onClick={onRefresh} disabled={checking} title="Kiểm tra lại với Facebook">
       <RefreshCw size={15} className={checking ? 'spin' : ''} /> {checking ? 'Đang kiểm tra…' : 'Kiểm tra lại'}
@@ -163,15 +148,14 @@ export default function FacebookConnectPanel({ status, error, checking, onLogin,
           ? <p>Facebook sẽ chặn đăng nhập (“Không thể tải URL”). Vào Meta App → Cài đặt ứng dụng → Thông tin cơ bản → thêm <code>{app.domain}</code> vào Miền ứng dụng, rồi thêm URI chuyển hướng ở Đăng nhập bằng Facebook → Cài đặt.</p>
           : <p>Bấm “Đăng nhập Facebook”, chọn nick quản lý Fanpage, bấm “Chỉnh sửa quyền truy cập” và bật đủ Fanpage + các quyền được hỏi.</p>}
         <p className="fb-connect-sub">
-          Khi app chưa phát hành (chế độ phát triển), chỉ nick có vai trò trong app mới đăng nhập được — nick khác sẽ thấy “Ứng dụng không hoạt động”.
-          {roles ? ` Hiện app có: ${roles}.` : ''}
+          Facebook chặn đăng nhập (“Ứng dụng không hoạt động”) hoặc không cấp quyền Fanpage cho nick của bạn? Tool sẽ hướng dẫn tự tạo token để dùng Fanpage của chính bạn — không cần ai mời.
         </p>
       </>
     );
     actions = (
       <>
         <button type="button" className="button button-primary" onClick={onLogin}><LogIn size={15} /> Đăng nhập Facebook</button>
-        <a className="button button-secondary" href={`${appLink}/roles/roles/`} target="_blank" rel="noopener noreferrer"><UserPlus size={15} /> Thêm người thử nghiệm <ExternalLink size={12} aria-hidden="true" /></a>
+        <button type="button" className="button button-secondary" onClick={() => onOpenGuide('account-token')}><KeyRound size={15} /> Tự tạo token</button>
         <button type="button" className="button button-quiet" onClick={() => onOpenGuide('login-errors')}><BookOpen size={15} /> Facebook báo lỗi?</button>
         {refreshButton}
       </>
@@ -192,11 +176,12 @@ export default function FacebookConnectPanel({ status, error, checking, onLogin,
     tone = 'warn';
     Icon = AlertTriangle;
     title = 'Một số tính năng chưa dùng được vì token thiếu quyền';
-    body = <p>Bấm “Cấp thêm quyền”, ở hộp thoại Facebook chọn “Chỉnh sửa quyền truy cập” và bật các quyền còn thiếu. Nếu Facebook không hỏi quyền đó, cần thêm quyền vào Meta App trước — xem hướng dẫn.</p>;
+    body = <p>Bấm “Cấp thêm quyền”, ở hộp thoại Facebook chọn “Chỉnh sửa quyền truy cập” và bật các quyền còn thiếu. Nếu Facebook không hỏi quyền đó, tự tạo token có đủ quyền theo hướng dẫn — không cần ai mời.</p>;
     actions = (
       <>
         <button type="button" className="button button-primary" onClick={onLogin}><LogIn size={15} /> Cấp thêm quyền (đăng nhập lại)</button>
         <button type="button" className="button button-secondary" onClick={() => onOpenGuide('permissions')}><BookOpen size={15} /> Xem hướng dẫn cấp quyền</button>
+        <button type="button" className="button button-secondary" onClick={() => onOpenGuide('account-token')}><KeyRound size={15} /> Tự tạo token</button>
         {refreshButton}
       </>
     );

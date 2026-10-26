@@ -1,60 +1,32 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { Check, Copy, ExternalLink, X } from 'lucide-react';
+import { X } from 'lucide-react';
+import { CopyValue, CreatePageSteps, Ext, OwnTokenSteps } from './FacebookGuideSteps';
 
-// Hướng dẫn từng bước cho đăng nhập Facebook: thiết lập Meta App, xử lý lỗi, cấp quyền, lấy token
+// Hướng dẫn từng bước cho đăng nhập Facebook: thiết lập Meta App, xử lý lỗi, cấp quyền, tự tạo token, tạo Fanpage
 export const GUIDE_TABS = [
   { id: 'setup', label: 'Thiết lập Meta App' },
   { id: 'login-errors', label: 'Lỗi khi đăng nhập' },
   { id: 'permissions', label: 'Cấp quyền' },
-  { id: 'account-token', label: 'Token tài khoản' },
-  { id: 'page-token', label: 'Token Page' }
+  { id: 'account-token', label: 'Tự tạo token' },
+  { id: 'page-token', label: 'Token Page' },
+  { id: 'create-page', label: 'Tạo Fanpage' }
 ];
 
-function CopyValue({ value }) {
-  const [copied, setCopied] = useState(false);
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(value);
-    } catch {
-      const area = document.createElement('textarea');
-      area.value = value;
-      document.body.appendChild(area);
-      area.select();
-      document.execCommand('copy');
-      area.remove();
-    }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-  return (
-    <span className="fb-guide-value">
-      <code>{value}</code>
-      <button type="button" className="fb-guide-copy" onClick={copy} aria-label={`Chép ${value}`}>
-        {copied ? <Check size={13} /> : <Copy size={13} />} {copied ? 'Đã chép' : 'Chép'}
-      </button>
-    </span>
-  );
-}
-
-function Ext({ href, children }) {
-  return <a href={href} target="_blank" rel="noopener noreferrer">{children} <ExternalLink size={11} aria-hidden="true" /></a>;
-}
-
-function SetupGuide({ app, canConfigure }) {
+function SetupGuide({ app, canConfigure, webhook }) {
   const origin = app?.siteOrigin || (typeof window !== 'undefined' ? window.location.origin : '');
   return (
     <>
-      <p className="fb-guide-intro">Làm một lần cho cả tool. Mỗi bước đều cần thiết — thiếu bước nào Facebook sẽ báo lỗi ở trang đăng nhập.</p>
+      <p className="fb-guide-intro">Làm một lần cho cả tool (Quản trị viên). Mỗi bước đều cần thiết — thiếu bước nào Facebook sẽ báo lỗi ở trang đăng nhập.</p>
       <ol className="fb-guide-steps">
         <li>
           <strong>Tạo Meta App</strong>
           <span>Vào <Ext href="https://developers.facebook.com/apps/">developers.facebook.com/apps</Ext> → <em>Tạo ứng dụng</em> → chọn loại <em>Doanh nghiệp</em> → đặt tên ứng dụng.</span>
         </li>
         <li>
-          <strong>Thêm trường hợp sử dụng</strong>
-          <span>Trong app: <em>Trường hợp sử dụng → Thêm</em> các mục về <em>Quản lý Trang (Page)</em>, <em>Messenger</em>, <em>Instagram</em> (nếu dùng) và <em>Đăng nhập bằng Facebook</em>. Trong từng mục, bấm <em>Tùy chỉnh → Quyền và tính năng</em> để thêm các quyền ở tab “Cấp quyền”.</span>
+          <strong>Chọn đúng 3 trường hợp sử dụng</strong>
+          <span><em>Quản lý mọi thứ trên Trang của bạn</em>, <em>Tương tác với khách hàng trên Messenger from Meta</em>, <em>Quản lý hoạt động nhắn tin và nội dung trên Instagram</em>. <strong>Không</strong> thêm các mục về quảng cáo, Danh mục, Video trực tiếp — chúng bắt buộc xác minh doanh nghiệp khi phát hành và không gỡ ra được. Trong từng mục, bấm <em>Tùy chỉnh → Quyền và tính năng</em> để thêm các quyền ở tab “Cấp quyền”.</span>
         </li>
         <li>
           <strong>Cài đặt ứng dụng → Thông tin cơ bản</strong>
@@ -80,12 +52,32 @@ function SetupGuide({ app, canConfigure }) {
             : <span className="fb-guide-note">Chỉ Quản trị viên của tool nhập được App ID / App Secret — hãy gửi 2 giá trị này cho Quản trị viên.</span>}
         </li>
         <li>
-          <strong>Thêm vai trò cho nick Facebook sẽ đăng nhập</strong>
-          <span>Khi app <em>chưa phát hành</em>, chỉ nick có vai trò trong app mới đăng nhập được. Vào <em>Vai trò trong ứng dụng → Vai trò → Thêm người</em> → chọn <em>Người thử nghiệm</em> (hoặc Nhà phát triển). Người được mời phải bấm <em>Chấp nhận</em> lời mời.</span>
+          <strong>Cấu hình Webhook (nhận tin nhắn &amp; bình luận gần như tức thì)</strong>
+          <span>
+            <em>Trường hợp sử dụng</em> → <em>Tương tác với khách hàng trên Messenger from Meta</em> → <em>Tùy chỉnh</em> → <em>Cấu hình webhook</em> → dán 2 giá trị dưới → <em>Xác minh và lưu</em> → bật các trường của Trang
+            {' '}{(webhook?.pageFields || ['messages', 'message_echoes', 'feed']).map((field) => <code key={field}>{field}</code>)}.
+            {' '}Làm tương tự ở <em>Quản lý hoạt động nhắn tin và nội dung trên Instagram</em> với
+            {' '}{(webhook?.instagramFields || ['messages', 'comments']).map((field) => <code key={field}>{field}</code>)}.
+            {' '}Tool tự đăng ký từng Fanpage với app sau khi đăng nhập Facebook.
+          </span>
+          {webhook ? (
+            <dl className="fb-guide-fields">
+              <dt>URL gọi lại (Callback URL)</dt><dd><CopyValue value={webhook.callbackUrl} /></dd>
+              <dt>Mã xác minh (Verify token)</dt>
+              <dd>{webhook.verifyToken ? <CopyValue value={webhook.verifyToken} /> : <span className="fb-guide-note">Máy chủ chưa đặt MESSENGER_VERIFY_TOKEN — chưa dùng được Webhook (tool vẫn tự đồng bộ tin nhắn định kỳ).</span>}</dd>
+            </dl>
+          ) : <span className="fb-guide-note">Chỉ Quản trị viên của tool xem được URL gọi lại và mã xác minh.</span>}
         </li>
         <li>
-          <strong>Dùng cho khách hàng thật (làm sau)</strong>
-          <span>Để mọi nick Facebook đăng nhập được: xác minh doanh nghiệp → gửi <em>Xét duyệt ứng dụng (App Review)</em> xin quyền nâng cao → chuyển app sang <em>Đang hoạt động (Live)</em>.</span>
+          <strong>Phát hành app (chế độ Live) để mọi nick đăng nhập được</strong>
+          <span>
+            Mở {app?.appId ? <Ext href={`https://developers.facebook.com/apps/${app.appId}/dashboard/`}>trang tổng quan app</Ext> : 'trang tổng quan app'} → <em>Phát hành</em> (chuyển <em>Chế độ ứng dụng</em> sang <em>Đang hoạt động / Live</em>) và làm các mục Meta yêu cầu trên màn hình.
+            Khi app còn ở chế độ phát triển, Facebook chặn mọi nick không có vai trò trong app bằng thông báo “Ứng dụng không hoạt động”.
+          </span>
+        </li>
+        <li>
+          <strong>Quyền Fanpage cho mọi nick (làm sau)</strong>
+          <span>Sau khi phát hành, mọi nick đăng nhập được, nhưng Facebook chỉ cấp quyền Fanpage cho nick quản trị app cho tới khi app được duyệt <em>quyền nâng cao</em> (Xét duyệt ứng dụng + xác minh doanh nghiệp). Trong lúc đó, nick khác đăng nhập xong sẽ được tool hướng dẫn <em>tự tạo token</em> — không cần ai mời.</span>
         </li>
       </ol>
     </>
@@ -93,19 +85,20 @@ function SetupGuide({ app, canConfigure }) {
 }
 
 const LOGIN_ERRORS = [
-  { title: '“Ứng dụng không hoạt động” / “App not active” / “ứng dụng đang ở chế độ phát triển”', fix: 'Nick Facebook bạn đang đăng nhập không có vai trò trong app. Thêm nick đó làm Người thử nghiệm (bước 6 phần Thiết lập) và chấp nhận lời mời — hoặc đăng nhập bằng nick Quản trị viên của app.' },
+  { title: '“Ứng dụng không hoạt động” / “App not active” / “ứng dụng đang ở chế độ phát triển”', fix: 'Meta App của tool chưa phát hành nên Facebook chặn nick không có vai trò trong app (nick mới cũng vậy). Quản trị viên tool: phát hành app (bước 6 tab “Thiết lập Meta App”). Trong lúc chờ, bạn vẫn dùng được Fanpage của mình theo tab “Tự tạo token” — không cần ai mời.' },
   { title: '“URL bị chặn” / “URL Blocked”', fix: 'Chưa khai báo URI chuyển hướng. Làm bước 4 phần Thiết lập (Đăng nhập bằng Facebook → Cài đặt → URI chuyển hướng OAuth hợp lệ).' },
   { title: '“Không thể tải URL… miền của URL không có trong miền của ứng dụng”', fix: 'Chưa khai báo tên miền của tool. Làm bước 3 phần Thiết lập (Miền ứng dụng).' },
   { title: '“Tính năng không khả dụng” / “Feature unavailable”', fix: 'App chưa có Đăng nhập bằng Facebook. Làm bước 2 phần Thiết lập (thêm trường hợp sử dụng Đăng nhập bằng Facebook).' },
   { title: '“Phạm vi không hợp lệ” / “Invalid Scopes: …”', fix: 'App chưa được thêm quyền được nêu trong lỗi. Vào Trường hợp sử dụng → Tùy chỉnh → Quyền và tính năng → thêm đúng quyền đó (xem tab “Cấp quyền”).' },
-  { title: 'Đăng nhập xong nhưng tool báo “đã hủy” hoặc “chưa cấp đủ quyền”', fix: 'Bấm Đăng nhập Facebook lại, chọn “Chỉnh sửa quyền truy cập” và bật đủ Trang (Fanpage) + các quyền được hỏi.' },
+  { title: 'Đăng nhập xong nhưng tool báo “chưa đủ quyền dùng Fanpage”', fix: 'Nếu Facebook có hỏi quyền: đăng nhập lại, chọn “Chỉnh sửa quyền truy cập” và bật hết. Nếu Facebook không hỏi quyền Fanpage: làm theo tab “Tự tạo token”.' },
+  { title: 'Đăng nhập xong nhưng tool báo “chưa có Fanpage”', fix: 'Nick chưa quản trị Fanpage nào, hoặc chưa tích Fanpage khi đăng nhập. Xem tab “Tạo Fanpage”.' },
   { title: 'Quay về tool nhưng báo “Phiên đăng nhập Facebook đã hết hạn”', fix: 'Bạn mở trang đăng nhập quá lâu hoặc trình duyệt chặn cookie của tool. Đăng nhập tool lại rồi bấm Đăng nhập Facebook ngay (không mở ở tab ẩn danh khác).' }
 ];
 
 function LoginErrorsGuide() {
   return (
     <>
-      <p className="fb-guide-intro">Nếu sau khi bấm <em>Đăng nhập Facebook</em> mà Facebook hiện thông báo lỗi và không quay về tool, đối chiếu thông báo với bảng dưới:</p>
+      <p className="fb-guide-intro">Nếu sau khi bấm <em>Đăng nhập Facebook</em> mà Facebook hiện thông báo lỗi, đối chiếu thông báo với bảng dưới:</p>
       <ul className="fb-guide-errors">
         {LOGIN_ERRORS.map((item) => (
           <li key={item.title}><strong>{item.title}</strong><span>{item.fix}</span></li>
@@ -115,7 +108,7 @@ function LoginErrorsGuide() {
   );
 }
 
-function PermissionsGuide({ features, loginScopes }) {
+function PermissionsGuide({ features }) {
   return (
     <>
       <p className="fb-guide-intro">Mỗi tính năng cần các quyền dưới đây. Thiếu quyền nào thì tính năng đó chưa dùng được.</p>
@@ -131,47 +124,45 @@ function PermissionsGuide({ features, loginScopes }) {
         </tbody>
       </table>
       <ol className="fb-guide-steps">
-        <li><strong>Thêm quyền vào Meta App</strong><span>Trường hợp sử dụng → Tùy chỉnh → <em>Quyền và tính năng</em> → bấm <em>Thêm</em> cho từng quyền còn thiếu.</span></li>
-        <li><strong>Cấp quyền cho tool</strong><span>Bấm <em>Đăng nhập Facebook</em> trong trang Kênh → ở hộp thoại Facebook chọn <em>Chỉnh sửa quyền truy cập</em> → bật đủ Fanpage và các quyền → <em>Tiếp tục</em>.</span></li>
-        <li><strong>Dùng token dán tay?</strong><span>Khi tạo token ở Graph API Explorer, thêm đủ các quyền sau rồi tạo token mới:</span>
-          <dl className="fb-guide-fields"><dt>Danh sách quyền</dt><dd><CopyValue value={(loginScopes || []).join(',')} /></dd></dl>
-        </li>
+        <li><strong>Facebook có hỏi quyền khi đăng nhập</strong><span>Bấm <em>Đăng nhập Facebook</em> → ở hộp thoại Facebook chọn <em>Chỉnh sửa quyền truy cập</em> → bật đủ Fanpage và các quyền → <em>Tiếp tục</em>.</span></li>
+        <li><strong>Facebook không hỏi quyền Fanpage</strong><span>Meta App của tool chưa được duyệt quyền nâng cao cho nick của bạn. Tự tạo token có đủ quyền theo tab <em>Tự tạo token</em> — không cần ai mời.</span></li>
+        <li><strong>Quản trị viên Meta App của tool</strong><span>Thêm quyền vào app (Trường hợp sử dụng → Tùy chỉnh → <em>Quyền và tính năng</em>) và gửi <em>Xét duyệt ứng dụng</em> để mọi nick được Facebook hỏi quyền khi đăng nhập.</span></li>
       </ol>
     </>
   );
 }
 
-function AccountTokenGuide({ app, loginScopes }) {
+function AccountTokenGuide({ features }) {
   return (
     <>
-      <p className="fb-guide-intro">Token tài khoản giúp tool tự nạp <strong>toàn bộ Fanpage</strong> của nick Facebook và tự lấy lại token khi hết hạn.</p>
-      <ol className="fb-guide-steps">
-        <li><strong>Mở Graph API Explorer</strong><span><Ext href="https://developers.facebook.com/tools/explorer/">developers.facebook.com/tools/explorer</Ext> (đăng nhập bằng nick Facebook quản lý Fanpage).</span></li>
-        <li><strong>Chọn đúng Meta App</strong><span>Ô <em>Meta App</em> → chọn app của tool{app?.appId ? <> (ID <code>{app.appId}</code>)</> : null}. Token tạo bằng app khác sẽ không tự gia hạn được.</span></li>
-        <li><strong>Chọn loại token</strong><span>Ô <em>Người dùng hoặc Trang</em> → <em>Mã truy cập người dùng (User Token)</em>.</span></li>
-        <li><strong>Thêm quyền</strong><span>Ô <em>Quyền</em> → thêm từng quyền sau:</span>
-          <dl className="fb-guide-fields"><dt>Danh sách quyền</dt><dd><CopyValue value={(loginScopes || []).join(',')} /></dd></dl>
-        </li>
-        <li><strong>Tạo token</strong><span>Bấm <em>Generate Access Token</em> → đăng nhập → <em>Chỉnh sửa quyền truy cập</em> → chọn tất cả Fanpage → cho phép.</span></li>
-        <li><strong>Dán vào tool</strong><span>Chép token (bắt đầu bằng <code>EAA…</code>) → trang Kênh → <em>Thêm qua token → Token tài khoản Facebook</em> → dán → <em>Xác thực & Nạp Pages</em>.{app?.configured ? ' Tool tự đổi sang token dài hạn.' : ' Token này chỉ sống 1–2 giờ cho tới khi Quản trị viên cấu hình App ID & App Secret.'}</span></li>
-      </ol>
+      <p className="fb-guide-intro">Dùng khi đăng nhập Facebook bị chặn hoặc không được cấp quyền Fanpage. Bạn tự tạo token bằng Meta App <strong>của chính mình</strong> — không cần ai mời hay cấp vai trò. Tool sẽ tự nạp toàn bộ Fanpage của nick.</p>
+      <OwnTokenSteps features={features} />
     </>
   );
 }
 
-function PageTokenGuide({ app }) {
+function PageTokenGuide() {
   return (
     <>
-      <p className="fb-guide-intro">Dùng khi chỉ cần thêm <strong>một Fanpage</strong>. Lưu ý: Fanpage thêm bằng Page Token không tự lấy lại token được — nên ưu tiên Token tài khoản.</p>
+      <p className="fb-guide-intro">Dùng khi chỉ cần thêm <strong>một Fanpage</strong>. Lưu ý: Fanpage thêm bằng Page Token không tự lấy lại token được — nên ưu tiên token tài khoản (tab “Tự tạo token”).</p>
       <ol className="fb-guide-steps">
-        <li><strong>Có Token tài khoản trước</strong><span>Làm bước 1–5 ở tab <em>Token tài khoản</em> trong Graph API Explorer (chưa cần dán vào tool).</span></li>
-        <li><strong>Lấy danh sách Fanpage</strong><span>Trong Graph API Explorer, nhập vào ô truy vấn rồi bấm <em>Gửi</em>:</span>
+        <li><strong>Có token tài khoản trước</strong><span>Làm bước 1–5 ở tab <em>Tự tạo token</em> (chưa cần dán vào tool).</span></li>
+        <li><strong>Lấy danh sách Fanpage</strong><span>Trong Graph API Explorer, dán token 60 ngày vào ô <em>Mã truy cập</em>, nhập truy vấn sau rồi bấm <em>Gửi</em>:</span>
           <dl className="fb-guide-fields"><dt>Truy vấn</dt><dd><CopyValue value="me/accounts?fields=id,name,access_token" /></dd></dl>
         </li>
         <li><strong>Chép Page ID và Page Token</strong><span>Trong kết quả, tìm Fanpage cần thêm: <code>id</code> là <em>Page ID</em>, <code>access_token</code> là <em>Page Token</em>.</span></li>
         <li><strong>Dán vào tool</strong><span>Trang Kênh → <em>Thêm qua token → Token Page</em> → điền Page ID + Page Token → <em>Lưu kết nối</em>.</span></li>
-        <li><strong>Token không hết hạn</strong><span>{app?.configured ? 'Page Token lấy từ token tài khoản dài hạn sẽ không hết hạn. Nếu Token tài khoản là loại ngắn hạn, hãy dán nó vào tool trước (tool đổi sang dài hạn) rồi mới lấy Page Token.' : 'Page Token lấy từ token ngắn hạn sẽ hết hạn sau 1–2 giờ. Cấu hình App ID & App Secret để tool tự quản lý token dài hạn.'}</span></li>
+        <li><strong>Token không hết hạn</strong><span>Page Token lấy từ token tài khoản 60 ngày sẽ không hết hạn. Lấy từ token chưa gia hạn thì chỉ sống 1–2 giờ.</span></li>
       </ol>
+    </>
+  );
+}
+
+function CreatePageGuide() {
+  return (
+    <>
+      <p className="fb-guide-intro">Nick Facebook cần quản trị ít nhất 1 Fanpage thì tool mới có Trang để đăng bài, nhắn tin. Nick mới tạo có thể bị Facebook giới hạn tạo Trang trong vài ngày đầu — hãy xác minh số điện thoại cho nick trước.</p>
+      <CreatePageSteps />
     </>
   );
 }
@@ -196,11 +187,12 @@ export default function FacebookGuideModal({ open, tab, onTabChange, onClose, st
 
   const app = status?.app;
   const body = {
-    setup: <SetupGuide app={app} canConfigure={status?.canConfigure} />,
+    setup: <SetupGuide app={app} canConfigure={status?.canConfigure} webhook={status?.webhook} />,
     'login-errors': <LoginErrorsGuide />,
-    permissions: <PermissionsGuide features={status?.features} loginScopes={status?.loginScopes} />,
-    'account-token': <AccountTokenGuide app={app} loginScopes={status?.loginScopes} />,
-    'page-token': <PageTokenGuide app={app} />
+    permissions: <PermissionsGuide features={status?.features} />,
+    'account-token': <AccountTokenGuide features={status?.features} />,
+    'page-token': <PageTokenGuide />,
+    'create-page': <CreatePageGuide />
   }[tab] || null;
 
   return createPortal(

@@ -566,6 +566,7 @@ function clearTokenCache(pageId = null) {
   else tokenCache.clear();
 }
 
+
 function onConversationSynced(hook) {
   syncHooks.push(hook);
 }
@@ -788,22 +789,28 @@ async function getMessagingPageIds() {
 
 let cycleRunning = false;
 let lastInstagramRefresh = 0;
-const webhookSubscriptionRetry = new Map(); // pageId -> thời điểm được thử lại (Infinity = đã đăng ký)
+const webhookSubscriptionRetry = new Map(); // pageId:đuôi token -> thời điểm được thử lại (Infinity = đã đăng ký)
 const WEBHOOK_SUBSCRIBE_RETRY_MS = 10 * 60 * 1000;
 
 // Fanpage phải được đăng ký với app thì Meta mới gửi webhook tin nhắn (cần quyền pages_manage_metadata).
 // Chỉ chạy khi đã cấu hình webhook (MESSENGER_VERIFY_TOKEN) — bản chạy thử trên máy không đụng tới cài đặt Fanpage.
+// Ghi nhớ theo cả token Fanpage: token đổi (vd. đăng nhập lại bằng Meta App mới) thì đăng ký lại với app của token mới.
 async function ensurePageWebhookSubscription(pageId) {
   const key = String(pageId);
-  if (!process.env.MESSENGER_VERIFY_TOKEN || (webhookSubscriptionRetry.get(key) || 0) > Date.now()) return false;
-  webhookSubscriptionRetry.set(key, Date.now() + WEBHOOK_SUBSCRIBE_RETRY_MS);
+  if (!process.env.MESSENGER_VERIFY_TOKEN) return false;
+  const token = await getPageToken(key).catch(() => null);
+  if (!token) return false;
+  const retryKey = `${key}:${String(token).slice(-16)}`;
+  if ((webhookSubscriptionRetry.get(retryKey) || 0) > Date.now()) return false;
+  webhookSubscriptionRetry.set(retryKey, Date.now() + WEBHOOK_SUBSCRIBE_RETRY_MS);
   try {
-    const token = await getPageToken(key);
     // Gộp với các trường app đã đăng ký sẵn (vd: feed của AI Bình luận) để không ghi đè lẫn nhau
     const fields = new Set(['messages', 'message_echoes']);
     try {
       const current = (await axios.get(`${GRAPH}/${key}/subscribed_apps`, { params: { access_token: token }, timeout: 15000 })).data.data || [];
-      const appId = String(process.env.FACEBOOK_APP_ID || '');
+      // Meta App đang dùng (Cài đặt → Meta App, dự phòng FACEBOOK_APP_ID); nạp khi chạy để tránh vòng require
+      const { getMetaAppCredentials } = require('./FacebookTokenService');
+      const appId = String((await getMetaAppCredentials().catch(() => ({}))).appId || '');
       current
         .filter((item) => !appId || String(item.id) === appId)
         .forEach((item) => (item.subscribed_fields || []).forEach((field) => fields.add(field)));
@@ -814,7 +821,7 @@ async function ensurePageWebhookSubscription(pageId) {
       params: { subscribed_fields: [...fields].join(','), access_token: token },
       timeout: 15000
     });
-    webhookSubscriptionRetry.set(key, Infinity);
+    webhookSubscriptionRetry.set(retryKey, Infinity);
     console.log(`[Messenger Webhook] Đã đăng ký nhận webhook tin nhắn cho Fanpage ${key}.`);
     return true;
   } catch (error) {

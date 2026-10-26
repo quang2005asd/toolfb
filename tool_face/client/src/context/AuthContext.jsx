@@ -8,7 +8,7 @@ import { resetMessengerUnread } from '../hooks/useMessengerUnread';
 
 const AuthContext = createContext(null);
 
-const PUBLIC_PATHS = new Set(['/', '/login', '/privacy', '/terms', '/data-deletion']);
+const PUBLIC_PATHS = new Set(['/', '/login', '/privacy', '/terms', '/data-deletion', '/facebook-login-done']);
 
 // Cache dữ liệu theo tài khoản phải xóa khi đổi tài khoản để không lộ dữ liệu của người trước
 function resetAccountCaches() {
