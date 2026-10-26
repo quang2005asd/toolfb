@@ -81,6 +81,12 @@ export const channelApi = {
   },
   facebookLoginUrl: `${API_BASE}/auth/facebook`,
 
+  // Mức độ sẵn sàng đăng nhập Facebook (setup / login / expired / partial / ready) + quyền từng tính năng
+  facebookStatus: async (refresh = false) => {
+    const response = await api.get('/channels/facebook-status', { params: refresh ? { refresh: 1 } : {} });
+    return response.data;
+  },
+
   // Instagram Business / Creator liên kết với Fanpage
   instagramAccounts: async () => {
     const response = await api.get('/channels/instagram');

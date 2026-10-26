@@ -1111,6 +1111,11 @@ export default function ComposePage() {
       showToast('error', 'Facebook Reels bắt buộc phải đính kèm tệp Video (tỷ lệ chuẩn 9:16).');
       return;
     }
+    // Story trên Facebook phải có ảnh hoặc video (không đăng được Story chỉ có chữ)
+    if (targetPlatform === 'facebook' && postType === 'story' && mediaList.length === 0 && !uploadedMedia?.mediaLink) {
+      showToast('error', 'Facebook Story cần 1 ảnh hoặc video. Hãy tải ảnh/video lên ở bước "Viết bài", hoặc chuyển sang dạng Bài Feed để đăng bài chỉ có chữ.');
+      return;
+    }
     const parsedDate = scheduledAt ? new Date(scheduledAt) : new Date();
     if (!isPublishNow && Number.isNaN(parsedDate.getTime())) {
       showToast('error', 'Thời gian đăng bài không hợp lệ, vui lòng kiểm tra lại.');

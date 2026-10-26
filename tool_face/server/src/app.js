@@ -44,6 +44,7 @@ const commentAiService = require('./utils/CommentAiService');
 const { commentAiRouter } = require('./modules/comment-ai/comment-ai.routes');
 
 const tokenService = require('./utils/FacebookTokenService');
+const facebookLoginStatus = require('./utils/FacebookLoginStatusService');
 
 // Sau mỗi lần đồng bộ tin của một hội thoại: kiểm tra và gửi trả lời tự động nếu đang bật
 messengerService.onConversationSynced(autoReplyService.processConversation);
@@ -1287,6 +1288,16 @@ app.get('/api/channels/token-status', requireAuth, async (req, res) => {
     return res.json({ success: true, ...(await tokenService.getTokenStatus(req.user.sub)), loginUrl: '/api/auth/facebook' });
   } catch (error) {
     return sendApiError(res, 'Token Status Error', error, 'Không thể tải trạng thái token.');
+  }
+});
+
+// Mức độ sẵn sàng của đăng nhập Facebook (thiết lập Meta App → đăng nhập → quyền từng tính năng) cho trang Kênh
+app.get('/api/channels/facebook-status', requireAuth, async (req, res) => {
+  try {
+    const status = await facebookLoginStatus.getLoginStatus(req.user.sub, { force: req.query.refresh === '1' });
+    return res.json({ success: true, ...status, canConfigure: hasPermission(req.user.role, PERMISSIONS.SETTINGS_SYSTEM) });
+  } catch (error) {
+    return sendApiError(res, 'Facebook Status Error', error, 'Không thể kiểm tra trạng thái đăng nhập Facebook.');
   }
 });
 

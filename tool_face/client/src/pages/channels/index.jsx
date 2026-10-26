@@ -29,6 +29,8 @@ import PlatformIcon from '../../components/PlatformIcon';
 import InstagramChannels from '../../components/channels/InstagramChannels';
 import TikTokChannels from '../../components/channels/TikTokChannels';
 import TokenHealthBanner from '../../components/channels/TokenHealthBanner';
+import FacebookConnectPanel from '../../components/channels/FacebookConnectPanel';
+import FacebookGuideModal from '../../components/channels/FacebookGuideModal';
 import useAuth from '../../hooks/useAuth';
 import { PERMISSIONS } from '../../utils/permissions';
 import channelApi from '../../services/channelApi';
@@ -52,6 +54,26 @@ export default function ChannelsPage() {
   const [tiktokCount, setTiktokCount] = useState(null);
   const [tokenInfo, setTokenInfo] = useState(null);
   const [renewingTokens, setRenewingTokens] = useState(false);
+
+  // Mức độ sẵn sàng đăng nhập Facebook (Meta App → đăng nhập → quyền) & hướng dẫn từng bước
+  const [fbStatus, setFbStatus] = useState(null);
+  const [fbStatusError, setFbStatusError] = useState('');
+  const [fbStatusChecking, setFbStatusChecking] = useState(false);
+  const [guideTab, setGuideTab] = useState(null);
+  const [oauthHelp, setOauthHelp] = useState(null); // { code, message } lỗi trả về từ Facebook Login
+
+  const loadFbStatus = async (refresh = false) => {
+    setFbStatusChecking(true);
+    try {
+      const res = await channelApi.facebookStatus(refresh);
+      setFbStatus(res);
+      setFbStatusError('');
+    } catch (err) {
+      setFbStatusError(err.response?.data?.message || 'Không kết nối được máy chủ.');
+    } finally {
+      setFbStatusChecking(false);
+    }
+  };
 
   useEffect(() => {
     channelApi.instagramAccounts().then((res) => setInstagramCount((res.accounts || []).length)).catch(() => {});
@@ -131,6 +153,7 @@ export default function ChannelsPage() {
   useEffect(() => {
     loadData();
     handleCheckTokens();
+    loadFbStatus();
   }, []);
 
   // Kết quả trả về từ Facebook Login (đăng nhập lại để lấy token mới)
@@ -143,6 +166,7 @@ export default function ChannelsPage() {
       setNotice(`✅ Đã đăng nhập lại Facebook và lấy lại token cho ${connected} Fanpage.${longLived ? ' Token dài hạn — token Fanpage sẽ không hết hạn.' : ''}`);
       loadData();
       handleCheckTokens();
+      loadFbStatus(true);
     } else {
       const messages = {
         oauth_denied: 'Bạn đã hủy đăng nhập Facebook hoặc chưa cấp đủ quyền.',
@@ -150,7 +174,9 @@ export default function ChannelsPage() {
         oauth_state_invalid: 'Phiên đăng nhập Facebook đã hết hạn, hãy thử lại.',
         app_not_configured: 'Chưa cấu hình App ID & App Secret nên chưa đăng nhập Facebook được. Quản trị viên vào Cài đặt → Hồ sơ & bảo mật để cấu hình.'
       };
-      setError(messages[oauthError] || 'Không đăng nhập được Facebook.');
+      const message = messages[oauthError] || 'Không đăng nhập được Facebook.';
+      setError(message);
+      setOauthHelp({ code: String(oauthError), message });
     }
     const rest = { ...router.query };
     delete rest.connected;
@@ -161,6 +187,12 @@ export default function ChannelsPage() {
 
   const reconnectFacebook = () => {
     window.location.href = channelApi.facebookLoginUrl;
+  };
+
+  // Chưa thiết lập Meta App thì mở hướng dẫn thay vì chuyển sang trang lỗi của Facebook
+  const startFacebookLogin = () => {
+    if (fbStatus?.level === 'setup') return setGuideTab('setup');
+    return reconnectFacebook();
   };
 
   const openPasteToken = () => {
@@ -180,6 +212,7 @@ export default function ChannelsPage() {
       else setError(res.message);
       await loadData();
       await handleCheckTokens({ quiet: true });
+      loadFbStatus(true);
     } catch (err) {
       setError(err.response?.data?.message || 'Không thể làm mới token.');
     } finally {
@@ -231,6 +264,7 @@ export default function ChannelsPage() {
       applySyncResult(res);
       await loadData();
       await handleCheckTokens({ quiet: true });
+      loadFbStatus(true);
       setNotice(res.message || 'Đã đồng bộ toàn bộ Fanpage từ các tài khoản Facebook!');
     } catch (err) {
       setError(err.response?.data?.message || 'Không thể đồng bộ Fanpage.');
@@ -298,6 +332,7 @@ export default function ChannelsPage() {
       await channelApi.disconnectAccount(accId);
       setNotice(`Đã xóa tài khoản Facebook "${accName}" thành công.`);
       await loadData();
+      loadFbStatus();
     } catch (err) {
       setError(err.response?.data?.message || 'Không thể xóa tài khoản Facebook.');
     } finally {
@@ -320,6 +355,7 @@ export default function ChannelsPage() {
       setShowFbAccountModal(false);
       setFbAccountToken('');
       await loadData();
+      loadFbStatus(true);
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Lỗi kết nối tài khoản Facebook.');
     } finally {
@@ -480,7 +516,12 @@ export default function ChannelsPage() {
       title="Quản lý Kênh"
       actions={platform !== 'facebook' ? null : (
         <div className="channel-actions">
-          <button className="button button-primary" type="button" onClick={reconnectFacebook}>
+          <button
+            className="button button-primary"
+            type="button"
+            onClick={startFacebookLogin}
+            title={fbStatus?.level === 'setup' ? 'Chưa thiết lập Meta App — mở hướng dẫn thiết lập' : 'Đăng nhập Facebook để kết nối / lấy lại token Fanpage'}
+          >
             <LogIn size={15} /> Đăng nhập Facebook
           </button>
 
@@ -583,17 +624,42 @@ export default function ChannelsPage() {
         <InstagramChannels onCountChange={setInstagramCount} />
       ) : (
       <>
-      <TokenHealthBanner
-        info={tokenInfo}
-        invalidPageCount={Object.values(tokenStatuses).filter((item) => !item.isValid).length}
-        canConfigureApp={can(PERMISSIONS.SETTINGS_SYSTEM)}
-        renewing={renewingTokens}
-        onRenew={handleRenewTokens}
-        onReconnect={reconnectFacebook}
+      <FacebookConnectPanel
+        status={fbStatus}
+        error={fbStatusError}
+        checking={fbStatusChecking}
+        onLogin={reconnectFacebook}
+        onOpenGuide={setGuideTab}
         onPasteToken={openPasteToken}
+        onRefresh={() => loadFbStatus(true)}
       />
+      {/* Chưa có nick nào thì bảng trạng thái phía trên đã hướng dẫn kết nối */}
+      {(tokenInfo?.accounts?.length > 0 || Object.values(tokenStatuses).some((item) => !item.isValid)) && (
+        <TokenHealthBanner
+          info={tokenInfo}
+          invalidPageCount={Object.values(tokenStatuses).filter((item) => !item.isValid).length}
+          canConfigureApp={can(PERMISSIONS.SETTINGS_SYSTEM)}
+          renewing={renewingTokens}
+          onRenew={handleRenewTokens}
+          onReconnect={reconnectFacebook}
+          onPasteToken={openPasteToken}
+        />
+      )}
       {notice && <div className="notice" style={{ marginBottom: 14, borderColor: 'rgba(16, 185, 129, 0.4)', color: '#10b981' }}>{notice}</div>}
-      {error && <div className="notice" style={{ marginBottom: 14, borderColor: 'rgba(239, 68, 68, 0.4)', color: '#ef4444' }}>{error}</div>}
+      {error && (
+        <div className="notice" style={{ marginBottom: 14, borderColor: 'rgba(239, 68, 68, 0.4)', color: '#ef4444' }}>
+          {error}
+          {oauthHelp?.message === error && (
+            <>
+              {' '}
+              <button type="button" className="auth-inline-link" onClick={() => setGuideTab(oauthHelp.code === 'app_not_configured' ? 'setup' : 'login-errors')}>
+                Xem cách xử lý
+              </button>
+            </>
+          )}
+        </div>
+      )}
+      <FacebookGuideModal open={Boolean(guideTab)} tab={guideTab} onTabChange={setGuideTab} onClose={() => setGuideTab(null)} status={fbStatus} />
 
       {/* Tabs chuyển đổi giữa Kênh, Nhóm kênh và Tài khoản Facebook (Apple Frosted Glass) */}
       <div className="step-strip" role="tablist" style={{ marginBottom: 20 }}>
@@ -628,7 +694,12 @@ export default function ChannelsPage() {
               <Globe2 size={18} style={{ verticalAlign: 'middle', marginRight: 8, color: 'var(--blue)' }} />
               Kết nối tài khoản Facebook bằng Access Token
             </h2>
-            <button className="button button-quiet" type="button" style={{ minHeight: 28, padding: '0 10px', fontSize: 11 }} onClick={() => setShowFbAccountModal(false)}>Đóng</button>
+            <div className="fb-token-form-tools">
+              <button className="button button-secondary" type="button" onClick={() => setGuideTab('account-token')}>
+                <CircleHelp size={13} /> Hướng dẫn lấy token
+              </button>
+              <button className="button button-quiet" type="button" style={{ minHeight: 28, padding: '0 10px', fontSize: 11 }} onClick={() => setShowFbAccountModal(false)}>Đóng</button>
+            </div>
           </div>
           <form className="panel-body" onSubmit={handleConnectFacebook}>
             <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 0, marginBottom: 12 }}>
@@ -670,7 +741,12 @@ export default function ChannelsPage() {
         <section className="panel" style={{ marginBottom: 20 }}>
           <div className="panel-heading">
             <h2><KeyRound size={16} style={{ verticalAlign: 'middle', marginRight: 8, color: 'var(--blue)' }} />Thêm Fanpage bằng Page Access Token</h2>
-            <button className="button button-quiet" type="button" style={{ minHeight: 28, padding: '0 10px', fontSize: 11 }} onClick={() => setShowManualModal(false)}>Đóng</button>
+            <div className="fb-token-form-tools">
+              <button className="button button-secondary" type="button" onClick={() => setGuideTab('page-token')}>
+                <CircleHelp size={13} /> Hướng dẫn lấy Page Token
+              </button>
+              <button className="button button-quiet" type="button" style={{ minHeight: 28, padding: '0 10px', fontSize: 11 }} onClick={() => setShowManualModal(false)}>Đóng</button>
+            </div>
           </div>
           <form className="panel-body" onSubmit={handleManualAdd}>
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 300px) 1fr auto', gap: 12, alignItems: 'end' }}>

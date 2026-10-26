@@ -424,6 +424,7 @@ module.exports = {
   getMetaAppCredentials,
   getTokenStatus,
   inspectUserToken,
+  listAccounts,
   loginScopes,
   onTokensRenewed,
   renewAll,
