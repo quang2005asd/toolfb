@@ -70,9 +70,22 @@ services:
       # AI Bình luận: dùng chung Callback URL /api/webhooks/messenger (không cần FB_VERIFY_TOKEN riêng)
       - POLL_COMMENTS=${POLL_COMMENTS:-on}
       - REPLY_MIN_GAP_MS=${REPLY_MIN_GAP_MS:-6000}
+      # Cấu hình AI Studio (Groq & Gemini)
+      - AI_API_KEY=${AI_API_KEY:-}
+      - AI_API_KEY_1=${AI_API_KEY_1:-}
+      - AI_API_KEY_2=${AI_API_KEY_2:-}
+      - AI_API_KEY_3=${AI_API_KEY_3:-}
+      - AI_API_KEY_4=${AI_API_KEY_4:-}
+      - AI_API_KEY_5=${AI_API_KEY_5:-}
+      - GROQ_API_KEYS=${GROQ_API_KEYS:-}
+      - AI_MODEL=${AI_MODEL:-openai/gpt-oss-120b}
+      - AI_API_BASE_URL=${AI_API_BASE_URL:-https://api.groq.com/openai/v1}
+      - GEMINI_API_KEYS=${GEMINI_API_KEYS:-}
+      - APPS_SCRIPT_URL=${APPS_SCRIPT_URL:-}
     volumes:
       - ./server/src:/app/src
       - ./server/config:/app/config
+      - ./server/queues:/app/queues
       - server_data:/app/data
       - server_uploads:/app/uploads
     depends_on:
@@ -106,9 +119,11 @@ services:
       - SESSION_SECRET=${SESSION_SECRET:?Hay dat SESSION_SECRET trong file .env}
       - FACEBOOK_APP_ID=${FACEBOOK_APP_ID:-}
       - FACEBOOK_APP_SECRET=${FACEBOOK_APP_SECRET:-}
+      - APPS_SCRIPT_URL=${APPS_SCRIPT_URL:-}
     volumes:
       - ./server/src:/app/src
       - ./server/config:/app/config
+      - ./server/queues:/app/queues
       - server_data:/app/data
       - server_uploads:/app/uploads
     depends_on:

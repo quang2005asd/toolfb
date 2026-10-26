@@ -2952,9 +2952,10 @@ const server = app.listen(PORT, () => {
 
   // Tùy chọn gộp Worker chạy chung một tiến trình (Dành cho Render / Cloud Free không tốn thêm $7/tháng)
   if (process.env.RUN_WORKER_IN_PROCESS === 'true') {
-    console.log('⚡ [In-Process Worker] Tự động kích hoạt Post Worker chạy chung trong Backend...');
+    console.log('⚡ [In-Process Worker] Tự động kích hoạt Post Worker & Auth Log Worker chạy chung trong Backend...');
     try {
       require('../queues/post.worker');
+      require('../queues/authlog.worker');
     } catch (workerErr) {
       console.warn('[In-Process Worker Error]', workerErr.message);
     }
