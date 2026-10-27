@@ -8,6 +8,7 @@
     "dev": "nodemon --watch src --watch .env --ext js,json,env src/app.js",
     "worker": "nodemon --watch queues --watch src --watch .env queues/post.worker.js",
     "worker:comments": "nodemon --watch queues --watch src --watch .env queues/comment.worker.js",
+    "worker:tiktok": "nodemon --watch queues --watch src --watch .env queues/tiktok.worker.js",
     "workers": "node queues/start.workers.js"
   },
   "dependencies": {

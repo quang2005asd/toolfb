@@ -286,10 +286,50 @@ async function executePublishPost(postId) {
     return;
   }
 
-  // Điều hướng nếu là bài đăng TikTok
+  // Điều hướng nếu là bài đăng TikTok → ĐẨY VÀO HÀNG ĐỢI để kiểm soát tải
+  // Lý do: Mỗi lần upload TikTok phải khởi động 1 browser Chromium (~300-500MB RAM).
+  // Nếu gọi trực tiếp, nhiều người upload cùng lúc sẽ làm server quá tải.
+  // Hàng đợi đảm bảo chỉ tối đa TIKTOK_MAX_CONCURRENT_BROWSERS chạy song song.
   if (post.platform === 'tiktok') {
-    const { executePublishTikTokPost } = require('./TikTokPuppeteerService');
-    return executePublishTikTokPost(postId);
+    const isStandalone = process.env.DISABLE_REDIS === 'true';
+
+    // Lấy tiktok_account_id từ bài đăng
+    const tiktokAccountId = post.tiktok_account_id || post.page_id;
+    if (!tiktokAccountId) {
+      throw new Error('Chưa chọn tài khoản TikTok để đăng bài.');
+    }
+
+    if (!isStandalone) {
+      // ── Chế độ BullMQ (có Redis): Đẩy vào queue, worker sẽ xử lý ──
+      try {
+        const { addTikTokUploadToQueue } = require('../../queues/tiktok.queue');
+        const result = await addTikTokUploadToQueue(postId, tiktokAccountId);
+        console.log(`[PostExecution] 📋 TikTok Post #${postId} đã vào hàng chờ upload. Job: ${result.jobId || 'in-queue'}`);
+
+        // Cập nhật trạng thái sang 'queued' để UI biết bài đang chờ xử lý
+        await pool.request()
+          .input('id', sql.Int, postId)
+          .query("UPDATE Posts SET status = 'queued' WHERE id = @id AND status IN ('pending', 'scheduled')");
+        return;
+      } catch (queueErr) {
+        console.warn('[PostExecution] TikTok Queue không khả dụng, thực thi trực tiếp:', queueErr.message);
+        // Fallback: thực thi trực tiếp nếu queue lỗi
+        const { executePublishTikTokPost } = require('./TikTokPuppeteerService');
+        return executePublishTikTokPost(postId);
+      }
+    } else {
+      // ── Chế độ Standalone (không có Redis): Dùng InMemoryQueue ──
+      try {
+        const { addTikTokUploadToQueue } = require('../../queues/tiktok.queue');
+        const result = await addTikTokUploadToQueue(postId, tiktokAccountId);
+        console.log(`[PostExecution] 📋 TikTok Post #${postId} vào hàng in-memory (vị trí ${result.position || '?'}).`);
+        return;
+      } catch (queueErr) {
+        console.warn('[PostExecution] InMemory TikTok Queue lỗi, thực thi trực tiếp:', queueErr.message);
+        const { executePublishTikTokPost } = require('./TikTokPuppeteerService');
+        return executePublishTikTokPost(postId);
+      }
+    }
   }
 
   const claimResult = await pool.request()

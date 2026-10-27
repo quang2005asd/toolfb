@@ -42,7 +42,8 @@ export default function DashboardPage() {
       totalComments: 0,
       totalShares: 0,
       totalPosts: 0,
-      avgEngagementPerPost: 0
+      avgEngagementPerPost: 0,
+      tiktok: { totalPosts: 0, totalAccounts: 0 }
     },
     chartData: [],
     topPosts: []
@@ -78,7 +79,8 @@ export default function DashboardPage() {
             totalComments: 0,
             totalShares: 0,
             totalPosts: 0,
-            avgEngagementPerPost: 0
+            avgEngagementPerPost: 0,
+            tiktok: { totalPosts: 0, totalAccounts: 0 }
           },
           chartData: Array.isArray(result.chartData) ? result.chartData : [],
           topPosts: Array.isArray(result.topPosts) ? result.topPosts : [],
@@ -236,7 +238,24 @@ export default function DashboardPage() {
             Tương tác trung bình / {summary.totalPosts} bài đăng đã xuất bản
           </div>
         </article>
+
+        {/* Thẻ 5: TikTok */}
+        <article className="panel metric-card" style={{ borderTop: '2px solid #e2336b' }}>
+          <div className="metric-label" style={{ color: '#e2336b' }}>
+            <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor" style={{ display: 'inline', verticalAlign: 'middle' }}>
+              <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.76a4.85 4.85 0 0 1-1.01-.07z"/>
+            </svg>
+            {' '}Video TikTok đã đăng
+          </div>
+          <div className="metric-value" style={{ color: '#e2336b' }}>
+            {reportLoading ? '—' : (summary.tiktok?.totalPosts || 0).toLocaleString('vi-VN')}
+          </div>
+          <div className="metric-foot">
+            {summary.tiktok?.totalAccounts || 0} tài khoản TikTok · {period} ngày gần nhất
+          </div>
+        </article>
       </section>
+
 
       {/* ═══ BIỂU ĐỒ TỔNG HỢP LƯỢT XEM & TƯƠNG TÁC BÀI VIẾT ═══ */}
       <section className="panel" style={{ marginBottom: 22 }}>
@@ -360,7 +379,8 @@ export default function DashboardPage() {
                   <tr>
                     <th style={{ width: 50 }}>#</th>
                     <th>Nội dung bài viết</th>
-                    <th>Fanpage</th>
+                    <th>Nền tảng</th>
+                    <th>Tài khoản / Fanpage</th>
                     <th>Ngày đăng</th>
                     <th style={{ textAlign: 'center' }}>Lượt xem</th>
                     <th style={{ textAlign: 'center' }}>Cảm xúc</th>
@@ -371,7 +391,9 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {reportData.topPosts.map((post, idx) => (
+                  {reportData.topPosts.map((post, idx) => {
+                    const isTikTok = post.platform === 'tiktok';
+                    return (
                     <tr key={post.id}>
                       <td>
                         <strong style={{ color: idx === 0 ? '#f59e0b' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#64748b', fontSize: 13 }}>
@@ -379,13 +401,18 @@ export default function DashboardPage() {
                         </strong>
                       </td>
                       <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, maxWidth: 360 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, maxWidth: 340 }}>
                           {post.full_picture && (
                             <img
                               src={post.full_picture}
                               alt=""
                               style={{ width: 38, height: 38, borderRadius: 8, objectFit: 'cover', flexShrink: 0, border: '1px solid rgba(255,255,255,0.1)' }}
                             />
+                          )}
+                          {!post.full_picture && isTikTok && (
+                            <div style={{ width: 38, height: 38, borderRadius: 8, background: 'linear-gradient(135deg,#010101,#333)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <svg width={18} height={18} viewBox="0 0 24 24" fill="#e2336b"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.76a4.85 4.85 0 0 1-1.01-.07z"/></svg>
+                            </div>
                           )}
                           <div style={{ overflow: 'hidden' }}>
                             <div
@@ -406,7 +433,20 @@ export default function DashboardPage() {
                         </div>
                       </td>
                       <td>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--blue)' }}>{post.pageName}</span>
+                        {isTikTok ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(226,51,107,0.12)', border: '1px solid rgba(226,51,107,0.3)', color: '#e2336b', padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 700 }}>
+                            <svg width={10} height={10} viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.76a4.85 4.85 0 0 1-1.01-.07z"/></svg>
+                            TikTok
+                          </span>
+                        ) : (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.3)', color: '#2563eb', padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 700 }}>
+                            <svg width={10} height={10} viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                            Facebook
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: isTikTok ? '#e2336b' : 'var(--blue)' }}>{post.pageName}</span>
                       </td>
                       <td>
                         <span style={{ fontSize: 12, color: 'var(--muted)' }}>
@@ -415,36 +455,38 @@ export default function DashboardPage() {
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         <span style={{ fontWeight: 700, color: 'var(--ink)', fontSize: 12.5 }}>
-                          {post.views ? post.views.toLocaleString('vi-VN') : '—'}
+                          {isTikTok ? <span className="muted" style={{ fontSize: 11 }}>N/A</span> : (post.views ? post.views.toLocaleString('vi-VN') : '—')}
                         </span>
                       </td>
                       <td style={{ textAlign: 'center' }}>
-                        <span style={{ color: 'var(--blue)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-                          <ThumbsUp size={11} /> {post.reactions}
-                        </span>
+                        {isTikTok ? <span className="muted" style={{ fontSize: 11 }}>—</span> : (
+                          <span style={{ color: 'var(--blue)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                            <ThumbsUp size={11} /> {post.reactions}
+                          </span>
+                        )}
                       </td>
                       <td style={{ textAlign: 'center' }}>
-                        <span style={{ color: '#059669', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-                          <MessageSquare size={11} /> {post.comments}
-                        </span>
+                        {isTikTok ? <span className="muted" style={{ fontSize: 11 }}>—</span> : (
+                          <span style={{ color: '#059669', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                            <MessageSquare size={11} /> {post.comments}
+                          </span>
+                        )}
                       </td>
                       <td style={{ textAlign: 'center' }}>
-                        <span style={{ color: '#7c3aed', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-                          <Share2 size={11} /> {post.shares}
-                        </span>
+                        {isTikTok ? <span className="muted" style={{ fontSize: 11 }}>—</span> : (
+                          <span style={{ color: '#7c3aed', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                            <Share2 size={11} /> {post.shares}
+                          </span>
+                        )}
                       </td>
                       <td style={{ textAlign: 'center' }}>
-                        <span style={{
-                          background: 'rgba(56, 189, 248, 0.15)',
-                          border: '1px solid rgba(56, 189, 248, 0.35)',
-                          color: '#38bdf8',
-                          padding: '3px 10px',
-                          borderRadius: 99,
-                          fontWeight: 800,
-                          fontSize: 12
-                        }}>
-                          {post.engagements}
-                        </span>
+                        {isTikTok ? (
+                          <span style={{ background: 'rgba(226,51,107,0.12)', border: '1px solid rgba(226,51,107,0.3)', color: '#e2336b', padding: '3px 10px', borderRadius: 99, fontWeight: 800, fontSize: 12 }}>đã đăng</span>
+                        ) : (
+                          <span style={{ background: 'rgba(56, 189, 248, 0.15)', border: '1px solid rgba(56, 189, 248, 0.35)', color: '#38bdf8', padding: '3px 10px', borderRadius: 99, fontWeight: 800, fontSize: 12 }}>
+                            {post.engagements}
+                          </span>
+                        )}
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         {post.permalink_url ? (
@@ -459,11 +501,12 @@ export default function DashboardPage() {
                             <ExternalLink size={12} />
                           </a>
                         ) : (
-                          <span className="muted" style={{ fontSize: 11 }}>—</span>
+                          <span className="muted" style={{ fontSize: 11 }}>{isTikTok ? 'TikTok' : '—'}</span>
                         )}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

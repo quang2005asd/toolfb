@@ -26,13 +26,21 @@ export const parseExcelPreview = (file) => {
           const match = String(channelName).match(/^(.*?)\|/);
           if (match) channelName = match[1].trim();
 
+          const rawPlatform = row['Platform'] || row['Nền tảng'] || row['Nền tảng (FB/TikTok)'] || row['Nền tảng (Facebook/TikTok)'] || '';
+          let platform = 'facebook';
+          const normP = String(rawPlatform).toLowerCase();
+          if (normP.includes('tiktok') || normP === 'tt') platform = 'tiktok';
+          else if (normP.includes('ca hai') || normP.includes('all') || normP.includes('both')) platform = 'all';
+          else if (String(channelName).toLowerCase().startsWith('@') || String(channelName).toLowerCase().includes('tiktok')) platform = 'tiktok';
+
           return {
             key: index,
             rowIndex: index + 2,
+            platform,
             channel: channelName,
             content: row['Content'] || row['Nội dung'] || row['Nội dung bài đăng'] || '(Không có nội dung)',
             schedule: row['Schedule'] || row['Thời gian đăng'] || row['Lịch đăng'] || 'Đăng ngay',
-            mediaType: row['Media Type'] || row['Loại Media'] || (mediaCount > 0 ? 'image' : 'text'),
+            mediaType: row['Media Type'] || row['Loại Media'] || (mediaCount > 0 ? (platform === 'tiktok' ? 'video' : 'image') : 'text'),
             mediaCount: mediaCount,
             comment1: row['Seeding Comment 1'] || row['Comment 1'] || row['Bình luận 1'] || '-',
             comment2: row['Seeding Comment 2'] || row['Comment 2'] || row['Bình luận 2'] || '-'
