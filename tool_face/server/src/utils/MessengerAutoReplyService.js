@@ -10,6 +10,7 @@ const axios = require('axios');
 const { sql, getPool } = require('../../config/db');
 const messenger = require('./MessengerService');
 const { getAiConfig } = require('./AiContentGenerator');
+const commentAiService = require('./CommentAiService');
 
 const AUTO_REPLY_SENDER = 'auto';
 const MODES = ['template', 'ai'];
@@ -184,9 +185,11 @@ async function generateAiReply({ messages, pageName, customerName, instruction }
   return reply.slice(0, messenger.MAX_TEXT_LENGTH);
 }
 
-async function buildReply({ settings, messages, pageName, customerName }) {
+async function buildReply({ settings, messages, pageId, pageName, customerName }) {
   if (settings.mode === 'ai') {
     try {
+      const templateReply = await commentAiService.generateInboxReply({ pageId, messages, pageName, customerName });
+      if (templateReply) return { text: templateReply.reply, modeUsed: 'ai' };
       return { text: await generateAiReply({ messages, pageName, customerName, instruction: settings.aiInstruction }), modeUsed: 'ai' };
     } catch (error) {
       return { text: renderTemplate(settings.templateText, { customerName, pageName }), modeUsed: 'template_fallback', aiError: error.message };
@@ -265,7 +268,7 @@ async function processConversation(conversationId) {
 
     try {
       const pageName = await getPageName(conversation.page_id);
-      const reply = await buildReply({ settings, messages, pageName, customerName: conversation.participant_name });
+      const reply = await buildReply({ settings, messages, pageId: conversation.page_id, pageName, customerName: conversation.participant_name });
       const result = await messenger.sendMessage({
         conversationId: conversation.id,
         text: reply.text,
@@ -287,11 +290,12 @@ async function processConversation(conversationId) {
   }
 }
 
-async function previewReply({ settings, pageName, sampleText }) {
+async function previewReply({ settings, pageId, pageName, sampleText }) {
   const sample = String(sampleText || '').trim() || 'shgagdwy';
   return buildReply({
     settings: { ...normalizeSettings('preview', null), ...settings },
     messages: [{ isFromPage: false, text: sample, attachments: [] }],
+    pageId,
     pageName,
     customerName: 'Khách hàng'
   });

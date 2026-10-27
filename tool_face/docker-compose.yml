@@ -81,9 +81,11 @@ services:
       - AI_MODEL=${AI_MODEL:-openai/gpt-oss-120b}
       - AI_API_BASE_URL=${AI_API_BASE_URL:-https://api.groq.com/openai/v1}
       - GEMINI_API_KEYS=${GEMINI_API_KEYS:-}
+      - APPS_SCRIPT_URL=${APPS_SCRIPT_URL:-}
     volumes:
       - ./server/src:/app/src
       - ./server/config:/app/config
+      - ./server/queues:/app/queues
       - server_data:/app/data
       - server_uploads:/app/uploads
     depends_on:
@@ -117,9 +119,11 @@ services:
       - SESSION_SECRET=${SESSION_SECRET:?Hay dat SESSION_SECRET trong file .env}
       - FACEBOOK_APP_ID=${FACEBOOK_APP_ID:-}
       - FACEBOOK_APP_SECRET=${FACEBOOK_APP_SECRET:-}
+      - APPS_SCRIPT_URL=${APPS_SCRIPT_URL:-}
     volumes:
       - ./server/src:/app/src
       - ./server/config:/app/config
+      - ./server/queues:/app/queues
       - server_data:/app/data
       - server_uploads:/app/uploads
     depends_on:

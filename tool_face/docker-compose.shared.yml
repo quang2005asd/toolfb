@@ -46,6 +46,8 @@ x-app-env: &app-env
   AI_API_BASE_URL: ${AI_API_BASE_URL:-https://api.groq.com/openai/v1}
   AI_MODEL: ${AI_MODEL:-openai/gpt-oss-120b}
   GEMINI_API_KEYS: ${GEMINI_API_KEYS:-}
+  # Ghi log đăng ký / đăng nhập vào Google Sheet (URL Web App của Google Apps Script; để trống = tắt)
+  APPS_SCRIPT_URL: ${APPS_SCRIPT_URL:-}
 
 x-logging: &logging
   driver: json-file

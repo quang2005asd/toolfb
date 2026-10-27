@@ -41,7 +41,7 @@ const autoReplyService = require('./utils/MessengerAutoReplyService');
 const instagramService = require('./utils/InstagramService');
 const tiktokService = require('./utils/TikTokService');
 const commentAiService = require('./utils/CommentAiService');
-const { commentAiRouter } = require('./modules/comment-ai/comment-ai.routes');
+const { commentAiRouter, facebookWebhookRouter } = require('./modules/comment-ai/comment-ai.routes');
 
 const tokenService = require('./utils/FacebookTokenService');
 const facebookLoginStatus = require('./utils/FacebookLoginStatusService');
@@ -110,6 +110,7 @@ app.use(express.json({
 }));
 app.use('/api', loadSession);
 app.use('/api/comment-ai', commentAiRouter);
+app.use('/api/webhooks/facebook', facebookWebhookRouter);
 
 const mediaDirectory = process.env.APP_DATA_DIR
   ? path.join(process.env.APP_DATA_DIR, 'uploads')
@@ -1753,6 +1754,7 @@ app.post('/api/messenger/auto-reply/preview', requireAuth, async (req, res) => {
     const { mode, templateText, aiInstruction, sampleText } = req.body || {};
     const preview = await autoReplyService.previewReply({
       settings: { mode: mode === 'ai' ? 'ai' : 'template', templateText, aiInstruction },
+      pageId: page?.id,
       pageName: page?.name || 'Shop',
       sampleText
     });
@@ -3043,13 +3045,14 @@ const server = app.listen(PORT, () => {
   // Khởi tạo schema TikTok (bảng TikTokAccounts + cột Posts.platform, Posts.tiktok_account_id)
   tiktokService.ensureTikTokSchema().catch((error) => console.error('[TikTok Schema Init Error]', error.message));
   // AI Bình luận: quét bình luận mới mỗi 2 phút (webhook feed vẫn là đường chính khi đã đăng ký)
-  if (process.env.POLL_COMMENTS !== 'off') commentAiService.startPolling(120000);
+  if (process.env.POLL_COMMENTS !== 'off') commentAiService.startPolling();
 
   // Tùy chọn gộp Worker chạy chung một tiến trình (Dành cho Render / Cloud Free không tốn thêm $7/tháng)
   if (process.env.RUN_WORKER_IN_PROCESS === 'true') {
-    console.log('⚡ [In-Process Worker] Tự động kích hoạt Post Worker chạy chung trong Backend...');
+    console.log('⚡ [In-Process Worker] Tự động kích hoạt Post Worker & Auth Log Worker chạy chung trong Backend...');
     try {
       require('../queues/post.worker');
+      require('../queues/authlog.worker');
     } catch (workerErr) {
       console.warn('[In-Process Worker Error]', workerErr.message);
     }

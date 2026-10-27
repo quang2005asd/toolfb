@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { sql, getPool } = require('../../config/db');
+const { sql, getPool, redisConfig } = require('../../config/db');
 const {
   DEFAULT_ROLE,
   assignableRoles,
@@ -8,6 +8,41 @@ const {
   isValidRole,
   roleLevel
 } = require('./Roles');
+
+let authLogQueue = null;
+try {
+  const { Queue } = require('bullmq');
+  authLogQueue = new Queue('auth-log', {
+    connection: redisConfig,
+    defaultJobOptions: {
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 1000
+      },
+      removeOnComplete: true,
+      removeOnFail: false
+    }
+  });
+  authLogQueue.on('error', (err) => {
+    console.error('[AuthLog Queue Error]', err.message);
+  });
+} catch (e) {
+  console.warn('[AuthLog Queue] BullMQ not initialized:', e.message);
+}
+
+function enqueueAuthLog(payload) {
+  if (!authLogQueue) return;
+  authLogQueue.add('auth-log', payload, {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 1000
+    },
+    removeOnComplete: true,
+    removeOnFail: false
+  }).catch(console.error);
+}
 
 const DEFAULT_ADMIN = { username: 'admin', password: '1', displayName: 'Administrator' };
 const ACCOUNT_STATUSES = ['active', 'locked'];
@@ -279,51 +314,108 @@ async function insertUser({ username, email, password, displayName, role, create
 
 // ═══ ĐĂNG KÝ / ĐĂNG NHẬP ═══
 async function registerAppUser({ username, email, password, confirmPassword }) {
-  await ensureAppUserSchema();
   const cleanUsername = normalizeUsername(username);
   const cleanEmail = normalizeEmail(email);
 
-  validateUsername(cleanUsername);
-  validateEmail(cleanEmail);
-  validateNewPassword(password, confirmPassword);
-  await assertUsernameAvailable(cleanUsername);
-  await assertEmailAvailable(cleanEmail);
+  try {
+    await ensureAppUserSchema();
+    validateUsername(cleanUsername);
+    validateEmail(cleanEmail);
+    validateNewPassword(password, confirmPassword);
+    await assertUsernameAvailable(cleanUsername);
+    await assertEmailAvailable(cleanEmail);
 
-  // Tài khoản tự đăng ký luôn bắt đầu ở role thấp nhất
-  return toPublicUser(await insertUser({
-    username: cleanUsername,
-    email: cleanEmail,
-    password,
-    displayName: cleanUsername,
-    role: DEFAULT_ROLE
-  }));
+    // Tài khoản tự đăng ký luôn bắt đầu ở role thấp nhất
+    const user = await insertUser({
+      username: cleanUsername,
+      email: cleanEmail,
+      password,
+      displayName: cleanUsername,
+      role: DEFAULT_ROLE
+    });
+    const publicUser = toPublicUser(user);
+
+    enqueueAuthLog({
+      type: 'register',
+      timestamp: new Date().toISOString(),
+      username: publicUser.username || cleanUsername,
+      email: publicUser.email || cleanEmail,
+      role: publicUser.role || DEFAULT_ROLE,
+      result: 'success',
+      failureCode: null,
+      failureMessage: null
+    });
+
+    return publicUser;
+  } catch (err) {
+    enqueueAuthLog({
+      type: 'register',
+      timestamp: new Date().toISOString(),
+      username: cleanUsername || (username ? String(username).trim() : null),
+      email: cleanEmail || (email ? String(email).trim() : null),
+      role: DEFAULT_ROLE,
+      result: 'failure',
+      failureCode: err.code || 'register_failed',
+      failureMessage: err.message
+    });
+    throw err;
+  }
 }
 
 async function loginAppUser({ identifier, password }) {
   const cleanIdentifier = String(identifier || '').trim().toLowerCase();
-  if (!cleanIdentifier || !password) {
-    throw new AppUserError('Vui lòng nhập tên đăng nhập và mật khẩu.', 400, 'missing_fields');
-  }
+  let matchedUser = null;
 
-  const user = await findUserByIdentifier(cleanIdentifier, { withPassword: true });
-  if (!user) {
-    throw new AppUserError('Tài khoản không tồn tại. Hãy kiểm tra lại hoặc đăng ký tài khoản mới.', 404, 'account_not_found');
-  }
-  if (user.status === 'locked') {
-    throw new AppUserError('Tài khoản đã bị khóa. Vui lòng liên hệ Quản lý hoặc Quản trị viên.', 403, 'account_locked');
-  }
-  if (!verifyPassword(password, user.password_hash)) {
-    throw new AppUserError('Mật khẩu không chính xác.', 401, 'wrong_password');
-  }
+  try {
+    if (!cleanIdentifier || !password) {
+      throw new AppUserError('Vui lòng nhập tên đăng nhập và mật khẩu.', 400, 'missing_fields');
+    }
 
-  const pool = await getPool();
-  const now = new Date();
-  await pool.request()
-    .input('id', sql.Int, user.id)
-    .input('now', sql.DateTime2, now)
-    .query('UPDATE dbo.AppUsers SET last_login_at = @now WHERE id = @id');
-  user.last_login_at = now;
-  return toPublicUser(user);
+    matchedUser = await findUserByIdentifier(cleanIdentifier, { withPassword: true });
+    if (!matchedUser) {
+      throw new AppUserError('Tài khoản không tồn tại. Hãy kiểm tra lại hoặc đăng ký tài khoản mới.', 404, 'account_not_found');
+    }
+    if (matchedUser.status === 'locked') {
+      throw new AppUserError('Tài khoản đã bị khóa. Vui lòng liên hệ Quản lý hoặc Quản trị viên.', 403, 'account_locked');
+    }
+    if (!verifyPassword(password, matchedUser.password_hash)) {
+      throw new AppUserError('Mật khẩu không chính xác.', 401, 'wrong_password');
+    }
+
+    const pool = await getPool();
+    const now = new Date();
+    await pool.request()
+      .input('id', sql.Int, matchedUser.id)
+      .input('now', sql.DateTime2, now)
+      .query('UPDATE dbo.AppUsers SET last_login_at = @now WHERE id = @id');
+    matchedUser.last_login_at = now;
+    const publicUser = toPublicUser(matchedUser);
+
+    enqueueAuthLog({
+      type: 'login',
+      timestamp: new Date().toISOString(),
+      username: publicUser.username,
+      email: publicUser.email || null,
+      role: publicUser.role,
+      result: 'success',
+      failureCode: null,
+      failureMessage: null
+    });
+
+    return publicUser;
+  } catch (err) {
+    enqueueAuthLog({
+      type: 'login',
+      timestamp: new Date().toISOString(),
+      username: matchedUser?.username || (cleanIdentifier.includes('@') ? null : cleanIdentifier) || null,
+      email: matchedUser?.email || (cleanIdentifier.includes('@') ? cleanIdentifier : null) || null,
+      role: matchedUser?.role || null,
+      result: 'failure',
+      failureCode: err.code || 'login_failed',
+      failureMessage: err.message
+    });
+    throw err;
+  }
 }
 
 // Dùng cho middleware: chỉ trả về tài khoản còn tồn tại và đang hoạt động
@@ -512,9 +604,11 @@ async function getUserDisplayMap(ids) {
 module.exports = {
   AppUserError,
   accountExists,
+  authLogQueue,
   changeOwnPassword,
   createUserByActor,
   deleteUserByActor,
+  enqueueAuthLog,
   ensureAppUserSchema,
   getActiveSessionUser,
   getUserDisplayMap,
