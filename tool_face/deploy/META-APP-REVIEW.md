@@ -32,7 +32,7 @@ Thay `ten-mien-cua-ban.com` bằng tên miền thật. Mở app tại [developer
 - Đăng ký trường (subscribe fields):
   - **Page**: `messages`, `message_echoes`
   - **Instagram**: `messages`
-- Tool xác thực chữ ký webhook bằng App Secret: nhập App Secret ở **tool → Cài đặt → Meta App**.
+- Tool xác thực chữ ký webhook bằng App Secret: thêm app ở **tool → Kênh → Meta App của tôi** (sự kiện chỉ được giao cho Fanpage của những tài khoản đã thêm app đó).
 
 ### A4. Trong lúc chờ xác minh: thêm người thử nghiệm
 

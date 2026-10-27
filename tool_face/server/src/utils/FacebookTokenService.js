@@ -210,7 +210,8 @@ async function removeUserMetaApp(appUserId, appId) {
   return { removed: list.length - next.length };
 }
 
-// Mọi Meta App đã lưu trong tool: { appId, secret, appUserIds } (dùng cho Webhook và yêu cầu xóa dữ liệu của Meta)
+// Mọi Meta App đã lưu trong tool: { appId, secrets, appUserIds } (dùng cho Webhook và yêu cầu xóa dữ liệu của Meta).
+// Cùng App ID có thể bị lưu với khóa cũ ở một tài khoản (đã đặt lại App Secret) → giữ mọi khóa để thử lần lượt.
 async function allUserApps() {
   const settings = await getSettings().catch(() => ({}));
   const byApp = new Map();
@@ -219,18 +220,19 @@ async function allUserApps() {
     if (!prefix) continue;
     const appUserId = key.slice(prefix.length);
     for (const app of decryptApps(storedApps(settings, appUserId))) {
-      const entry = byApp.get(app.appId) || { appId: app.appId, secret: app.appSecret, appUserIds: new Set() };
+      const entry = byApp.get(app.appId) || { appId: app.appId, secrets: new Set(), appUserIds: new Set() };
+      entry.secrets.add(app.appSecret);
       entry.appUserIds.add(String(appUserId));
       byApp.set(app.appId, entry);
     }
   }
-  return [...byApp.values()];
+  return [...byApp.values()].map((entry) => ({ ...entry, secrets: [...entry.secrets] }));
 }
 
-// Webhook: tìm app đã ký sự kiện (verify(secret) → true/false); trả về app và những người dùng đang dùng app đó
+// Webhook: tìm app đã ký sự kiện (verify(secret) → true/false); trả về app và mọi người dùng đã thêm app đó
 async function matchWebhookApp(verify) {
   for (const app of await allUserApps()) {
-    if (verify(app.secret)) return { appId: app.appId, appUserIds: [...app.appUserIds] };
+    if (app.secrets.some((secret) => verify(secret))) return { appId: app.appId, appUserIds: [...app.appUserIds] };
   }
   return null;
 }

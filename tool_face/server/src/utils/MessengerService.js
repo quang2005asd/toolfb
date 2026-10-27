@@ -719,7 +719,7 @@ async function sendMessage({ conversationId, text, image, userId, refresh = true
 }
 
 // ═══ WEBHOOK (ĐỒNG BỘ GẦN NHƯ TỨC THÌ KHI DEPLOY CÓ DOMAIN HTTPS) ═══
-// appSecret: App Secret nhập ở Cài đặt → Meta App (hoặc FACEBOOK_APP_SECRET)
+// appSecret: App Secret của Meta App người dùng đã thêm ở Kênh → Meta App của tôi
 function verifyWebhookSignature(rawBody, signatureHeader, appSecret = process.env.FACEBOOK_APP_SECRET) {
   if (!appSecret || !rawBody || typeof signatureHeader !== 'string' || !signatureHeader.startsWith('sha256=')) return false;
   const expected = Buffer.from(`sha256=${crypto.createHmac('sha256', appSecret).update(rawBody).digest('hex')}`);

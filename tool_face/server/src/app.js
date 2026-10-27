@@ -111,6 +111,8 @@ app.use(express.json({
 }));
 app.use('/api', loadSession);
 app.use('/api/comment-ai', commentAiRouter);
+// Đường Webhook thứ hai dùng chung bộ xử lý của /api/webhooks/messenger (chữ ký theo Meta App của người dùng)
+app.post('/api/webhooks/facebook', handleMetaWebhook);
 app.use('/api/webhooks/facebook', facebookWebhookRouter);
 
 const mediaDirectory = process.env.APP_DATA_DIR
@@ -1820,8 +1822,8 @@ function parseSignedRequest(signedRequest, appSecret) {
 app.post('/api/meta/data-deletion', express.urlencoded({ extended: false }), async (req, res) => {
   const apps = await tokenService.allUserApps().catch(() => []);
   let data = null;
-  for (const metaApp of apps) {
-    data = parseSignedRequest(req.body?.signed_request, metaApp.secret);
+  for (const secret of apps.flatMap((metaApp) => metaApp.secrets)) {
+    data = parseSignedRequest(req.body?.signed_request, secret);
     if (data?.user_id) break;
   }
   if (!data?.user_id) return res.status(400).json({ error: 'invalid_signed_request' });
@@ -1935,7 +1937,9 @@ app.get('/api/webhooks/messenger', (req, res) => {
   return res.sendStatus(403);
 });
 
-app.post('/api/webhooks/messenger', async (req, res) => {
+app.post('/api/webhooks/messenger', handleMetaWebhook);
+
+async function handleMetaWebhook(req, res) {
   // Chữ ký phải khớp một Meta App người dùng đã lưu; sự kiện chỉ được xử lý cho Fanpage của chính những người dùng app đó
   const signature = req.get('x-hub-signature-256');
   const matched = await tokenService.matchWebhookApp((secret) => messengerService.verifyWebhookSignature(req.rawBody, signature, secret)).catch(() => null);
@@ -1965,7 +1969,7 @@ app.post('/api/webhooks/messenger', async (req, res) => {
   } catch (error) {
     console.warn('[Messenger Webhook]', error.message);
   }
-});
+}
 
 app.get('/api/posts/template', (_req, res) => {
   const headers = ['STT', 'Nền tảng (FB/TikTok)', 'Kênh đăng (Fanpage hoặc TikTok ID/User)', 'Content', 'Schedule', 'Loại Media', 'Media Link', 'Media Thumb'];

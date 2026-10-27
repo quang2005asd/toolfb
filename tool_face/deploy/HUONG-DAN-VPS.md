@@ -84,7 +84,7 @@ Lần đầu build mất 5–10 phút (image server ~1,6 GB vì có Chromium cho
 
 Làm theo `deploy/META-APP-REVIEW.md` phần A, sau đó trong tool:
 
-1. **Cài đặt → Meta App**: nhập App ID và App Secret.
+1. **Kênh → Meta App của tôi**: nhập App ID và App Secret (mỗi tài khoản tool tự thêm Meta App của mình; tool không có app chung).
 2. **Kênh → Đăng nhập lại Facebook**: cấp đủ quyền cho Fanpage và Instagram.
 3. **Kênh → Instagram → Kiểm tra tin nhắn**.
 
@@ -155,7 +155,7 @@ docker compose -f docker-compose.prod.yml cp tool_face.sqlite server:/app/data/t
 docker compose -f docker-compose.prod.yml start server worker
 ```
 
-Giữ lại: tài khoản, bài đăng, tin nhắn, cài đặt. Vì `SESSION_SECRET` trên VPS khác bản local, cần **nhập lại App Secret** ở Cài đặt → Meta App và **đăng nhập lại Facebook** ở trang Kênh. Mật khẩu `1` của admin tự được thay bằng `ADMIN_PASSWORD`.
+Giữ lại: tài khoản, bài đăng, tin nhắn, cài đặt. Vì `SESSION_SECRET` trên VPS khác bản local, cần **nhập lại App Secret** ở Kênh → Meta App của tôi và **đăng nhập lại Facebook** ở trang Kênh. Mật khẩu `1` của admin tự được thay bằng `ADMIN_PASSWORD`.
 
 ## Sự cố thường gặp
 
