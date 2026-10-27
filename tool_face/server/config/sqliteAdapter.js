@@ -348,7 +348,8 @@ const COLUMN_MIGRATIONS = {
     token_expires_at: 'TEXT',
     token_status: 'TEXT',
     token_checked_at: 'TEXT',
-    token_error: 'TEXT'
+    token_error: 'TEXT',
+    meta_app_id: 'TEXT'
   }
 };
 

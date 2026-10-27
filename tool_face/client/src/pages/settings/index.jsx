@@ -34,7 +34,6 @@ import {
 import MainLayout from '../../components/layout/MainLayout';
 import RoleBadge from '../../components/RoleBadge';
 import settingsApi from '../../services/settingsApi';
-import authApi from '../../services/authApi';
 import userApi from '../../services/userApi';
 import useAuth from '../../hooks/useAuth';
 import { PERMISSIONS, PERMISSION_LABELS, formatDateTime } from '../../utils/permissions';
@@ -105,27 +104,6 @@ export default function SettingsPage() {
   useEffect(() => {
     if (user) setProfileForm({ displayName: user.name || '', email: user.email || '' });
   }, [user]);
-
-  // Meta App (App ID / App Secret) — chỉ Quản trị viên
-  const [metaAppForm, setMetaAppForm] = useState({ appId: '', appSecret: '' });
-  const [metaAppNotice, setMetaAppNotice] = useState({ type: '', text: '' });
-  const [savingMetaApp, setSavingMetaApp] = useState(false);
-
-  const handleSaveMetaApp = async (e) => {
-    e.preventDefault();
-    setSavingMetaApp(true);
-    setMetaAppNotice({ type: '', text: '' });
-    try {
-      const res = await settingsApi.saveMetaApp(metaAppForm);
-      setMetaAppNotice({ type: 'success', text: res.message || 'Đã lưu Meta App.' });
-      setMetaAppForm((current) => ({ ...current, appSecret: '' }));
-      await loadSettings();
-    } catch (err) {
-      setMetaAppNotice({ type: 'error', text: err.response?.data?.message || err.message });
-    } finally {
-      setSavingMetaApp(false);
-    }
-  };
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
@@ -220,11 +198,6 @@ export default function SettingsPage() {
   useEffect(() => {
     loadSettings();
   }, []);
-
-  // Điền sẵn App ID đã lưu vào form Meta App
-  useEffect(() => {
-    setMetaAppForm((current) => ({ ...current, appId: current.appId || data.system?.metaAppId || '' }));
-  }, [data.system?.metaAppId]);
 
   const handleProviderChange = (e) => {
     const providerId = e.target.value;
@@ -526,62 +499,19 @@ export default function SettingsPage() {
               </div>
             </section>
 
-            {/* Meta App: App ID / App Secret để tự đổi token dài hạn & đăng nhập lại Facebook 1 chạm */}
-            {canManageSystem && (
-              <section className="panel">
-                <div className="panel-heading">
-                  <h2><KeyRound size={16} style={{ verticalAlign: 'middle', marginRight: 8, color: 'var(--blue)' }} />Meta App · Tự động gia hạn token</h2>
-                  <span className={`status-pill ${data.system.metaAppConfigured ? 'published' : 'pending'}`}>
-                    {data.system.metaAppConfigured ? 'Đang tự gia hạn' : 'Chưa cấu hình'}
-                  </span>
-                </div>
-                <form className="panel-body" onSubmit={handleSaveMetaApp}>
-                  {metaAppNotice.text && <InlineNotice notice={metaAppNotice} />}
-                  <p className="muted" style={{ marginTop: 0, fontSize: 12.5, lineHeight: 1.6 }}>
-                    Token lấy từ Graph API Explorer chỉ sống 1–2 giờ. Khi có App ID & App Secret, tool tự đổi sang <strong>token dài hạn (~60 ngày)</strong>,
-                    token Fanpage lấy từ đó <strong>không hết hạn</strong>, tự lấy lại token Fanpage khi hỏng, và cho phép <strong>đăng nhập lại Facebook 1 chạm</strong>.
-                  </p>
-                  <div className="settings-form-grid">
-                    <div>
-                      <label className="field-label" htmlFor="meta-app-id">App ID</label>
-                      <input id="meta-app-id" className="field" inputMode="numeric" placeholder="VD: 1397216959190868" value={metaAppForm.appId} onChange={(e) => setMetaAppForm({ ...metaAppForm, appId: e.target.value.trim() })} required />
-                    </div>
-                    <div>
-                      <label className="field-label" htmlFor="meta-app-secret">
-                        App Secret {data.system.metaAppSecretMasked && <span style={{ color: '#10b981', fontWeight: 600 }}>({data.system.metaAppSecretMasked})</span>}
-                      </label>
-                      <input id="meta-app-secret" className="field" type="password" autoComplete="off" placeholder={data.system.metaAppSecretMasked ? 'Để trống nếu giữ nguyên' : 'Dán App Secret…'} value={metaAppForm.appSecret} onChange={(e) => setMetaAppForm({ ...metaAppForm, appSecret: e.target.value.trim() })} />
-                    </div>
-                  </div>
-                  <small className="muted" style={{ display: 'block', marginTop: 8, fontSize: 11.5, lineHeight: 1.6 }}>
-                    Lấy tại <a href="https://developers.facebook.com/apps/" target="_blank" rel="noreferrer" style={{ color: 'var(--blue)' }}>Meta for Developers</a> → ứng dụng của bạn → Cài đặt ứng dụng → Thông tin cơ bản.
-                    Token dán vào tool phải được tạo từ <strong>cùng ứng dụng này</strong> (chọn đúng app trong Graph API Explorer).
-                  </small>
-                  {data.system.facebookRedirectUri && (
-                    <div style={{ marginTop: 14 }}>
-                      <span className="field-label">Valid OAuth Redirect URI (để đăng nhập Facebook 1 chạm)</span>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <input className="field" readOnly value={data.system.facebookRedirectUri} onFocus={(e) => e.target.select()} style={{ fontFamily: 'monospace', fontSize: 12.5 }} />
-                        <button type="button" className="button button-secondary" style={{ flexShrink: 0 }} onClick={() => navigator.clipboard?.writeText(data.system.facebookRedirectUri)}>Sao chép</button>
-                      </div>
-                      <small className="muted" style={{ display: 'block', marginTop: 6, fontSize: 11.5 }}>
-                        Thêm vào Meta App → Facebook Login → Cài đặt → Valid OAuth Redirect URIs (khi chạy localhost thường đã được cho phép sẵn).
-                      </small>
-                    </div>
-                  )}
-                  <div style={{ marginTop: 18, display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
-                    {data.system.metaAppConfigured && (
-                      <a href={authApi.facebookLoginUrl} className="button button-secondary">
-                        Đăng nhập lại Facebook <ExternalLink size={13} />
-                      </a>
-                    )}
-                    <button type="submit" className="button button-primary" disabled={savingMetaApp || !metaAppForm.appId}>
-                      <Save size={15} /> {savingMetaApp ? 'Đang xác thực…' : 'Lưu & xác thực'}
-                    </button>
-                  </div>
-                </form>
-              </section>
-            )}
+            {/* Meta App: mỗi tài khoản tự thêm Meta App riêng ở trang Kênh (tool không dùng app chung) */}
+            <section className="panel">
+              <div className="panel-heading">
+                <h2><KeyRound size={16} style={{ verticalAlign: 'middle', marginRight: 8, color: 'var(--blue)' }} />Meta App · Đăng nhập Facebook</h2>
+              </div>
+              <div className="panel-body">
+                <p className="muted" style={{ marginTop: 0, fontSize: 12.5, lineHeight: 1.6 }}>
+                  Mỗi tài khoản dùng <strong>Meta App của riêng mình</strong> để đăng nhập Facebook và kết nối Fanpage (có thể thêm nhiều app cho nhiều nick).
+                  Thêm, sửa hoặc gỡ app ở trang <strong>Kênh → Meta App của tôi</strong>.
+                </p>
+                <Link href="/channels" className="button button-secondary">Mở trang Kênh <ExternalLink size={13} /></Link>
+              </div>
+            </section>
           </div>
         </div>
       )}

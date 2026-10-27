@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, AppWindow, CheckCircle2, KeyRound, Loader2, LogIn, PlusCircle, ShieldAlert, X } from 'lucide-react';
-import { CreatePageSteps, Ext, OwnAppCreateSteps, OwnAppEnterSteps, OwnTokenSteps } from './FacebookGuideSteps';
+import { AlertTriangle, AppWindow, CheckCircle2, KeyRound, Loader2, LogIn, PlusCircle, ShieldAlert, Trash2, X } from 'lucide-react';
+import { CreatePageSteps, Ext, OwnAppCreateSteps, OwnAppEnterSteps, OwnTokenSteps, UseCasePermissionBlocks } from './FacebookGuideSteps';
 
 const ERRORS = {
   oauth_denied: {
@@ -10,8 +10,7 @@ const ERRORS = {
   },
   oauth_failed: {
     title: 'Facebook không hoàn tất đăng nhập',
-    text: 'Tool không đổi được mã đăng nhập sang token. Thường do App Secret trong Meta App đã bị đổi, hoặc URI chuyển hướng trong Meta App chưa đúng. Kiểm tra lại cài đặt Meta App, rồi thử lại.',
-    guide: 'setup'
+    text: 'Tool không đổi được mã đăng nhập sang token. Thường do Khóa bí mật của Meta App đã bị đặt lại, hoặc URI chuyển hướng trong app chưa đúng. Kiểm tra app ở “Meta App của tôi”, rồi thử lại.'
   },
   oauth_state_invalid: {
     title: 'Phiên đăng nhập Facebook đã hết hạn',
@@ -19,18 +18,8 @@ const ERRORS = {
   }
 };
 
-function AdminNote({ status, children }) {
-  if (!status?.canConfigure) return null;
-  const appId = status.app?.source === 'system' ? status.app?.appId : null;
-  return (
-    <div className="fb-login-cause">
-      <strong>Dành cho Quản trị viên tool</strong>
-      <span>
-        {children}{' '}
-        {appId && <Ext href={`https://developers.facebook.com/apps/${appId}/dashboard/`}>Mở trang tổng quan Meta App</Ext>}
-      </span>
-    </div>
-  );
+function appName(app) {
+  return app?.label ? `${app.label} (ID ${app.appId})` : `ID ${app?.appId}`;
 }
 
 // Hỏi người dùng đã có Meta App chưa để đưa đúng bảng hướng dẫn
@@ -41,7 +30,7 @@ function OwnAppChooser({ onOwnApp }) {
         <AppWindow size={20} aria-hidden="true" />
         <span>
           <strong>Tôi đã có Meta App</strong>
-          <small>Hướng dẫn kiểm tra cài đặt và điền App ID, Khóa bí mật, quyền vào tool</small>
+          <small>Kiểm tra cài đặt, thêm quyền từng mục rồi điền App ID + Khóa bí mật vào tool</small>
         </span>
       </button>
       <button type="button" className="fb-own-app-option" onClick={() => onOwnApp('own-app-create')}>
@@ -55,22 +44,46 @@ function OwnAppChooser({ onOwnApp }) {
   );
 }
 
-// Nhập App ID + Khóa bí mật của Meta App riêng; server kiểm tra với Facebook trước khi lưu
-function OwnAppForm({ status, onSave, onRemove, onLogin }) {
-  const own = status?.app?.source === 'user' ? status.app : null;
-  const [appId, setAppId] = useState(own?.appId || '');
+// Danh sách Meta App đã lưu: đăng nhập bằng từng app hoặc gỡ app
+function OwnAppList({ apps, onLoginWith, onRemove, loginLabel = 'Đăng nhập bằng app này' }) {
+  if (!apps?.length) return null;
+  return (
+    <ul className="fb-app-list">
+      {apps.map((app) => {
+        const ok = app.credentialsValid !== false && app.domainOk !== false;
+        return (
+          <li key={app.appId} className={ok ? '' : 'is-error'}>
+            <div className="fb-app-list-info">
+              <strong>{app.label || 'Meta App'}</strong>
+              <small>ID {app.appId}{app.credentialsValid === false ? ' · Khóa bí mật không đúng / app đã bị xóa' : app.domainOk === false ? ' · chưa khai báo miền của tool' : ''}</small>
+            </div>
+            <div className="fb-app-list-actions">
+              {onLoginWith && <button type="button" className="button button-primary" onClick={() => onLoginWith(app.appId)} disabled={!ok}><LogIn size={14} /> {loginLabel}</button>}
+              {onRemove && <button type="button" className="button button-quiet" onClick={() => onRemove(app.appId)} aria-label={`Gỡ Meta App ${app.appId}`}><Trash2 size={14} /> Gỡ</button>}
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+// Thêm một Meta App: server kiểm tra với Facebook (khóa, miền của tool) trước khi lưu
+function OwnAppForm({ onSave, onLoginWith }) {
+  const [appId, setAppId] = useState('');
   const [appSecret, setAppSecret] = useState('');
+  const [label, setLabel] = useState('');
   const [saving, setSaving] = useState(false);
-  const [result, setResult] = useState(null); // { ok, message }
+  const [result, setResult] = useState(null); // { ok, message, appId }
 
   const submit = async (event) => {
     event.preventDefault();
     setSaving(true);
     setResult(null);
     try {
-      const res = await onSave(appId.trim(), appSecret.trim());
+      const res = await onSave(appId.trim(), appSecret.trim(), label.trim());
       setAppSecret('');
-      setResult({ ok: true, message: res.message || 'Đã lưu Meta App của bạn.' });
+      setResult({ ok: true, message: res.message || 'Đã lưu Meta App của bạn.', appId: res.appId || appId.trim() });
     } catch (error) {
       setResult({ ok: false, message: error.response?.data?.message || error.message || 'Không lưu được Meta App.' });
     } finally {
@@ -80,8 +93,7 @@ function OwnAppForm({ status, onSave, onRemove, onLogin }) {
 
   return (
     <form className="fb-own-app-form" onSubmit={submit}>
-      <strong>Điền Meta App của bạn vào tool</strong>
-      {own && <span className="fb-guide-note">Đang dùng Meta App riêng ID <code>{own.appId}</code>. Điền lại để đổi app.</span>}
+      <strong>Điền Meta App vào tool</strong>
       <div className="fb-own-app-fields">
         <label>
           <span className="field-label">ID ứng dụng (App ID)</span>
@@ -89,57 +101,55 @@ function OwnAppForm({ status, onSave, onRemove, onLogin }) {
         </label>
         <label>
           <span className="field-label">Khóa bí mật của ứng dụng (App Secret)</span>
-          <input id="own-app-secret" className="field" type="password" autoComplete="new-password" placeholder={own ? 'Để trống nếu không đổi' : 'Dán khóa bí mật'} value={appSecret} onChange={(event) => setAppSecret(event.target.value.trim())} required={!own || own.appId !== appId} />
+          <input id="own-app-secret" className="field" type="password" autoComplete="new-password" placeholder="Dán khóa bí mật" value={appSecret} onChange={(event) => setAppSecret(event.target.value.trim())} required />
+        </label>
+        <label className="fb-own-app-label">
+          <span className="field-label">Tên gợi nhớ (không bắt buộc)</span>
+          <input id="own-app-label" className="field" maxLength={60} placeholder="VD: App của nick Shop A" value={label} onChange={(event) => setLabel(event.target.value)} />
         </label>
       </div>
       {result && <p className={`fb-own-app-result ${result.ok ? 'is-ok' : 'is-error'}`} role="status">{result.ok ? <CheckCircle2 size={14} aria-hidden="true" /> : <AlertTriangle size={14} aria-hidden="true" />} {result.message}</p>}
       <div className="fb-own-app-actions">
         {result?.ok
-          ? <button type="button" className="button button-primary" onClick={onLogin}><LogIn size={15} /> Đăng nhập Facebook bằng app của bạn</button>
+          ? <button type="button" className="button button-primary" onClick={() => onLoginWith(result.appId)}><LogIn size={15} /> Đăng nhập Facebook bằng app này</button>
           : <button type="submit" className="button button-primary" disabled={saving}>{saving ? 'Đang kiểm tra với Facebook…' : 'Kiểm tra & lưu'}</button>}
-        {own && !result?.ok && <button type="button" className="button button-quiet" onClick={onRemove}>Bỏ app riêng, dùng app chung</button>}
       </div>
     </form>
   );
 }
 
 // Facebook chặn đăng nhập ("Ứng dụng không hoạt động") hoặc người dùng đóng cửa sổ trước khi xong
-function IncompleteBody({ status, onOwnApp }) {
-  if (status?.app?.source === 'user') {
-    return (
-      <>
-        <p className="fb-login-lead">Tool chưa nhận được kết quả đăng nhập qua <strong>Meta App của bạn</strong> (ID <code>{status.app.appId}</code>). Nếu bạn vẫn đang đăng nhập ở cửa sổ Facebook, cứ hoàn tất — tool sẽ tự cập nhật.</p>
-        <div className="fb-login-cause is-main">
-          <strong>Facebook báo lỗi với app của bạn?</strong>
-          <span>Đăng nhập Facebook bằng <em>đúng nick quản trị viên</em> của app đó, và kiểm tra app đã khai báo miền, URI chuyển hướng, quyền như hướng dẫn.</span>
-          <button type="button" className="button button-secondary fb-guide-action" onClick={() => onOwnApp('own-app-enter')}><AppWindow size={15} /> Kiểm tra / đổi Meta App của tôi</button>
-        </div>
-        <div className="fb-login-cause">
-          <strong>Bạn đã đóng cửa sổ Facebook hoặc bấm Hủy</strong>
-          <span>Bấm “Thử lại” để mở lại cửa sổ đăng nhập.</span>
-        </div>
-      </>
-    );
-  }
+function IncompleteBody({ state, apps, onOwnApp, onLoginWith }) {
+  const used = apps.find((app) => app.appId === state.appId) || apps[0];
   return (
     <>
-      <p className="fb-login-lead">Tool chưa nhận được kết quả đăng nhập từ Facebook. Nếu bạn vẫn đang đăng nhập ở cửa sổ Facebook, cứ hoàn tất — tool sẽ tự cập nhật.</p>
+      <p className="fb-login-lead">Tool chưa nhận được kết quả đăng nhập từ Facebook{used ? <> qua Meta App <strong>{appName(used)}</strong></> : null}. Nếu bạn vẫn đang đăng nhập ở cửa sổ Facebook, cứ hoàn tất — tool sẽ tự cập nhật.</p>
       <div className="fb-login-cause is-main">
         <strong>Facebook báo “Ứng dụng không hoạt động”?</strong>
-        <span>Nick Facebook của bạn không có quyền quản trị trong Meta App chung của tool. Hãy dùng <em>Meta App của riêng bạn</em>: bạn là quản trị viên nên đăng nhập được ngay — không cần ai mời. Bạn đã có Meta App chưa?</span>
-        <OwnAppChooser onOwnApp={onOwnApp} />
+        <span>Nick đang đăng nhập trong cửa sổ Facebook <em>không có vai trò</em> trong Meta App này. Chọn một cách:</span>
+        <ol className="fb-guide-substeps">
+          <li>Đăng nhập đúng <em>nick quản trị viên</em> của app: trong cửa sổ Facebook bấm ảnh đại diện → <em>Đăng xuất</em> / <em>Chuyển tài khoản</em> → đăng nhập nick đó → bấm Thử lại.</li>
+          <li>Thêm nick đang dùng vào app: <em>Vai trò trong ứng dụng</em> → <em>Thêm người</em> → <em>Quản trị viên</em> → nick đó chấp nhận tại <Ext href="https://developers.facebook.com/requests/">developers.facebook.com/requests</Ext>.</li>
+          <li>Nick đó có Meta App riêng: thêm app đó vào tool rồi đăng nhập bằng app đó.</li>
+        </ol>
+        <button type="button" className="button button-secondary fb-guide-action" onClick={() => onOwnApp('own-app')}><PlusCircle size={15} /> Thêm Meta App khác</button>
       </div>
-      <AdminNote status={status}>Nick quản trị viên Meta App chung vẫn đăng nhập bình thường. Muốn mọi nick dùng được app chung thì app cần được Meta duyệt quyền nâng cao (Xét duyệt ứng dụng + xác minh doanh nghiệp).</AdminNote>
+      {apps.length > 1 && (
+        <div className="fb-login-cause">
+          <strong>Đăng nhập bằng app khác đã lưu</strong>
+          <OwnAppList apps={apps} onLoginWith={onLoginWith} />
+        </div>
+      )}
       <div className="fb-login-cause">
-        <strong>Bạn đã đóng cửa sổ Facebook hoặc bấm Hủy</strong>
-        <span>Bấm “Thử lại” để mở lại cửa sổ đăng nhập.</span>
+        <strong>Facebook báo lỗi khác hoặc bạn đã đóng cửa sổ / bấm Hủy</strong>
+        <span>Bấm “Thử lại”, hoặc xem bảng xử lý lỗi theo đúng câu Facebook hiện.</span>
       </div>
     </>
   );
 }
 
 // Đăng nhập được nhưng Facebook không cấp quyền Fanpage
-function NoPermissionBody({ state, status, onOwnApp }) {
+function NoPermissionBody({ state, status }) {
   const fromToken = state.source === 'token';
   return (
     <>
@@ -153,18 +163,17 @@ function NoPermissionBody({ state, status, onOwnApp }) {
           <span>Bấm “Đăng nhập lại” → ở hộp thoại Facebook chọn <em>Chỉnh sửa quyền truy cập</em> → bật hết các quyền và Fanpage → <em>Tiếp tục</em>.</span>
         </div>
       )}
-      {!fromToken && status?.app?.source !== 'user' && (
-        <div className="fb-login-cause is-main">
-          <strong>Facebook không hỏi quyền Fanpage?</strong>
-          <span>Meta App chung của tool chưa được Meta duyệt quyền nâng cao cho nick của bạn. Dùng <em>Meta App của riêng bạn</em> để Facebook cấp đủ quyền — bạn đã có Meta App chưa?</span>
-          <OwnAppChooser onOwnApp={onOwnApp} />
+      <div className="fb-login-cause is-main">
+        <strong>Facebook không hỏi quyền đó?</strong>
+        <span>Quyền chưa được thêm vào đúng trường hợp sử dụng trong Meta App. Thêm theo từng khối dưới đây (quyền đang thiếu được tô đỏ), rồi {fromToken ? 'tạo lại token' : 'đăng nhập lại'}:</span>
+        <UseCasePermissionBlocks missing={state.missing} compact />
+      </div>
+      {fromToken && (
+        <div className="fb-login-cause">
+          <strong>Tạo lại token có đủ quyền</strong>
+          <OwnTokenSteps features={status?.features} missing={state.missing} />
         </div>
       )}
-      <div className={`fb-login-cause${fromToken ? ' is-main' : ''}`}>
-        <strong>{fromToken ? 'Tạo lại token có đủ quyền' : 'Hoặc: tự tạo token rồi dán vào tool'}</strong>
-        <span>{fromToken ? 'Làm lại theo bảng dưới, nhớ thêm đủ quyền ở bước 3–4:' : 'Không muốn điền Meta App vào tool thì tạo token theo bảng dưới — không cần ai mời:'}</span>
-        <OwnTokenSteps features={status?.features} missing={state.missing} />
-      </div>
     </>
   );
 }
@@ -184,11 +193,11 @@ function NoPagesBody({ state }) {
 }
 
 /**
- * Hộp thoại đăng nhập Facebook trong tool.
- * state.phase: 'waiting' | 'incomplete' | 'own-app' | 'own-app-enter' | 'own-app-create' | 'no-permission' | 'no-pages' | 'error'
- * state: { code?, missing?, source? ('login' | 'token') }
+ * Hộp thoại đăng nhập Facebook trong tool (tool không có app chung — mỗi người dùng Meta App riêng, có thể nhiều app).
+ * state.phase: 'waiting' | 'incomplete' | 'choose-app' | 'own-app' | 'own-app-enter' | 'own-app-create' | 'no-permission' | 'no-pages' | 'error'
+ * state: { appId? (app vừa dùng), code?, missing?, source? ('login' | 'token') }
  */
-export default function FacebookLoginDialog({ state, status, onRetry, onFocusPopup, onAppNotActive, onOwnApp, onSaveOwnApp, onRemoveOwnApp, onOpenGuide, onPasteToken, onClose }) {
+export default function FacebookLoginDialog({ state, status, onRetry, onLoginWith, onFocusPopup, onAppNotActive, onOwnApp, onSaveOwnApp, onRemoveOwnApp, onOpenGuide, onPasteToken, onClose }) {
   const primaryRef = useRef(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -203,6 +212,7 @@ export default function FacebookLoginDialog({ state, status, onRetry, onFocusPop
   }, [phase]);
   if (!phase || typeof document === 'undefined') return null;
 
+  const apps = status?.apps || [];
   const fromToken = state.source === 'token';
   const pasteButton = (primary) => (
     <button ref={primary ? primaryRef : undefined} type="button" className={`button ${primary ? 'button-primary' : 'button-secondary'}`} onClick={onPasteToken}>
@@ -220,12 +230,17 @@ export default function FacebookLoginDialog({ state, status, onRetry, onFocusPop
     Icon = Loader2;
     tone = 'info';
     title = 'Đang chờ đăng nhập Facebook…';
+    const used = apps.find((app) => app.appId === state.appId);
     body = (
       <>
-        <p className="fb-login-lead">Hoàn tất đăng nhập trong cửa sổ Facebook vừa mở. Ở bước hỏi quyền, chọn <em>Chỉnh sửa quyền truy cập</em> và tích đủ Fanpage.</p>
+        <p className="fb-login-lead">Hoàn tất đăng nhập trong cửa sổ Facebook vừa mở{used ? <> (Meta App <strong>{appName(used)}</strong>)</> : null}. Ở bước hỏi quyền, chọn <em>Chỉnh sửa quyền truy cập</em> và tích đủ Fanpage.</p>
+        <div className="fb-login-cause">
+          <strong>Muốn kết nối nick khác với nick đang hiện?</strong>
+          <span>Facebook dùng nick đang đăng nhập trong trình duyệt. Trong cửa sổ Facebook bấm ảnh đại diện → <em>Đăng xuất</em> / <em>Chuyển tài khoản</em> → đăng nhập nick cần thêm, rồi bấm “Mở lại cửa sổ Facebook”.</span>
+        </div>
         <div className="fb-login-cause is-main">
           <strong>Facebook báo “Ứng dụng không hoạt động”?</strong>
-          <span>Bấm nút bên dưới — tool đóng cửa sổ Facebook và hướng dẫn bạn dùng Meta App của riêng mình.</span>
+          <span>Bấm nút bên dưới — tool đóng cửa sổ Facebook và hướng dẫn cách xử lý.</span>
           <button ref={primaryRef} type="button" className="button button-primary fb-guide-action" onClick={onAppNotActive}><ShieldAlert size={15} /> Facebook báo “Ứng dụng không hoạt động”</button>
         </div>
       </>
@@ -238,23 +253,50 @@ export default function FacebookLoginDialog({ state, status, onRetry, onFocusPop
     );
   } else if (phase === 'incomplete') {
     title = 'Chưa đăng nhập được Facebook';
-    body = <IncompleteBody status={status} onOwnApp={onOwnApp} />;
+    body = <IncompleteBody state={state} apps={apps} onOwnApp={onOwnApp} onLoginWith={onLoginWith} />;
     actions = (
       <>
         <button ref={primaryRef} type="button" className="button button-primary" onClick={onRetry}><LogIn size={15} /> Thử lại</button>
+        <button type="button" className="button button-secondary" onClick={() => onOpenGuide('login-errors')}>Bảng xử lý lỗi</button>
         {pasteButton(false)}
-        <button type="button" className="button button-secondary" onClick={() => onOpenGuide('login-errors')}>Facebook báo lỗi khác?</button>
+        {closeButton}
+      </>
+    );
+  } else if (phase === 'choose-app') {
+    Icon = AppWindow;
+    tone = 'info';
+    title = 'Đăng nhập bằng Meta App nào?';
+    body = (
+      <>
+        <p className="fb-login-lead">Bạn đã lưu {apps.length} Meta App. Chọn app mà <em>nick Facebook sắp đăng nhập</em> là quản trị viên (mỗi nick đi qua app của nó).</p>
+        <OwnAppList apps={apps} onLoginWith={onLoginWith} />
+      </>
+    );
+    actions = (
+      <>
+        <button type="button" className="button button-secondary" onClick={() => onOwnApp('own-app')}><PlusCircle size={15} /> Thêm Meta App khác</button>
         {closeButton}
       </>
     );
   } else if (phase === 'own-app') {
     Icon = AppWindow;
     tone = 'info';
-    title = 'Dùng Meta App của riêng bạn';
+    title = apps.length ? 'Thêm Meta App khác' : 'Cần Meta App để đăng nhập Facebook';
     body = (
       <>
-        <p className="fb-login-lead">Đăng nhập Facebook qua tool cần một Meta App mà nick của bạn là <em>quản trị viên</em>. Dùng app của riêng bạn thì đăng nhập được ngay, không cần ai mời. Bạn đã có Meta App trên developers.facebook.com chưa?</p>
+        <p className="fb-login-lead">
+          {apps.length
+            ? 'Mỗi nick Facebook đăng nhập qua một Meta App mà nick đó là quản trị viên. Thêm app của nick khác để quản lý thêm Fanpage.'
+            : <>Tool không dùng app chung: mỗi tài khoản dùng <em>Meta App của riêng mình</em> (miễn phí). Nick tạo app là quản trị viên nên đăng nhập được ngay, không cần ai mời.</>}
+          {' '}Bạn đã có Meta App trên developers.facebook.com chưa?
+        </p>
         <OwnAppChooser onOwnApp={onOwnApp} />
+        {apps.length > 0 && (
+          <div className="fb-login-cause">
+            <strong>Meta App đã lưu</strong>
+            <OwnAppList apps={apps} onLoginWith={onLoginWith} onRemove={onRemoveOwnApp} />
+          </div>
+        )}
       </>
     );
     actions = (
@@ -271,15 +313,23 @@ export default function FacebookLoginDialog({ state, status, onRetry, onFocusPop
       <>
         <p className="fb-login-lead">
           {phase === 'own-app-enter'
-            ? 'Kiểm tra app có đủ các mục dưới đây, rồi điền App ID và Khóa bí mật vào cuối bảng.'
-            : 'Làm lần lượt từng bước (khoảng 10 phút), rồi điền App ID và Khóa bí mật vào cuối bảng.'}
+            ? 'Kiểm tra app có đủ từng mục dưới đây (nhất là quyền của từng trường hợp sử dụng), rồi điền App ID và Khóa bí mật ở cuối bảng.'
+            : 'Làm lần lượt từng bước (khoảng 10 phút), rồi điền App ID và Khóa bí mật ở cuối bảng.'}
           {' '}
           <button type="button" className="auth-inline-link" onClick={() => onOwnApp(phase === 'own-app-enter' ? 'own-app-create' : 'own-app-enter')}>
             {phase === 'own-app-enter' ? 'Chưa có app? Xem hướng dẫn tạo' : 'Đã có app? Chỉ cần kiểm tra & điền'}
           </button>
         </p>
-        {phase === 'own-app-enter' ? <OwnAppEnterSteps app={status?.app} features={status?.features} /> : <OwnAppCreateSteps app={status?.app} features={status?.features} />}
-        <OwnAppForm key={phase} status={status} onSave={onSaveOwnApp} onRemove={onRemoveOwnApp} onLogin={onRetry} />
+        {phase === 'own-app-enter'
+          ? <OwnAppEnterSteps app={status?.app} webhook={status?.webhook} />
+          : <OwnAppCreateSteps app={status?.app} webhook={status?.webhook} />}
+        <OwnAppForm key={phase} onSave={onSaveOwnApp} onLoginWith={onLoginWith} />
+        {apps.length > 0 && (
+          <div className="fb-login-cause">
+            <strong>Meta App đã lưu</strong>
+            <OwnAppList apps={apps} onLoginWith={onLoginWith} onRemove={onRemoveOwnApp} />
+          </div>
+        )}
       </>
     );
     actions = (
@@ -290,11 +340,11 @@ export default function FacebookLoginDialog({ state, status, onRetry, onFocusPop
     );
   } else if (phase === 'no-permission') {
     title = 'Chưa đủ quyền dùng Fanpage';
-    body = <NoPermissionBody state={state} status={status} onOwnApp={onOwnApp} />;
+    body = <NoPermissionBody state={state} status={status} />;
     actions = (
       <>
-        {pasteButton(true)}
-        {!fromToken && <button type="button" className="button button-secondary" onClick={onRetry}><LogIn size={15} /> Đăng nhập lại</button>}
+        {fromToken ? pasteButton(true) : <button ref={primaryRef} type="button" className="button button-primary" onClick={onRetry}><LogIn size={15} /> Đăng nhập lại</button>}
+        <button type="button" className="button button-secondary" onClick={() => onOpenGuide('permissions')}>Bảng quyền từng mục</button>
         {closeButton}
       </>
     );
@@ -318,7 +368,7 @@ export default function FacebookLoginDialog({ state, status, onRetry, onFocusPop
     actions = (
       <>
         <button ref={primaryRef} type="button" className="button button-primary" onClick={onRetry}><LogIn size={15} /> Thử lại</button>
-        <button type="button" className="button button-secondary" onClick={() => (status?.app?.source === 'user' ? onOwnApp('own-app-enter') : onOpenGuide(info.guide || 'login-errors'))}>Xem hướng dẫn</button>
+        <button type="button" className="button button-secondary" onClick={() => (state.code === 'oauth_failed' ? onOwnApp('own-app') : onOpenGuide('login-errors'))}>Xem hướng dẫn</button>
         {closeButton}
       </>
     );

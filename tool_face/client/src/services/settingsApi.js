@@ -23,10 +23,6 @@ export const settingsApi = {
     const response = await api.post('/settings/telegram/test', params);
     return response.data;
   },
-  saveMetaApp: async ({ appId, appSecret }) => {
-    const response = await api.post('/settings/meta-app', { appId, appSecret });
-    return response.data;
-  },
   runTokenHealthCheck: async () => {
     const response = await api.post('/channels/health-check');
     return response.data;

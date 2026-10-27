@@ -81,15 +81,21 @@ export const channelApi = {
   },
   facebookLoginUrl: `${API_BASE}/auth/facebook`,
 
-  // Meta App riêng của người dùng (khi nick không có vai trò trong app chung của tool)
-  saveMyMetaApp: async (appId, appSecret) => {
-    const response = await api.post('/channels/my-meta-app', { appId, appSecret });
+  // Meta App riêng của người dùng (bắt buộc để đăng nhập Facebook; một người có thể thêm nhiều app cho nhiều nick)
+  myMetaApps: async () => {
+    const response = await api.get('/channels/my-meta-app');
     return response.data;
   },
-  removeMyMetaApp: async () => {
-    const response = await api.delete('/channels/my-meta-app');
+  saveMyMetaApp: async (appId, appSecret, label) => {
+    const response = await api.post('/channels/my-meta-app', { appId, appSecret, label });
     return response.data;
   },
+  removeMyMetaApp: async (appId) => {
+    const response = await api.delete(`/channels/my-meta-app/${encodeURIComponent(appId)}`);
+    return response.data;
+  },
+  // Đường dẫn đăng nhập Facebook bằng một Meta App cụ thể (cửa sổ phụ)
+  facebookLoginUrlFor: (appId) => `${API_BASE}/auth/facebook?popup=1${appId ? `&app=${encodeURIComponent(appId)}` : ''}`,
 
   // Mức độ sẵn sàng đăng nhập Facebook (setup / login / expired / partial / ready) + quyền từng tính năng
   facebookStatus: async (refresh = false) => {

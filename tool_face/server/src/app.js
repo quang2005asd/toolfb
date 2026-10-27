@@ -266,13 +266,15 @@ app.get('/api/auth/facebook', async (req, res) => {
     return res.redirect(302, `${clientOrigin()}/login?error=session_required`);
   }
   const popup = req.query.popup === '1';
-  // Ưu tiên Meta App riêng của người dùng (họ là quản trị viên app đó), không có thì dùng app chung
-  const creds = await tokenService.getMetaAppCredentials(req.user.sub);
+  // Chỉ dùng Meta App riêng của người dùng (tool không có app chung); có nhiều app thì đăng nhập bằng app được chọn
+  const requestedApp = typeof req.query.app === 'string' && /^\d{5,20}$/.test(req.query.app) ? req.query.app : null;
+  const creds = await tokenService.getMetaAppCredentials(req.user.sub, { appId: requestedApp });
   if (!creds.configured) {
     return res.redirect(302, facebookLoginReturn(popup, 'error=app_not_configured'));
   }
 
-  const state = crypto.randomBytes(32).toString('base64url') + (popup ? FB_POPUP_STATE_SUFFIX : '');
+  // state = chuỗi ngẫu nhiên ~ App ID (+ .popup): callback đổi mã đăng nhập bằng đúng app đã mở hộp thoại
+  const state = `${crypto.randomBytes(32).toString('base64url')}~${creds.appId}${popup ? FB_POPUP_STATE_SUFFIX : ''}`;
   setCookie(req, res, OAUTH_STATE_COOKIE, state, 10 * 60);
   const graphVersion = process.env.FB_GRAPH_VERSION || 'v19.0';
   const authorizationUrl = new URL(`https://www.facebook.com/${graphVersion}/dialog/oauth`);
@@ -305,8 +307,13 @@ app.get('/api/auth/facebook/callback', async (req, res) => {
     return res.redirect(facebookLoginReturn(popup, 'error=oauth_state_invalid'));
   }
 
+  const stateAppId = String(req.query.state).replace(FB_POPUP_STATE_SUFFIX, '').split('~')[1] || null;
+  const creds = await tokenService.getMetaAppCredentials(req.user.sub, { appId: stateAppId });
+  if (!creds.configured) {
+    return res.redirect(facebookLoginReturn(popup, 'error=app_not_configured'));
+  }
+
   try {
-    const creds = await tokenService.getMetaAppCredentials(req.user.sub);
     const graphVersion = process.env.FB_GRAPH_VERSION || 'v19.0';
     const codeResponse = await axios.get(`https://graph.facebook.com/${graphVersion}/oauth/access_token`, {
       params: {
@@ -318,8 +325,8 @@ app.get('/api/auth/facebook/callback', async (req, res) => {
       timeout: 15000
     });
     // Đổi sang token dài hạn, lưu nick Facebook và lấy lại toàn bộ token Fanpage
-    const result = await tokenService.connectUserToken(req.user.sub, codeResponse.data.access_token);
-    console.log(`[Facebook OAuth] Kết nối lại ${result.pages.length} Fanpage cho ${req.user.username} (FB: ${result.fbAccount.id}, token ${result.tokenType}).`);
+    const result = await tokenService.connectUserToken(req.user.sub, codeResponse.data.access_token, { appId: creds.appId });
+    console.log(`[Facebook OAuth] Kết nối lại ${result.pages.length} Fanpage cho ${req.user.username} (FB: ${result.fbAccount.id}, app ${creds.appId}, token ${result.tokenType}).`);
     // Đăng nhập được nhưng chưa có Fanpage → tool hiện hướng dẫn tạo Fanpage; thiếu quyền một số tính năng → báo kèm
     const query = new URLSearchParams({ connected: String(result.pages.length), token: result.tokenType });
     if (!result.pages.length) query.set('reason', 'no_pages');
@@ -934,7 +941,6 @@ app.get('/api/settings', requireAuth, async (req, res) => {
       ? `${effectiveApiKey.slice(0, 7)}••••••••${effectiveApiKey.slice(-4)}`
       : (effectiveApiKey ? '••••••••' : '');
     const canManageSystem = hasPermission(req.user.role, PERMISSIONS.SETTINGS_SYSTEM);
-    const metaApp = await tokenService.getMetaAppCredentials();
 
     const publicSettings = {
       ai_provider: settings.ai_provider || 'openai',
@@ -972,9 +978,6 @@ app.get('/api/settings', requireAuth, async (req, res) => {
         connectedPagesCount: pages.length
       },
       system: {
-        metaAppId: canManageSystem ? metaApp.appId : '',
-        metaAppConfigured: metaApp.configured,
-        metaAppSecretMasked: canManageSystem && metaApp.appSecret ? `••••••••${metaApp.appSecret.slice(-4)}` : '',
         facebookRedirectUri: canManageSystem ? facebookRedirectUri() : '',
         nodeVersion: process.version,
         serverTime: new Date().toISOString(),
@@ -985,25 +988,6 @@ app.get('/api/settings', requireAuth, async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Lỗi tải thông tin cài đặt: ' + error.message });
-  }
-});
-
-// App ID / App Secret của Meta App: dùng để tự đổi sang token dài hạn và đăng nhập lại Facebook 1 chạm
-app.post('/api/settings/meta-app', requirePermission(PERMISSIONS.SETTINGS_SYSTEM), async (req, res) => {
-  try {
-    const { appId, appSecret } = req.body || {};
-    await tokenService.saveMetaAppCredentials({ appId, appSecret });
-    // Có App Secret rồi thì đổi ngay các token ngắn hạn còn sống sang token dài hạn
-    const results = await tokenService.renewAll({ force: true }).catch(() => []);
-    const exchanged = results.filter((item) => item.exchanged).length;
-    return res.json({
-      success: true,
-      message: `Đã lưu và xác thực Meta App.${exchanged ? ` Đã đổi ${exchanged} nick Facebook sang token dài hạn.` : ''}`,
-      results
-    });
-  } catch (error) {
-    const status = error instanceof tokenService.TokenError ? error.status : 500;
-    return res.status(status).json({ success: false, message: error.message });
   }
 });
 
@@ -1172,8 +1156,6 @@ app.get('/api/channels/check-tokens', requireAuth, async (req, res) => {
     messengerService.clearTokenCache();
     const channels = await getConnectedPages(req.user.sub);
     const graphVersion = process.env.FB_GRAPH_VERSION || 'v19.0';
-    const creds = await tokenService.getMetaAppCredentials(req.user.sub);
-    const appToken = creds.configured ? `${creds.appId}|${creds.appSecret}` : null;
 
     const tokenStatusList = await Promise.all(
       channels.map(async (channel) => {
@@ -1189,7 +1171,9 @@ app.get('/api/channels/check-tokens', requireAuth, async (req, res) => {
           let isValid = true;
           let details = 'Token hợp lệ và hoạt động bình thường';
 
-          // Nếu có appToken, gọi debug_token để xem chi tiết hạn dùng
+          // Có Meta App của nick sở hữu Fanpage thì gọi debug_token để xem chi tiết hạn dùng
+          const pageCreds = await tokenService.getPageAppCredentials(channel.id).catch(() => ({ configured: false }));
+          const appToken = pageCreds.configured ? `${pageCreds.appId}|${pageCreds.appSecret}` : null;
           if (appToken) {
             try {
               const debugRes = await axios.get(`https://graph.facebook.com/${graphVersion}/debug_token`, {
@@ -1324,10 +1308,11 @@ app.get('/api/channels/token-status', requireAuth, async (req, res) => {
 });
 
 // Mức độ sẵn sàng của đăng nhập Facebook (thiết lập Meta App → đăng nhập → quyền từng tính năng) cho trang Kênh
-// Meta App riêng của người dùng: dùng khi nick Facebook của họ không có vai trò trong app chung của tool
+// Meta App riêng của người dùng (một hoặc nhiều app): bắt buộc để đăng nhập Facebook qua tool
 app.get('/api/channels/my-meta-app', requireAuth, async (req, res) => {
   try {
-    return res.json({ success: true, ...(await tokenService.getUserMetaApp(req.user.sub)) });
+    const apps = await tokenService.getUserMetaApps(req.user.sub);
+    return res.json({ success: true, configured: apps.length > 0, apps });
   } catch (error) {
     return sendApiError(res, 'My Meta App Error', error, 'Không đọc được Meta App của bạn.');
   }
@@ -1335,21 +1320,23 @@ app.get('/api/channels/my-meta-app', requireAuth, async (req, res) => {
 
 app.post('/api/channels/my-meta-app', requireAuth, async (req, res) => {
   try {
-    const { appId, appSecret } = req.body || {};
-    const saved = await tokenService.saveUserMetaApp(req.user.sub, { appId, appSecret });
-    return res.json({ success: true, configured: true, appId: saved.appId, message: 'Đã lưu Meta App của bạn. Bấm Đăng nhập Facebook để kết nối Fanpage.' });
+    const { appId, appSecret, label } = req.body || {};
+    const saved = await tokenService.saveUserMetaApp(req.user.sub, { appId, appSecret, label });
+    const apps = await tokenService.getUserMetaApps(req.user.sub);
+    return res.json({ success: true, configured: true, appId: saved.appId, apps, message: 'Đã lưu Meta App của bạn. Bấm Đăng nhập Facebook để kết nối Fanpage.' });
   } catch (error) {
     const status = error instanceof tokenService.TokenError ? error.status : 500;
     return res.status(status).json({ success: false, code: error.code || null, message: error.message });
   }
 });
 
-app.delete('/api/channels/my-meta-app', requireAuth, async (req, res) => {
+app.delete('/api/channels/my-meta-app/:appId', requireAuth, async (req, res) => {
   try {
-    await tokenService.removeUserMetaApp(req.user.sub);
-    return res.json({ success: true, configured: false, message: 'Đã bỏ Meta App riêng — tool dùng lại app chung.' });
+    await tokenService.removeUserMetaApp(req.user.sub, req.params.appId);
+    const apps = await tokenService.getUserMetaApps(req.user.sub);
+    return res.json({ success: true, configured: apps.length > 0, apps, message: 'Đã gỡ Meta App khỏi tool.' });
   } catch (error) {
-    return sendApiError(res, 'My Meta App Error', error, 'Không bỏ được Meta App của bạn.');
+    return sendApiError(res, 'My Meta App Error', error, 'Không gỡ được Meta App.');
   }
 });
 
@@ -1357,13 +1344,13 @@ app.get('/api/channels/facebook-status', requireAuth, async (req, res) => {
   try {
     const status = await facebookLoginStatus.getLoginStatus(req.user.sub, { force: req.query.refresh === '1' });
     const canConfigure = hasPermission(req.user.role, PERMISSIONS.SETTINGS_SYSTEM);
-    // Chỉ Quản trị viên thấy thông số Webhook để dán vào Meta App
-    const webhook = canConfigure ? {
+    // Thông số Webhook để mỗi người dán vào Meta App của mình (sự kiện chỉ được xử lý cho Fanpage của chính chủ app)
+    const webhook = {
       callbackUrl: `${clientOrigin()}/api/webhooks/messenger`,
       verifyToken: process.env.MESSENGER_VERIFY_TOKEN || null,
       pageFields: ['messages', 'message_echoes', 'feed'],
       instagramFields: ['messages', 'comments']
-    } : null;
+    };
     return res.json({ success: true, ...status, canConfigure, webhook });
   } catch (error) {
     return sendApiError(res, 'Facebook Status Error', error, 'Không thể kiểm tra trạng thái đăng nhập Facebook.');
@@ -1831,8 +1818,12 @@ function parseSignedRequest(signedRequest, appSecret) {
 
 // Data Deletion Request Callback: Meta gọi khi người dùng gỡ app trong cài đặt Facebook và yêu cầu xóa dữ liệu
 app.post('/api/meta/data-deletion', express.urlencoded({ extended: false }), async (req, res) => {
-  const { appSecret } = await tokenService.getMetaAppCredentials().catch(() => ({}));
-  const data = parseSignedRequest(req.body?.signed_request, appSecret || process.env.FACEBOOK_APP_SECRET);
+  const apps = await tokenService.allUserApps().catch(() => []);
+  let data = null;
+  for (const metaApp of apps) {
+    data = parseSignedRequest(req.body?.signed_request, metaApp.secret);
+    if (data?.user_id) break;
+  }
   if (!data?.user_id) return res.status(400).json({ error: 'invalid_signed_request' });
 
   const fbUserId = String(data.user_id);
@@ -1945,20 +1936,29 @@ app.get('/api/webhooks/messenger', (req, res) => {
 });
 
 app.post('/api/webhooks/messenger', async (req, res) => {
-  // Nhận Webhook của Meta App đang dùng, và của app cũ trong thời gian chuyển app
-  const secrets = await tokenService.webhookSecrets().catch(() => []);
-  if (!secrets.some((secret) => messengerService.verifyWebhookSignature(req.rawBody, req.get('x-hub-signature-256'), secret))) {
+  // Chữ ký phải khớp một Meta App người dùng đã lưu; sự kiện chỉ được xử lý cho Fanpage của chính những người dùng app đó
+  const signature = req.get('x-hub-signature-256');
+  const matched = await tokenService.matchWebhookApp((secret) => messengerService.verifyWebhookSignature(req.rawBody, signature, secret)).catch(() => null);
+  if (!matched) {
     return res.sendStatus(403);
   }
   res.status(200).send('EVENT_RECEIVED');
-  commentAiService.handleWebhookBody(req.body).catch((error) => console.warn('[CommentAI Webhook]', error.message));
   try {
     const pool = await getPool();
-    const result = await pool.request().query('SELECT page_id FROM dbo.FacebookPages');
-    const pageIds = result.recordset.map((row) => String(row.page_id));
-    const igAccounts = await instagramService.listInstagramAccounts(pageIds).catch(() => []);
+    const pageIds = [];
+    for (const appUserId of matched.appUserIds) {
+      const result = await pool.request()
+        .input('appUserId', sql.VarChar(64), String(appUserId))
+        .query('SELECT page_id FROM dbo.FacebookPages WHERE facebook_user_id=@appUserId');
+      pageIds.push(...result.recordset.map((row) => String(row.page_id)));
+    }
+    const igAccounts = await instagramService.listInstagramAccounts([...new Set(pageIds)]).catch(() => []);
+    const allowed = new Set([...pageIds, ...igAccounts.map((account) => String(account.id))]);
+    const body = { ...req.body, entry: (Array.isArray(req.body?.entry) ? req.body.entry : []).filter((entry) => allowed.has(String(entry?.id))) };
+    if (!body.entry.length) return;
+    commentAiService.handleWebhookBody(body).catch((error) => console.warn('[CommentAI Webhook]', error.message));
     messengerService.handleWebhookPayload(
-      req.body,
+      body,
       new Set(pageIds),
       new Map(igAccounts.map((account) => [String(account.id), String(account.pageId)]))
     );

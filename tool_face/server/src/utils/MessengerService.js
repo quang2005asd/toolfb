@@ -808,9 +808,9 @@ async function ensurePageWebhookSubscription(pageId) {
     const fields = new Set(['messages', 'message_echoes']);
     try {
       const current = (await axios.get(`${GRAPH}/${key}/subscribed_apps`, { params: { access_token: token }, timeout: 15000 })).data.data || [];
-      // Meta App đang dùng (Cài đặt → Meta App, dự phòng FACEBOOK_APP_ID); nạp khi chạy để tránh vòng require
-      const { getMetaAppCredentials } = require('./FacebookTokenService');
-      const appId = String((await getMetaAppCredentials().catch(() => ({}))).appId || '');
+      // Meta App của nick sở hữu Fanpage; nạp khi chạy để tránh vòng require
+      const { getPageAppCredentials } = require('./FacebookTokenService');
+      const appId = String((await getPageAppCredentials(key).catch(() => ({}))).appId || '');
       current
         .filter((item) => !appId || String(item.id) === appId)
         .forEach((item) => (item.subscribed_fields || []).forEach((field) => fields.add(field)));

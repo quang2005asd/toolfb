@@ -26,7 +26,7 @@ const FEATURES = [
   { key: 'business', label: 'Fanpage thuộc Meta Business', scopes: ['business_management'], optional: true }
 ];
 
-let appCache = null; // { key, at, value }
+const appCache = new Map(); // khóa app -> { at, value }
 const accountCache = new Map(); // key -> { at, value }
 
 function graphError(error) {
@@ -36,7 +36,8 @@ function graphError(error) {
 
 async function inspectApp(creds, force) {
   const key = `${creds.appId}:${creds.appSecret.length}:${creds.appSecret.slice(-4)}`;
-  if (!force && appCache && appCache.key === key && Date.now() - appCache.at < APP_CACHE_MS) return appCache.value;
+  const cached = appCache.get(key);
+  if (!force && cached && Date.now() - cached.at < APP_CACHE_MS) return cached.value;
 
   const value = { credentialsValid: false, credentialsError: null, domainOk: null, domainMessage: null, roles: null };
   try {
@@ -74,7 +75,7 @@ async function inspectApp(creds, force) {
     }
   }
 
-  appCache = { key, at: Date.now(), value };
+  appCache.set(key, { at: Date.now(), value });
   return value;
 }
 
@@ -136,8 +137,15 @@ async function inspectAccount(row, creds, force) {
 }
 
 async function getLoginStatus(appUserId, { force = false } = {}) {
-  const creds = await tokenService.getMetaAppCredentials(appUserId);
-  const systemCreds = creds.source === 'user' ? await tokenService.getMetaAppCredentials() : creds;
+  // Tool không có app chung: chỉ Meta App người dùng tự thêm (có thể nhiều app, mỗi nick Facebook dùng một app)
+  const userApps = await tokenService.listUserApps(appUserId);
+  const apps = [];
+  for (const userApp of userApps) {
+    const appCreds = { appId: userApp.appId, appSecret: userApp.appSecret, configured: true };
+    apps.push({ appId: userApp.appId, label: userApp.label || '', ...(await inspectApp(appCreds, force)) });
+  }
+  const primary = apps.find((item) => item.credentialsValid) || apps[0] || null;
+  const creds = primary ? { ...userApps.find((item) => item.appId === primary.appId), configured: true } : { appId: '', appSecret: '', configured: false };
   const origin = clientOrigin();
   let domain = origin;
   try { domain = new URL(origin).hostname; } catch {}
@@ -145,9 +153,8 @@ async function getLoginStatus(appUserId, { force = false } = {}) {
   const app = {
     configured: creds.configured,
     appId: creds.appId || null,
-    // 'user': Meta App riêng của người dùng · 'system': app chung của tool
-    source: creds.source,
-    sharedAppConfigured: systemCreds.configured,
+    label: primary?.label || '',
+    source: 'user',
     redirectUri: facebookRedirectUri(),
     siteOrigin: origin,
     domain,
@@ -157,11 +164,11 @@ async function getLoginStatus(appUserId, { force = false } = {}) {
     domainMessage: null,
     roles: null
   };
-  if (creds.configured) Object.assign(app, await inspectApp(creds, force));
+  if (primary) Object.assign(app, { credentialsValid: primary.credentialsValid, credentialsError: primary.credentialsError, domainOk: primary.domainOk, domainMessage: primary.domainMessage, roles: primary.roles });
 
   const rows = await tokenService.listAccounts(appUserId);
   const accounts = [];
-  for (const row of rows) accounts.push(await inspectAccount(row, creds, force));
+  for (const row of rows) accounts.push({ ...(await inspectAccount(row, await tokenService.getAccountCredentials(row), force)), metaAppId: row.meta_app_id ? String(row.meta_app_id) : null });
 
   let level = 'ready';
   if (!creds.configured || !app.credentialsValid) level = 'setup';
@@ -172,6 +179,7 @@ async function getLoginStatus(appUserId, { force = false } = {}) {
   return {
     level,
     app,
+    apps,
     accounts,
     features: FEATURES,
     loginScopes: tokenService.loginScopes().split(',').map((item) => item.trim()).filter(Boolean),

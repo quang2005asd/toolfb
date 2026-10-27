@@ -21,7 +21,6 @@ const GRAPH = `https://graph.facebook.com/${process.env.FB_GRAPH_VERSION || 'v19
 const RENEW_INTERVAL_MS = 30 * 60 * 1000;
 const RENEW_THROTTLE_MS = 2 * 60 * 1000;
 const LONG_LIVED_MIN_SECONDS = 7 * 24 * 60 * 60;
-const PREVIOUS_APP_GRACE_MS = 14 * 24 * 60 * 60 * 1000;
 // Quyền cần cho đăng bài, đọc số liệu, hộp thư Messenger và Instagram
 const DEFAULT_LOGIN_SCOPES = [
   'public_profile', 'pages_show_list', 'pages_read_engagement', 'pages_read_user_content', 'pages_manage_posts',
@@ -65,6 +64,8 @@ async function ensureTokenSchema() {
           ALTER TABLE dbo.ConnectedFbAccounts ADD token_checked_at datetime2 NULL;
         IF COL_LENGTH('dbo.ConnectedFbAccounts', 'token_error') IS NULL
           ALTER TABLE dbo.ConnectedFbAccounts ADD token_error nvarchar(500) NULL;
+        IF COL_LENGTH('dbo.ConnectedFbAccounts', 'meta_app_id') IS NULL
+          ALTER TABLE dbo.ConnectedFbAccounts ADD meta_app_id varchar(32) NULL;
       `);
     })().catch((error) => {
       schemaPromise = null;
@@ -84,47 +85,79 @@ function graphMessage(error) {
   return error.response?.data?.error?.message || error.message;
 }
 
-// ═══ THÔNG TIN META APP (APP ID / APP SECRET) ═══
-// Mỗi người dùng tool có thể dùng Meta App riêng (họ là quản trị viên app nên đăng nhập Facebook được mà không cần ai mời)
-const USER_APP_PREFIX = 'fb_user_app:';
+// ═══ META APP RIÊNG CỦA TỪNG NGƯỜI DÙNG (APP ID / APP SECRET) ═══
+// Tool không dùng app chung: mỗi tài khoản tool tự thêm một hoặc nhiều Meta App mà nick Facebook của họ là quản trị viên.
+// Mỗi nick Facebook nhớ app đã cấp token (ConnectedFbAccounts.meta_app_id) để đổi / gia hạn token bằng đúng app đó.
+const USER_APPS_PREFIX = 'fb_user_apps:';
+const LEGACY_USER_APP_PREFIX = 'fb_user_app:';
+const MAX_APPS_PER_USER = 10;
 
-function readUserApp(settings, appUserId) {
-  if (!appUserId) return null;
-  const stored = settings[`${USER_APP_PREFIX}${appUserId}`];
-  if (!stored || typeof stored !== 'object' || !stored.appId || !stored.secret) return null;
-  const appSecret = decryptToken(stored.secret);
-  return appSecret ? { appId: String(stored.appId), appSecret } : null;
+function storedApps(settings, appUserId) {
+  if (!appUserId) return [];
+  const current = settings[`${USER_APPS_PREFIX}${appUserId}`];
+  if (current && Array.isArray(current.apps)) return current.apps;
+  const legacy = settings[`${LEGACY_USER_APP_PREFIX}${appUserId}`];
+  return legacy && typeof legacy === 'object' && legacy.appId && legacy.secret ? [legacy] : [];
 }
 
-// appUserId: ưu tiên Meta App riêng của người dùng đó, không có thì dùng app chung (Cài đặt → Meta App / biến môi trường)
-async function getMetaAppCredentials(appUserId = null) {
-  const settings = await getSettings().catch(() => ({}));
-  const own = readUserApp(settings, appUserId);
-  if (own) return { ...own, configured: true, source: 'user' };
-  const appId = String(settings.fb_app_id || process.env.FACEBOOK_APP_ID || '').trim();
-  let appSecret = '';
-  if (settings.fb_app_secret_encrypted) appSecret = decryptToken(settings.fb_app_secret_encrypted) || '';
-  if (!appSecret) appSecret = process.env.FACEBOOK_APP_SECRET || '';
-  return { appId, appSecret, configured: Boolean(appId && appSecret), source: 'system' };
+function decryptApps(list) {
+  return list
+    .map((item) => {
+      const appSecret = item && item.secret ? decryptToken(item.secret) : null;
+      return appSecret ? { appId: String(item.appId), appSecret, label: item.label || '', savedAt: item.savedAt || null } : null;
+    })
+    .filter(Boolean);
 }
 
-async function getUserMetaApp(appUserId) {
+async function listUserApps(appUserId) {
   const settings = await getSettings().catch(() => ({}));
-  const own = readUserApp(settings, appUserId);
-  return { configured: Boolean(own), appId: own?.appId || null };
+  return decryptApps(storedApps(settings, appUserId));
 }
 
-// Lưu Meta App riêng: kiểm tra App Secret và việc app đã khai báo miền của tool (không thì Facebook chặn đăng nhập)
-async function saveUserMetaApp(appUserId, { appId, appSecret }) {
-  const cleanId = String(appId || '').trim();
-  const settings = await getSettings().catch(() => ({}));
-  const existing = readUserApp(settings, appUserId);
-  const cleanSecret = String(appSecret || '').trim() || (existing?.appId === cleanId ? existing.appSecret : '');
-  if (!/^\d{5,20}$/.test(cleanId)) throw new TokenError('App ID chỉ gồm chữ số (xem tại Cài đặt ứng dụng → Thông tin cơ bản → ID ứng dụng).', 400, 'invalid_app_id');
-  if (!cleanSecret) throw new TokenError('Vui lòng nhập Khóa bí mật của ứng dụng (App Secret).', 400, 'missing_app_secret');
+function toCreds(app) {
+  return app
+    ? { appId: app.appId, appSecret: app.appSecret, label: app.label || '', configured: true, source: 'user' }
+    : { appId: '', appSecret: '', label: '', configured: false, source: 'user' };
+}
+
+// appId: chọn đúng một app của người dùng; không truyền thì lấy app đầu tiên
+async function getMetaAppCredentials(appUserId = null, { appId = null } = {}) {
+  const apps = await listUserApps(appUserId);
+  if (appId) return toCreds(apps.find((app) => app.appId === String(appId)));
+  return toCreds(apps[0]);
+}
+
+// App đã cấp token cho một nick Facebook; app đó bị gỡ khỏi tool thì dùng app đầu tiên của người dùng
+async function getAccountCredentials(row) {
+  const apps = await listUserApps(row.app_user_id);
+  return toCreds(apps.find((app) => app.appId === String(row.meta_app_id || '')) || apps[0]);
+}
+
+// App của nick sở hữu Fanpage (dùng để kiểm tra token Page / chẩn đoán)
+async function getPageAppCredentials(pageId) {
+  const pool = await getPool();
+  const result = await pool.request()
+    .input('pageId', sql.VarChar(64), String(pageId))
+    .query(`
+      SELECT TOP 1 p.facebook_user_id AS app_user_id, a.meta_app_id
+        FROM dbo.FacebookPages p
+        LEFT JOIN dbo.ConnectedFbAccounts a ON a.app_user_id = p.facebook_user_id AND a.fb_user_id = p.fb_account_id
+       WHERE p.page_id = @pageId
+    `);
+  const row = result.recordset[0];
+  return row ? getAccountCredentials(row) : toCreds(null);
+}
+
+async function getUserMetaApps(appUserId) {
+  const apps = await listUserApps(appUserId);
+  return apps.map(({ appId, label, savedAt }) => ({ appId, label, savedAt }));
+}
+
+// Kiểm tra App Secret và việc app đã khai báo miền của tool (không thì Facebook chặn đăng nhập)
+async function validateAppCredentials(appId, appSecret) {
   try {
     await axios.get(`${GRAPH}/oauth/access_token`, {
-      params: { client_id: cleanId, client_secret: cleanSecret, grant_type: 'client_credentials' },
+      params: { client_id: appId, client_secret: appSecret, grant_type: 'client_credentials' },
       timeout: 15000
     });
   } catch (error) {
@@ -134,7 +167,7 @@ async function saveUserMetaApp(appUserId, { appId, appSecret }) {
   try {
     // Gửi mã giả kèm URI chuyển hướng của tool: miền chưa khai báo thì Facebook trả lỗi 191 trước khi kiểm tra mã
     await axios.get(`${GRAPH}/oauth/access_token`, {
-      params: { client_id: cleanId, client_secret: cleanSecret, redirect_uri: facebookRedirectUri(), code: 'tool-face-domain-check' },
+      params: { client_id: appId, client_secret: appSecret, redirect_uri: facebookRedirectUri(), code: 'tool-face-domain-check' },
       timeout: 15000
     });
   } catch (error) {
@@ -143,46 +176,73 @@ async function saveUserMetaApp(appUserId, { appId, appSecret }) {
       throw new TokenError(`Meta App chưa khai báo miền ${domain}. Vào Cài đặt ứng dụng → Thông tin cơ bản → thêm ${domain} vào Miền ứng dụng, và thêm ${facebookRedirectUri()} vào URI chuyển hướng OAuth hợp lệ, rồi lưu lại.`, 400, 'domain_not_allowed');
     }
   }
-  await saveSetting(`${USER_APP_PREFIX}${appUserId}`, { appId: cleanId, secret: encryptToken(cleanSecret), savedAt: new Date().toISOString() });
-  return { appId: cleanId };
 }
 
-async function removeUserMetaApp(appUserId) {
-  await saveSetting(`${USER_APP_PREFIX}${appUserId}`, '');
-}
-
-async function saveMetaAppCredentials({ appId, appSecret }) {
+// Thêm / cập nhật một Meta App của người dùng (cùng App ID thì cập nhật, bỏ trống khóa thì giữ khóa cũ)
+async function saveUserMetaApp(appUserId, { appId, appSecret, label }) {
   const cleanId = String(appId || '').trim();
-  const current = await getMetaAppCredentials();
-  const cleanSecret = String(appSecret || '').trim() || current.appSecret;
-  if (!/^\d{5,20}$/.test(cleanId)) throw new TokenError('App ID chỉ gồm chữ số (xem tại Meta for Developers → Cài đặt ứng dụng → Thông tin cơ bản).', 400, 'invalid_app_id');
-  if (!cleanSecret) throw new TokenError('Vui lòng nhập App Secret.', 400, 'missing_app_secret');
-  // Xác thực với Facebook trước khi lưu
-  try {
-    await axios.get(`${GRAPH}/oauth/access_token`, {
-      params: { client_id: cleanId, client_secret: cleanSecret, grant_type: 'client_credentials' },
-      timeout: 15000
-    });
-  } catch (error) {
-    throw new TokenError(`Facebook từ chối App ID / App Secret: ${graphMessage(error)}`, 400, 'invalid_app_credentials');
-  }
-  // Đổi sang Meta App khác: giữ App Secret của app cũ thêm 14 ngày để Webhook của app cũ vẫn được nhận trong lúc chuyển
-  const previous = current.configured && current.appId !== cleanId
-    ? { fb_prev_app_id: current.appId, fb_prev_app_secret_encrypted: encryptToken(current.appSecret), fb_prev_app_until: new Date(Date.now() + PREVIOUS_APP_GRACE_MS).toISOString() }
-    : {};
-  await saveMultipleSettings({ fb_app_id: cleanId, fb_app_secret_encrypted: encryptToken(cleanSecret), ...previous });
-  return { appId: cleanId };
+  const settings = await getSettings().catch(() => ({}));
+  const list = storedApps(settings, appUserId);
+  const existing = decryptApps(list).find((app) => app.appId === cleanId);
+  const cleanSecret = String(appSecret || '').trim() || existing?.appSecret || '';
+  if (!/^\d{5,20}$/.test(cleanId)) throw new TokenError('App ID chỉ gồm chữ số (xem tại Cài đặt ứng dụng → Thông tin cơ bản → ID ứng dụng).', 400, 'invalid_app_id');
+  if (!cleanSecret) throw new TokenError('Vui lòng nhập Khóa bí mật của ứng dụng (App Secret).', 400, 'missing_app_secret');
+  if (!existing && list.length >= MAX_APPS_PER_USER) throw new TokenError(`Mỗi tài khoản lưu tối đa ${MAX_APPS_PER_USER} Meta App.`, 400, 'too_many_apps');
+  await validateAppCredentials(cleanId, cleanSecret);
+  const entry = {
+    appId: cleanId,
+    secret: encryptToken(cleanSecret),
+    label: String(label ?? existing?.label ?? '').trim().slice(0, 60),
+    savedAt: new Date().toISOString()
+  };
+  const next = existing ? list.map((item) => (String(item.appId) === cleanId ? entry : item)) : [...list, entry];
+  await saveSetting(`${USER_APPS_PREFIX}${appUserId}`, { apps: next });
+  if (settings[`${LEGACY_USER_APP_PREFIX}${appUserId}`]) await saveSetting(`${LEGACY_USER_APP_PREFIX}${appUserId}`, '');
+  return { appId: cleanId, label: entry.label };
 }
 
-// App Secret dùng để kiểm chữ ký Webhook: app đang cấu hình, FACEBOOK_APP_SECRET và app cũ (trong 14 ngày sau khi đổi app)
-async function webhookSecrets() {
+async function removeUserMetaApp(appUserId, appId) {
   const settings = await getSettings().catch(() => ({}));
-  const creds = await getMetaAppCredentials();
-  const secrets = [creds.appSecret, process.env.FACEBOOK_APP_SECRET];
-  if (settings.fb_prev_app_secret_encrypted && Date.parse(settings.fb_prev_app_until || '') > Date.now()) {
-    secrets.push(decryptToken(settings.fb_prev_app_secret_encrypted));
+  const list = storedApps(settings, appUserId);
+  const next = list.filter((item) => String(item.appId) !== String(appId));
+  await saveSetting(`${USER_APPS_PREFIX}${appUserId}`, { apps: next });
+  if (settings[`${LEGACY_USER_APP_PREFIX}${appUserId}`]) await saveSetting(`${LEGACY_USER_APP_PREFIX}${appUserId}`, '');
+  return { removed: list.length - next.length };
+}
+
+// Mọi Meta App đã lưu trong tool: { appId, secret, appUserIds } (dùng cho Webhook và yêu cầu xóa dữ liệu của Meta)
+async function allUserApps() {
+  const settings = await getSettings().catch(() => ({}));
+  const byApp = new Map();
+  for (const key of Object.keys(settings)) {
+    const prefix = key.startsWith(USER_APPS_PREFIX) ? USER_APPS_PREFIX : key.startsWith(LEGACY_USER_APP_PREFIX) ? LEGACY_USER_APP_PREFIX : null;
+    if (!prefix) continue;
+    const appUserId = key.slice(prefix.length);
+    for (const app of decryptApps(storedApps(settings, appUserId))) {
+      const entry = byApp.get(app.appId) || { appId: app.appId, secret: app.appSecret, appUserIds: new Set() };
+      entry.appUserIds.add(String(appUserId));
+      byApp.set(app.appId, entry);
+    }
   }
-  return [...new Set(secrets.filter(Boolean))];
+  return [...byApp.values()];
+}
+
+// Webhook: tìm app đã ký sự kiện (verify(secret) → true/false); trả về app và những người dùng đang dùng app đó
+async function matchWebhookApp(verify) {
+  for (const app of await allUserApps()) {
+    if (verify(app.secret)) return { appId: app.appId, appUserIds: [...app.appUserIds] };
+  }
+  return null;
+}
+
+async function saveAccountApp(appUserId, fbUserId, metaAppId) {
+  if (!metaAppId) return;
+  const pool = await getPool();
+  await pool.request()
+    .input('appUserId', sql.VarChar(64), String(appUserId))
+    .input('fbUserId', sql.VarChar(64), String(fbUserId))
+    .input('metaAppId', sql.VarChar(32), String(metaAppId))
+    .query('UPDATE dbo.ConnectedFbAccounts SET meta_app_id=@metaAppId WHERE app_user_id=@appUserId AND fb_user_id=@fbUserId');
 }
 
 function loginScopes() {
@@ -308,11 +368,17 @@ async function grantedPermissions(token) {
 }
 
 // ═══ KẾT NỐI TOKEN MỚI (dán token hoặc Facebook Login) ═══
-async function connectUserToken(appUserId, rawToken) {
+// appId: Meta App vừa dùng để đăng nhập (OAuth). Dán token thì tool tự nhận app đã cấp token qua debug_token.
+async function connectUserToken(appUserId, rawToken, { appId = null } = {}) {
   await ensureTokenSchema();
-  const creds = await getMetaAppCredentials(appUserId);
+  const apps = await listUserApps(appUserId);
+  const preferred = appId ? apps.find((app) => app.appId === String(appId)) : null;
+  let creds = toCreds(preferred);
   const first = await inspectUserToken(rawToken, creds);
   if (!first.valid) throw new TokenError(first.error || 'Facebook Access Token không hợp lệ.', 400, 'invalid_token');
+  // Token do app nào cấp: trùng một app của người dùng thì dùng app đó để đổi / gia hạn token
+  const tokenAppId = first.appId || preferred?.appId || null;
+  if (!preferred && tokenAppId) creds = toCreds(apps.find((app) => app.appId === tokenAppId));
 
   // Chưa có quyền xem Fanpage thì dừng trước khi đồng bộ (không xóa Fanpage đã lưu của nick này)
   const permissions = await grantedPermissions(rawToken);
@@ -348,6 +414,7 @@ async function connectUserToken(appUserId, rawToken) {
   await saveFacebookUser({ id: appUserId, name: profile.name, picture: profile.picture }, token, expiresIn);
   const pages = await syncFacebookPages(appUserId, token, fbAccount);
   await saveTokenMeta(appUserId, fbAccount.id, { status: 'valid', type: info.type, expiresAt: info.expiresAt, error: exchangeError });
+  await saveAccountApp(appUserId, fbAccount.id, tokenAppId);
   lastRenewByAccount.set(`${appUserId}:${fbAccount.id}`, Date.now());
   await notifyRenewed(appUserId);
   return {
@@ -359,6 +426,7 @@ async function connectUserToken(appUserId, rawToken) {
     expiresAt: info.expiresAt,
     exchanged: token !== rawToken,
     exchangeError,
+    metaAppId: tokenAppId,
     appConfigured: creds.configured
   };
 }
@@ -394,7 +462,7 @@ async function renewAccount(row, { force = false, refreshPages = false } = {}) {
   }
   lastRenewByAccount.set(key, Date.now());
 
-  const creds = await getMetaAppCredentials(row.app_user_id);
+  const creds = await getAccountCredentials(row);
   const stored = decryptToken(row.access_token_encrypted);
   if (!stored) {
     await saveTokenMeta(row.app_user_id, row.fb_user_id, { status: 'invalid', error: 'Không giải mã được token đã lưu (SESSION_SECRET đã đổi).' });
@@ -453,6 +521,8 @@ async function renewAccount(row, { force = false, refreshPages = false } = {}) {
     expiresAt: info.expiresAt,
     exchanged,
     pagesRefreshed: exchanged || invalidPages > 0 || refreshPages,
+    // Số Fanpage đang lỗi vừa được lấy lại token (lần làm mới định kỳ không đổi gì thì bằng 0)
+    repairedPages: invalidPages,
     message: note
   };
 }
@@ -490,10 +560,10 @@ async function requestRenewForPage(pageId) {
 }
 
 async function getTokenStatus(appUserId) {
-  const [accounts, creds] = await Promise.all([listAccounts(appUserId), getMetaAppCredentials(appUserId)]);
+  const [accounts, apps] = await Promise.all([listAccounts(appUserId), listUserApps(appUserId)]);
   return {
-    appConfigured: creds.configured,
-    oauthAvailable: creds.configured && Boolean(process.env.SESSION_SECRET),
+    appConfigured: apps.length > 0,
+    oauthAvailable: apps.length > 0 && Boolean(process.env.SESSION_SECRET),
     accounts: accounts.map((row) => ({
       id: String(row.fb_user_id),
       name: row.fb_name,
@@ -502,7 +572,8 @@ async function getTokenStatus(appUserId) {
       type: row.token_type || 'unknown',
       expiresAt: toIso(row.token_expires_at),
       checkedAt: toIso(row.token_checked_at),
-      error: row.token_error || null
+      error: row.token_error || null,
+      metaAppId: row.meta_app_id ? String(row.meta_app_id) : null
     }))
   };
 }
@@ -514,7 +585,7 @@ function onTokensRenewed(hook) {
 function startTokenAutoRenew() {
   const run = (reason) => renewAll()
     .then((results) => {
-      const renewed = results.filter((item) => item.exchanged || item.pagesRefreshed).length;
+      const renewed = results.filter((item) => item.exchanged || item.repairedPages > 0).length;
       const expired = results.filter((item) => item.status === 'expired').length;
       if (renewed || expired) console.log(`🔑 [Token Auto Renew] (${reason}) Làm mới ${renewed} nick, ${expired} nick đã hết hạn cần đăng nhập lại.`);
     })
@@ -526,20 +597,23 @@ function startTokenAutoRenew() {
 
 module.exports = {
   TokenError,
+  allUserApps,
   connectUserToken,
   ensureTokenSchema,
+  getAccountCredentials,
   getMetaAppCredentials,
+  getPageAppCredentials,
   getTokenStatus,
-  getUserMetaApp,
+  getUserMetaApps,
   inspectUserToken,
   listAccounts,
+  listUserApps,
   loginScopes,
+  matchWebhookApp,
   onTokensRenewed,
   renewAll,
   requestRenewForPage,
   removeUserMetaApp,
-  saveMetaAppCredentials,
   saveUserMetaApp,
-  startTokenAutoRenew,
-  webhookSecrets
+  startTokenAutoRenew
 };

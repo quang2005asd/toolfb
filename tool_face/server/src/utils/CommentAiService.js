@@ -1094,10 +1094,10 @@ async function handleWebhookBody(body) {
   }
 }
 
-// Meta App đang dùng (Cài đặt → Meta App, dự phòng biến môi trường); nạp khi chạy để tránh vòng require
-async function metaApp() {
-  const { getMetaAppCredentials } = require('./FacebookTokenService');
-  return getMetaAppCredentials().catch(() => ({ appId: process.env.FACEBOOK_APP_ID || '', appSecret: process.env.FACEBOOK_APP_SECRET || '' }));
+// Meta App của nick sở hữu Fanpage (mỗi người dùng tự thêm app); nạp khi chạy để tránh vòng require
+async function metaApp(pageId) {
+  const { getPageAppCredentials } = require('./FacebookTokenService');
+  return getPageAppCredentials(pageId).catch(() => ({ appId: '', appSecret: '', configured: false }));
 }
 
 async function subscribePage(pageId) {
@@ -1107,7 +1107,7 @@ async function subscribePage(pageId) {
   const fields = new Set(['feed']);
   try {
     const current = (await graphGet(`${GRAPH}/${pageId}/subscribed_apps`, { params: { access_token: token }, timeout: 15000 })).data.data || [];
-    const appId = String((await metaApp()).appId || '');
+    const appId = String((await metaApp(pageId)).appId || '');
     current
       .filter((a) => !appId || String(a.id) === appId)
       .forEach((a) => (a.subscribed_fields || []).forEach((f) => fields.add(f)));
@@ -1219,7 +1219,7 @@ async function buildDiagnostics(pageId, { full = false, host = '' } = {}) {
     const useSqlite = process.env.USE_SQLITE === 'true' || process.env.DB_TYPE === 'sqlite';
     add(`Node ${process.version}, chạy được ${Math.round(process.uptime() / 60)} phút, database: ${useSqlite ? 'SQLite' : 'SQL Server'}`);
     add(`CLIENT_ORIGIN=${process.env.CLIENT_ORIGIN || '(chưa đặt)'}  Địa chỉ máy chủ đang được gọi: ${host || '(không rõ)'}`);
-    const app = await metaApp();
+    const app = await metaApp(pageId);
     add(`Meta App ID=${app.appId || '(chưa đặt)'}  App Secret:${app.appSecret ? 'đã đặt' : 'CHƯA ĐẶT'}  FB_VERIFY_TOKEN:${process.env.FB_VERIFY_TOKEN ? 'đã đặt' : 'CHƯA ĐẶT (cần để Facebook xác thực webhook)'}`);
     const ai = await getAiConfig();
     add(`AI: key ${ai.apiKey ? 'đã đặt' : 'CHƯA ĐẶT (vào Cài đặt)'}, model=${ai.model}, endpoint=${(() => { try { return new URL(ai.baseUrl).host; } catch { return ai.baseUrl; } })()}`);
@@ -1314,7 +1314,7 @@ async function buildDiagnostics(pageId, { full = false, host = '' } = {}) {
         add(`Token Page: dùng được (${me.data.name})`);
       } catch (e) { add(`Token Page: KHÔNG dùng được - ${errorText(e)}`); }
       try {
-        const app = await metaApp();
+        const app = await metaApp(pageId);
         const appToken = `${app.appId}|${app.appSecret}`;
         const d = (await graphGet(`${GRAPH}/debug_token`, { params: { input_token: token, access_token: appToken }, timeout: 15000 })).data.data || {};
         const scopes = d.scopes || [];
