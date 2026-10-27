@@ -24,7 +24,8 @@
 const crypto = require('crypto');
 const { sql, getPool } = require('../../config/db');
 const webSearchService = require('./WebSearchService');
-const { callAiChat } = require('./AiClientService');
+const { callAiChat, getGroqKey } = require('./AiClientService');
+const { getSettings } = require('./SettingsService');
 const topicPackService = require('./TopicPackService');
 const {
   resolveTopicPack,
@@ -326,6 +327,22 @@ const LENGTH_GUIDES = {
 };
 
 // ═══ QUY TRÌNH SINH BÀI ĐĂNG TÍCH HỢP STATE MACHINE, TOPIC PACK & SAFETY CHECK ═══
+// Cấu hình AI dạng OpenAI-compatible { apiKey, model, baseUrl } cho các module gọi thẳng /chat/completions
+// (AI Bình luận, AI trả lời tin nhắn). Khóa nhập ở Cài đặt được ưu tiên; khóa Groq / chưa nhập thì lấy khóa còn lượt trong pool của AI Engine.
+async function getAiConfig() {
+  const settings = await getSettings().catch(() => ({}));
+  const customKey = String(settings.ai_api_key || process.env.AI_API_KEY || '').trim();
+  const useGroq = !customKey || customKey.startsWith('gsk_');
+  const apiKey = useGroq ? getGroqKey(customKey || undefined) : customKey;
+  let baseUrl = String(settings.ai_base_url || process.env.AI_API_BASE_URL || '').trim().replace(/\/$/, '');
+  let model = settings.ai_model || process.env.AI_MODEL || 'openai/gpt-oss-120b';
+  if (useGroq) {
+    if (!baseUrl || baseUrl.includes('api.openai.com')) baseUrl = 'https://api.groq.com/openai/v1';
+    if (['gpt-4o-mini', 'gpt-4o', 'llama-3.3-70b-versatile'].includes(model) || String(model).startsWith('gemini')) model = 'openai/gpt-oss-120b';
+  }
+  return { apiKey: apiKey || '', model, baseUrl: baseUrl || 'https://api.openai.com/v1' };
+}
+
 async function generatePosts(userId, options = {}) {
   const {
     prompt,
@@ -928,6 +945,7 @@ function formatDraft(row) {
 
 module.exports = {
   POST_STATES,
+  getAiConfig,
   generatePosts,
   regenerateDraft,
   approveDraft,
