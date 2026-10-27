@@ -8705,3 +8705,30 @@ body.dark-mode .token-menu-item:hover, body.dark-mode .token-menu-item:focus-vis
 .fb-login-dialog .fb-guide-fields { grid-template-columns: minmax(0, 1fr); gap: 2px; }
 .fb-login-dialog .fb-guide-fields dd { margin-bottom: 6px; }
 .fb-login-lead code { display: inline-block; margin: 2px 4px 0 0; }
+
+/* ═══ META APP RIÊNG CỦA NGƯỜI DÙNG: chọn "đã có / chưa có" + form App ID / Khóa bí mật ═══ */
+.fb-own-app-choice { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+.fb-own-app-option { display: flex; align-items: flex-start; gap: 10px; min-width: 0; padding: 12px; border-radius: 12px; border: 1px solid var(--border-strong); background: var(--panel); color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: border-color var(--trans-fast), box-shadow var(--trans-fast); }
+.fb-own-app-option:hover { border-color: var(--blue); box-shadow: 0 0 0 1px var(--blue-border); }
+.fb-own-app-option:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.fb-own-app-option > svg { flex: none; margin-top: 1px; color: var(--blue); }
+.fb-own-app-option > span { display: grid; gap: 2px; min-width: 0; }
+.fb-own-app-option strong { font-size: 13.5px; }
+.fb-own-app-option small { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.fb-own-app-form { display: grid; gap: 10px; margin-top: 16px; padding: 14px; border-radius: 12px; border: 1px solid var(--blue-border); background: var(--blue-bg); }
+.fb-own-app-form > strong { font-size: 14px; }
+.fb-own-app-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.fb-own-app-fields label { display: grid; gap: 4px; min-width: 0; }
+.fb-own-app-fields .field { width: 100%; min-width: 0; }
+.fb-own-app-result { display: flex; align-items: flex-start; gap: 6px; margin: 0; font-size: 12.5px; line-height: 1.5; }
+.fb-own-app-result > svg { flex: none; margin-top: 2px; }
+.fb-own-app-result.is-ok { color: #047857; }
+.fb-own-app-result.is-error { color: #b91c1c; }
+[data-theme="dark"] .fb-own-app-result.is-ok, body.dark-mode .fb-own-app-result.is-ok { color: #6ee7b7; }
+[data-theme="dark"] .fb-own-app-result.is-error, body.dark-mode .fb-own-app-result.is-error { color: #fca5a5; }
+.fb-own-app-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.fb-own-app-actions .button { min-height: 36px; padding: 0 14px; font-size: 12.5px; }
+@media (max-width: 600px) {
+  .fb-own-app-choice, .fb-own-app-fields { grid-template-columns: minmax(0, 1fr); }
+  .fb-own-app-actions .button { flex: 1 1 100%; justify-content: center; }
+}

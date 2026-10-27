@@ -8,7 +8,7 @@
  */
 const axios = require('axios');
 const { sql, getPool } = require('../../config/db');
-const { getSettings, saveMultipleSettings } = require('./SettingsService');
+const { getSettings, saveMultipleSettings, saveSetting } = require('./SettingsService');
 const {
   decryptToken,
   encryptToken,
@@ -85,13 +85,70 @@ function graphMessage(error) {
 }
 
 // ═══ THÔNG TIN META APP (APP ID / APP SECRET) ═══
-async function getMetaAppCredentials() {
+// Mỗi người dùng tool có thể dùng Meta App riêng (họ là quản trị viên app nên đăng nhập Facebook được mà không cần ai mời)
+const USER_APP_PREFIX = 'fb_user_app:';
+
+function readUserApp(settings, appUserId) {
+  if (!appUserId) return null;
+  const stored = settings[`${USER_APP_PREFIX}${appUserId}`];
+  if (!stored || typeof stored !== 'object' || !stored.appId || !stored.secret) return null;
+  const appSecret = decryptToken(stored.secret);
+  return appSecret ? { appId: String(stored.appId), appSecret } : null;
+}
+
+// appUserId: ưu tiên Meta App riêng của người dùng đó, không có thì dùng app chung (Cài đặt → Meta App / biến môi trường)
+async function getMetaAppCredentials(appUserId = null) {
   const settings = await getSettings().catch(() => ({}));
+  const own = readUserApp(settings, appUserId);
+  if (own) return { ...own, configured: true, source: 'user' };
   const appId = String(settings.fb_app_id || process.env.FACEBOOK_APP_ID || '').trim();
   let appSecret = '';
   if (settings.fb_app_secret_encrypted) appSecret = decryptToken(settings.fb_app_secret_encrypted) || '';
   if (!appSecret) appSecret = process.env.FACEBOOK_APP_SECRET || '';
-  return { appId, appSecret, configured: Boolean(appId && appSecret) };
+  return { appId, appSecret, configured: Boolean(appId && appSecret), source: 'system' };
+}
+
+async function getUserMetaApp(appUserId) {
+  const settings = await getSettings().catch(() => ({}));
+  const own = readUserApp(settings, appUserId);
+  return { configured: Boolean(own), appId: own?.appId || null };
+}
+
+// Lưu Meta App riêng: kiểm tra App Secret và việc app đã khai báo miền của tool (không thì Facebook chặn đăng nhập)
+async function saveUserMetaApp(appUserId, { appId, appSecret }) {
+  const cleanId = String(appId || '').trim();
+  const settings = await getSettings().catch(() => ({}));
+  const existing = readUserApp(settings, appUserId);
+  const cleanSecret = String(appSecret || '').trim() || (existing?.appId === cleanId ? existing.appSecret : '');
+  if (!/^\d{5,20}$/.test(cleanId)) throw new TokenError('App ID chỉ gồm chữ số (xem tại Cài đặt ứng dụng → Thông tin cơ bản → ID ứng dụng).', 400, 'invalid_app_id');
+  if (!cleanSecret) throw new TokenError('Vui lòng nhập Khóa bí mật của ứng dụng (App Secret).', 400, 'missing_app_secret');
+  try {
+    await axios.get(`${GRAPH}/oauth/access_token`, {
+      params: { client_id: cleanId, client_secret: cleanSecret, grant_type: 'client_credentials' },
+      timeout: 15000
+    });
+  } catch (error) {
+    throw new TokenError(`Facebook từ chối App ID / App Secret: ${graphMessage(error)}`, 400, 'invalid_app_credentials');
+  }
+  const { facebookRedirectUri } = require('../middlewares/auth');
+  try {
+    // Gửi mã giả kèm URI chuyển hướng của tool: miền chưa khai báo thì Facebook trả lỗi 191 trước khi kiểm tra mã
+    await axios.get(`${GRAPH}/oauth/access_token`, {
+      params: { client_id: cleanId, client_secret: cleanSecret, redirect_uri: facebookRedirectUri(), code: 'tool-face-domain-check' },
+      timeout: 15000
+    });
+  } catch (error) {
+    if (error.response?.data?.error?.code === 191) {
+      const domain = new URL(facebookRedirectUri()).hostname;
+      throw new TokenError(`Meta App chưa khai báo miền ${domain}. Vào Cài đặt ứng dụng → Thông tin cơ bản → thêm ${domain} vào Miền ứng dụng, và thêm ${facebookRedirectUri()} vào URI chuyển hướng OAuth hợp lệ, rồi lưu lại.`, 400, 'domain_not_allowed');
+    }
+  }
+  await saveSetting(`${USER_APP_PREFIX}${appUserId}`, { appId: cleanId, secret: encryptToken(cleanSecret), savedAt: new Date().toISOString() });
+  return { appId: cleanId };
+}
+
+async function removeUserMetaApp(appUserId) {
+  await saveSetting(`${USER_APP_PREFIX}${appUserId}`, '');
 }
 
 async function saveMetaAppCredentials({ appId, appSecret }) {
@@ -253,7 +310,7 @@ async function grantedPermissions(token) {
 // ═══ KẾT NỐI TOKEN MỚI (dán token hoặc Facebook Login) ═══
 async function connectUserToken(appUserId, rawToken) {
   await ensureTokenSchema();
-  const creds = await getMetaAppCredentials();
+  const creds = await getMetaAppCredentials(appUserId);
   const first = await inspectUserToken(rawToken, creds);
   if (!first.valid) throw new TokenError(first.error || 'Facebook Access Token không hợp lệ.', 400, 'invalid_token');
 
@@ -337,7 +394,7 @@ async function renewAccount(row, { force = false, refreshPages = false } = {}) {
   }
   lastRenewByAccount.set(key, Date.now());
 
-  const creds = await getMetaAppCredentials();
+  const creds = await getMetaAppCredentials(row.app_user_id);
   const stored = decryptToken(row.access_token_encrypted);
   if (!stored) {
     await saveTokenMeta(row.app_user_id, row.fb_user_id, { status: 'invalid', error: 'Không giải mã được token đã lưu (SESSION_SECRET đã đổi).' });
@@ -433,7 +490,7 @@ async function requestRenewForPage(pageId) {
 }
 
 async function getTokenStatus(appUserId) {
-  const [accounts, creds] = await Promise.all([listAccounts(appUserId), getMetaAppCredentials()]);
+  const [accounts, creds] = await Promise.all([listAccounts(appUserId), getMetaAppCredentials(appUserId)]);
   return {
     appConfigured: creds.configured,
     oauthAvailable: creds.configured && Boolean(process.env.SESSION_SECRET),
@@ -473,13 +530,16 @@ module.exports = {
   ensureTokenSchema,
   getMetaAppCredentials,
   getTokenStatus,
+  getUserMetaApp,
   inspectUserToken,
   listAccounts,
   loginScopes,
   onTokensRenewed,
   renewAll,
   requestRenewForPage,
+  removeUserMetaApp,
   saveMetaAppCredentials,
+  saveUserMetaApp,
   startTokenAutoRenew,
   webhookSecrets
 };

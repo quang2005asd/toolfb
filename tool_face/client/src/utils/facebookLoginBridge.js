@@ -56,7 +56,9 @@ export function subscribeLoginResult(callback) {
 export function openLoginPopup(url) {
   const width = 600;
   const height = 720;
-  const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - width) / 2));
+  // Màn hình đủ rộng: đặt cửa sổ Facebook lệch phải để không che hộp thoại hướng dẫn của tool ở giữa
+  const roomy = window.outerWidth >= width * 2 + 160;
+  const left = Math.max(0, Math.round(window.screenX + (roomy ? window.outerWidth - width - 24 : (window.outerWidth - width) / 2)));
   const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - height) / 2));
   const popup = window.open(url, POPUP_NAME, `width=${width},height=${height},left=${left},top=${top}`);
   return popup && !popup.closed ? popup : null;

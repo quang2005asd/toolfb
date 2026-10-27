@@ -136,7 +136,8 @@ async function inspectAccount(row, creds, force) {
 }
 
 async function getLoginStatus(appUserId, { force = false } = {}) {
-  const creds = await tokenService.getMetaAppCredentials();
+  const creds = await tokenService.getMetaAppCredentials(appUserId);
+  const systemCreds = creds.source === 'user' ? await tokenService.getMetaAppCredentials() : creds;
   const origin = clientOrigin();
   let domain = origin;
   try { domain = new URL(origin).hostname; } catch {}
@@ -144,6 +145,9 @@ async function getLoginStatus(appUserId, { force = false } = {}) {
   const app = {
     configured: creds.configured,
     appId: creds.appId || null,
+    // 'user': Meta App riêng của người dùng · 'system': app chung của tool
+    source: creds.source,
+    sharedAppConfigured: systemCreds.configured,
     redirectUri: facebookRedirectUri(),
     siteOrigin: origin,
     domain,

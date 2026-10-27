@@ -85,6 +85,69 @@ export function OwnTokenSteps({ features, missing }) {
   );
 }
 
+// Các mục Meta App riêng phải có để đăng nhập qua tool (dùng chung cho "đã có app" và cuối bước "tạo app")
+function OwnAppSettingsSteps({ app, features }) {
+  const origin = app?.siteOrigin || (typeof window !== 'undefined' ? window.location.origin : '');
+  const domain = app?.domain || (typeof window !== 'undefined' ? window.location.hostname : '');
+  const scopes = pageScopesFrom(features);
+  return (
+    <>
+      <li>
+        <strong>Khai báo tên miền của tool</strong>
+        <span><em>Cài đặt ứng dụng → Thông tin cơ bản</em> → <em>+ Thêm nền tảng</em> → <em>Trang web</em> → điền URL trang web, rồi điền <em>Miền ứng dụng</em> → <em>Lưu thay đổi</em>:</span>
+        <dl className="fb-guide-fields">
+          <dt>URL trang web</dt><dd><CopyValue value={`${origin}/`} /></dd>
+          <dt>Miền ứng dụng</dt><dd><CopyValue value={domain} /></dd>
+        </dl>
+      </li>
+      <li>
+        <strong>Khai báo URI chuyển hướng</strong>
+        <span><em>Đăng nhập bằng Facebook</em> → <em>Cài đặt</em> → bật <em>Đăng nhập OAuth trên web</em> → thêm vào <em>URI chuyển hướng OAuth hợp lệ</em> → <em>Lưu thay đổi</em>:</span>
+        <dl className="fb-guide-fields"><dt>URI chuyển hướng</dt><dd><CopyValue value={app?.redirectUri || `${origin}/api/auth/facebook/callback`} /></dd></dl>
+      </li>
+      <li>
+        <strong>Thêm quyền</strong>
+        <span><em>Trường hợp sử dụng</em> → từng mục → <em>Tùy chỉnh</em> → <em>Quyền và tính năng</em> → bấm <em>Thêm</em> ở các quyền:</span>
+        <span className="fb-guide-scopes">{scopes.map((scope) => <code key={scope}>{scope}</code>)}</span>
+      </li>
+      <li>
+        <strong>Chép App ID &amp; Khóa bí mật</strong>
+        <span><em>Cài đặt ứng dụng → Thông tin cơ bản</em> → chép <em>ID ứng dụng</em>, bấm <em>Hiển thị</em> ở <em>Khóa bí mật của ứng dụng</em> rồi chép → dán vào ô bên dưới. App để ở chế độ phát triển là đủ — bạn là quản trị viên nên đăng nhập được ngay.</span>
+      </li>
+    </>
+  );
+}
+
+// Đã có Meta App trên developers.facebook.com → chỉ cần kiểm tra cài đặt rồi điền vào tool
+export function OwnAppEnterSteps({ app, features }) {
+  return (
+    <ol className="fb-guide-steps">
+      <li>
+        <strong>Mở Meta App của bạn</strong>
+        <span>Vào <Ext href="https://developers.facebook.com/apps/">developers.facebook.com/apps</Ext> bằng nick Facebook quản lý Fanpage → chọn app. App cần có trường hợp sử dụng <em>Quản lý mọi thứ trên Trang của bạn</em> (thêm bằng <em>Trường hợp sử dụng → Thêm</em> nếu chưa có).</span>
+      </li>
+      <OwnAppSettingsSteps app={app} features={features} />
+    </ol>
+  );
+}
+
+// Chưa có Meta App → tạo từ đầu (miễn phí, không cần xác minh doanh nghiệp khi chỉ dùng cho Fanpage của mình)
+export function OwnAppCreateSteps({ app, features }) {
+  return (
+    <ol className="fb-guide-steps">
+      <li>
+        <strong>Đăng ký tài khoản nhà phát triển (một lần)</strong>
+        <span>Mở <Ext href="https://developers.facebook.com/">developers.facebook.com</Ext> bằng chính nick Facebook quản lý Fanpage → <em>Bắt đầu</em> → xác minh số điện thoại / email → <em>Hoàn tất</em>. Miễn phí.</span>
+      </li>
+      <li>
+        <strong>Tạo ứng dụng</strong>
+        <span><Ext href="https://developers.facebook.com/apps/creation/">Tạo ứng dụng</Ext> → đặt tên (vd. “Fanpage của tôi”) → chọn đúng 3 trường hợp sử dụng: <em>Quản lý mọi thứ trên Trang của bạn</em>, <em>Tương tác với khách hàng trên Messenger from Meta</em>, <em>Quản lý hoạt động nhắn tin và nội dung trên Instagram</em> → <em>Tôi chưa muốn kết nối danh mục doanh nghiệp</em> → <em>Tạo ứng dụng</em>. <strong>Không</strong> chọn mục quảng cáo (sẽ bị đòi xác minh doanh nghiệp).</span>
+      </li>
+      <OwnAppSettingsSteps app={app} features={features} />
+    </ol>
+  );
+}
+
 // Tạo Fanpage mới hoặc được thêm làm quản trị viên Fanpage có sẵn
 export function CreatePageSteps() {
   return (

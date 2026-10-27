@@ -81,6 +81,16 @@ export const channelApi = {
   },
   facebookLoginUrl: `${API_BASE}/auth/facebook`,
 
+  // Meta App riêng của người dùng (khi nick không có vai trò trong app chung của tool)
+  saveMyMetaApp: async (appId, appSecret) => {
+    const response = await api.post('/channels/my-meta-app', { appId, appSecret });
+    return response.data;
+  },
+  removeMyMetaApp: async () => {
+    const response = await api.delete('/channels/my-meta-app');
+    return response.data;
+  },
+
   // Mức độ sẵn sàng đăng nhập Facebook (setup / login / expired / partial / ready) + quyền từng tính năng
   facebookStatus: async (refresh = false) => {
     const response = await api.get('/channels/facebook-status', { params: refresh ? { refresh: 1 } : {} });

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { AlertTriangle, BookOpen, CheckCircle2, CircleAlert, KeyRound, LogIn, RefreshCw, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, AppWindow, BookOpen, CheckCircle2, CircleAlert, KeyRound, LogIn, RefreshCw, ShieldAlert } from 'lucide-react';
 
 // Trạng thái từng bước: done / current / error / todo
 function buildSteps(status) {
@@ -11,7 +11,7 @@ function buildSteps(status) {
       ? { state: 'error', hint: 'App ID / App Secret không đúng' }
       : app.domainOk === false
         ? { state: 'error', hint: `Chưa khai báo miền ${app.domain}` }
-        : { state: 'done', hint: `App ID ${app.appId}` };
+        : { state: 'done', hint: app.source === 'user' ? `Meta App của bạn · ID ${app.appId}` : `App ID ${app.appId}` };
   const loginStep = validAccounts.length
     ? { state: 'done', hint: `${validAccounts.length} nick đang hoạt động` }
     : accounts.length
@@ -80,7 +80,7 @@ function FeatureList({ accounts }) {
  * Bảng trạng thái đăng nhập Facebook theo cấp độ (setup → login → partial / ready) kèm hành động & hướng dẫn.
  * status: kết quả GET /channels/facebook-status
  */
-export default function FacebookConnectPanel({ status, error, checking, onLogin, onOpenGuide, onPasteToken, onRefresh }) {
+export default function FacebookConnectPanel({ status, error, checking, onLogin, onOpenGuide, onOwnApp, onPasteToken, onRefresh }) {
   if (!status) {
     if (!error) return null;
     return (
@@ -110,7 +110,33 @@ export default function FacebookConnectPanel({ status, error, checking, onLogin,
   let title;
   let body;
   let actions;
-  if (level === 'setup') {
+  const ownApp = app.source === 'user';
+  const ownAppButton = (
+    <button type="button" className="button button-secondary" onClick={onOwnApp}><AppWindow size={15} /> Meta App của tôi</button>
+  );
+  if (level === 'setup' && (ownApp || !status.canConfigure)) {
+    // Người dùng không quản trị tool (hoặc đang dùng app riêng): dùng Meta App của riêng mình
+    tone = 'warn';
+    Icon = AlertTriangle;
+    title = ownApp ? 'Meta App của bạn chưa dùng được' : 'Cần Meta App để đăng nhập Facebook';
+    body = (
+      <>
+        <p>
+          {ownApp
+            ? `App ID / Khóa bí mật của Meta App riêng không hợp lệ${app.credentialsError ? ` — Facebook báo: “${app.credentialsError}”` : ''}. Kiểm tra lại trong developers.facebook.com rồi điền lại.`
+            : 'Tool chưa có Meta App chung để đăng nhập Facebook. Bạn dùng Meta App của riêng mình — miễn phí, bạn là quản trị viên nên đăng nhập được ngay, không cần ai mời.'}
+        </p>
+        <p className="fb-connect-sub">Hoặc thêm Fanpage bằng token tự tạo (Thêm qua token).</p>
+      </>
+    );
+    actions = (
+      <>
+        <button type="button" className="button button-primary" onClick={onOwnApp}><AppWindow size={15} /> {ownApp ? 'Sửa Meta App của tôi' : 'Dùng Meta App của tôi'}</button>
+        <button type="button" className="button button-secondary" onClick={onPasteToken}><KeyRound size={15} /> Dùng token thay thế</button>
+        {refreshButton}
+      </>
+    );
+  } else if (level === 'setup') {
     tone = 'warn';
     Icon = AlertTriangle;
     title = 'Chưa thiết lập đăng nhập Facebook';
@@ -141,20 +167,25 @@ export default function FacebookConnectPanel({ status, error, checking, onLogin,
   } else if (level === 'login') {
     tone = app.domainOk === false ? 'warn' : 'info';
     Icon = app.domainOk === false ? AlertTriangle : LogIn;
-    title = app.domainOk === false ? `Meta App chưa khai báo tên miền ${app.domain}` : 'Meta App đã sẵn sàng — hãy đăng nhập Facebook';
+    title = app.domainOk === false
+      ? `${ownApp ? 'Meta App của bạn' : 'Meta App'} chưa khai báo tên miền ${app.domain}`
+      : `${ownApp ? 'Meta App của bạn' : 'Meta App'} đã sẵn sàng — hãy đăng nhập Facebook`;
     body = (
       <>
         {app.domainOk === false
           ? <p>Facebook sẽ chặn đăng nhập (“Không thể tải URL”). Vào Meta App → Cài đặt ứng dụng → Thông tin cơ bản → thêm <code>{app.domain}</code> vào Miền ứng dụng, rồi thêm URI chuyển hướng ở Đăng nhập bằng Facebook → Cài đặt.</p>
           : <p>Bấm “Đăng nhập Facebook”, chọn nick quản lý Fanpage, bấm “Chỉnh sửa quyền truy cập” và bật đủ Fanpage + các quyền được hỏi.</p>}
         <p className="fb-connect-sub">
-          Facebook chặn đăng nhập (“Ứng dụng không hoạt động”) hoặc không cấp quyền Fanpage cho nick của bạn? Tool sẽ hướng dẫn tự tạo token để dùng Fanpage của chính bạn — không cần ai mời.
+          {ownApp
+            ? `Đăng nhập bằng đúng nick quản trị viên của Meta App ID ${app.appId}.`
+            : 'Facebook báo “Ứng dụng không hoạt động” với nick của bạn? Dùng Meta App của riêng bạn (bạn là quản trị viên nên đăng nhập được) hoặc tự tạo token — không cần ai mời.'}
         </p>
       </>
     );
     actions = (
       <>
         <button type="button" className="button button-primary" onClick={onLogin}><LogIn size={15} /> Đăng nhập Facebook</button>
+        {ownAppButton}
         <button type="button" className="button button-secondary" onClick={() => onOpenGuide('account-token')}><KeyRound size={15} /> Tự tạo token</button>
         <button type="button" className="button button-quiet" onClick={() => onOpenGuide('login-errors')}><BookOpen size={15} /> Facebook báo lỗi?</button>
         {refreshButton}
@@ -181,6 +212,7 @@ export default function FacebookConnectPanel({ status, error, checking, onLogin,
       <>
         <button type="button" className="button button-primary" onClick={onLogin}><LogIn size={15} /> Cấp thêm quyền (đăng nhập lại)</button>
         <button type="button" className="button button-secondary" onClick={() => onOpenGuide('permissions')}><BookOpen size={15} /> Xem hướng dẫn cấp quyền</button>
+        {!ownApp && ownAppButton}
         <button type="button" className="button button-secondary" onClick={() => onOpenGuide('account-token')}><KeyRound size={15} /> Tự tạo token</button>
         {refreshButton}
       </>

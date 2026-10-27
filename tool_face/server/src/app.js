@@ -264,7 +264,8 @@ app.get('/api/auth/facebook', async (req, res) => {
     return res.redirect(302, `${clientOrigin()}/login?error=session_required`);
   }
   const popup = req.query.popup === '1';
-  const creds = await tokenService.getMetaAppCredentials();
+  // Ưu tiên Meta App riêng của người dùng (họ là quản trị viên app đó), không có thì dùng app chung
+  const creds = await tokenService.getMetaAppCredentials(req.user.sub);
   if (!creds.configured) {
     return res.redirect(302, facebookLoginReturn(popup, 'error=app_not_configured'));
   }
@@ -303,7 +304,7 @@ app.get('/api/auth/facebook/callback', async (req, res) => {
   }
 
   try {
-    const creds = await tokenService.getMetaAppCredentials();
+    const creds = await tokenService.getMetaAppCredentials(req.user.sub);
     const graphVersion = process.env.FB_GRAPH_VERSION || 'v19.0';
     const codeResponse = await axios.get(`https://graph.facebook.com/${graphVersion}/oauth/access_token`, {
       params: {
@@ -1169,7 +1170,7 @@ app.get('/api/channels/check-tokens', requireAuth, async (req, res) => {
     messengerService.clearTokenCache();
     const channels = await getConnectedPages(req.user.sub);
     const graphVersion = process.env.FB_GRAPH_VERSION || 'v19.0';
-    const creds = await tokenService.getMetaAppCredentials();
+    const creds = await tokenService.getMetaAppCredentials(req.user.sub);
     const appToken = creds.configured ? `${creds.appId}|${creds.appSecret}` : null;
 
     const tokenStatusList = await Promise.all(
@@ -1321,6 +1322,35 @@ app.get('/api/channels/token-status', requireAuth, async (req, res) => {
 });
 
 // Mức độ sẵn sàng của đăng nhập Facebook (thiết lập Meta App → đăng nhập → quyền từng tính năng) cho trang Kênh
+// Meta App riêng của người dùng: dùng khi nick Facebook của họ không có vai trò trong app chung của tool
+app.get('/api/channels/my-meta-app', requireAuth, async (req, res) => {
+  try {
+    return res.json({ success: true, ...(await tokenService.getUserMetaApp(req.user.sub)) });
+  } catch (error) {
+    return sendApiError(res, 'My Meta App Error', error, 'Không đọc được Meta App của bạn.');
+  }
+});
+
+app.post('/api/channels/my-meta-app', requireAuth, async (req, res) => {
+  try {
+    const { appId, appSecret } = req.body || {};
+    const saved = await tokenService.saveUserMetaApp(req.user.sub, { appId, appSecret });
+    return res.json({ success: true, configured: true, appId: saved.appId, message: 'Đã lưu Meta App của bạn. Bấm Đăng nhập Facebook để kết nối Fanpage.' });
+  } catch (error) {
+    const status = error instanceof tokenService.TokenError ? error.status : 500;
+    return res.status(status).json({ success: false, code: error.code || null, message: error.message });
+  }
+});
+
+app.delete('/api/channels/my-meta-app', requireAuth, async (req, res) => {
+  try {
+    await tokenService.removeUserMetaApp(req.user.sub);
+    return res.json({ success: true, configured: false, message: 'Đã bỏ Meta App riêng — tool dùng lại app chung.' });
+  } catch (error) {
+    return sendApiError(res, 'My Meta App Error', error, 'Không bỏ được Meta App của bạn.');
+  }
+});
+
 app.get('/api/channels/facebook-status', requireAuth, async (req, res) => {
   try {
     const status = await facebookLoginStatus.getLoginStatus(req.user.sub, { force: req.query.refresh === '1' });

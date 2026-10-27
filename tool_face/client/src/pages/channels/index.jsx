@@ -172,8 +172,13 @@ export default function ChannelsPage() {
     try { popupRef.current?.close(); } catch {}
     popupRef.current = null;
     if (code === 'app_not_configured') {
-      setFbLogin(null);
-      setGuideTab('setup');
+      // Quản trị viên thiết lập app chung; người dùng khác dùng Meta App riêng
+      if (fbStatus?.canConfigure) {
+        setFbLogin(null);
+        setGuideTab('setup');
+      } else {
+        setFbLogin({ phase: 'own-app' });
+      }
       loadFbStatus(true);
       return;
     }
@@ -268,7 +273,11 @@ export default function ChannelsPage() {
 
   // Chưa thiết lập Meta App thì mở hướng dẫn; đã thiết lập thì đăng nhập trong cửa sổ phụ, tab này ở lại tool
   const startFacebookLogin = () => {
-    if (fbStatus?.level === 'setup') return setGuideTab('setup');
+    // Chưa có Meta App dùng được: Quản trị viên xem hướng dẫn thiết lập app chung, người dùng khác dùng app riêng
+    if (fbStatus?.level === 'setup') {
+      if (fbStatus.canConfigure && fbStatus.app?.source !== 'user') return setGuideTab('setup');
+      return setFbLogin({ phase: fbStatus.app?.source === 'user' ? 'own-app-enter' : 'own-app' });
+    }
     const attempt = loginAttemptRef.current;
     clearTimeout(attempt.incompleteTimer);
     attempt.incompleteTimer = null;
@@ -289,6 +298,33 @@ export default function ChannelsPage() {
     const popup = popupRef.current;
     if (popup && !popup.closed) popup.focus();
     else startFacebookLogin();
+  };
+
+  // Người dùng báo Facebook hiện "Ứng dụng không hoạt động": đóng cửa sổ Facebook, mở bảng hướng dẫn ngay
+  const handleAppNotActive = () => {
+    const attempt = loginAttemptRef.current;
+    clearTimeout(attempt.incompleteTimer);
+    attempt.incompleteTimer = null;
+    try { popupRef.current?.close(); } catch {}
+    setFbLogin({ phase: 'incomplete' });
+  };
+
+  const saveOwnMetaApp = async (appId, appSecret) => {
+    const res = await channelApi.saveMyMetaApp(appId, appSecret);
+    await loadFbStatus(true);
+    return res;
+  };
+
+  const removeOwnMetaApp = async () => {
+    if (!confirm('Bỏ Meta App riêng của bạn và dùng lại app chung của tool?')) return;
+    try {
+      const res = await channelApi.removeMyMetaApp();
+      setNotice(res.message || 'Đã bỏ Meta App riêng.');
+      setFbLogin(null);
+      await loadFbStatus(true);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Không bỏ được Meta App riêng.');
+    }
   };
 
   const openPasteToken = () => {
@@ -736,6 +772,7 @@ export default function ChannelsPage() {
         checking={fbStatusChecking}
         onLogin={startFacebookLogin}
         onOpenGuide={setGuideTab}
+        onOwnApp={() => setFbLogin({ phase: fbStatus?.app?.source === 'user' ? 'own-app-enter' : 'own-app' })}
         onPasteToken={openPasteToken}
         onRefresh={() => loadFbStatus(true)}
       />
@@ -759,6 +796,10 @@ export default function ChannelsPage() {
         status={fbStatus}
         onRetry={startFacebookLogin}
         onFocusPopup={focusLoginPopup}
+        onAppNotActive={handleAppNotActive}
+        onOwnApp={(phase) => setFbLogin({ phase })}
+        onSaveOwnApp={saveOwnMetaApp}
+        onRemoveOwnApp={removeOwnMetaApp}
         onOpenGuide={(tab) => { setFbLogin(null); setGuideTab(tab); }}
         onPasteToken={() => { setFbLogin(null); openTokenForm('account'); }}
         onClose={() => setFbLogin(null)}
