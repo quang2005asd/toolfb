@@ -10,7 +10,7 @@ const NAV = [
   { href: '/terms', vi: 'Điều khoản sử dụng', en: 'Terms of Service' },
   { href: '/data-deletion', vi: 'Xóa dữ liệu', en: 'Data Deletion' }
 ];
-const DEFAULT_UPDATED = '2026-10-12';
+const DEFAULT_UPDATED = '2026-10-27';
 const UI = {
   vi: { updated: 'Cập nhật lần cuối', contact: 'Liên hệ', noEmail: 'quản trị viên của dịch vụ', back: 'Đăng nhập' },
   en: { updated: 'Last updated', contact: 'Contact', noEmail: 'the service administrator', back: 'Sign in' }

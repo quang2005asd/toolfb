@@ -9,6 +9,7 @@ const CONTENT = {
         h: '1. Dữ liệu chúng tôi thu thập',
         ul: [
           'Tài khoản Dịch vụ: tên đăng nhập, Gmail, mật khẩu (chỉ lưu dạng băm, không lưu bản gốc), vai trò và thời điểm đăng nhập.',
+          'Nhật ký đăng ký / đăng nhập: mỗi lần đăng ký hoặc đăng nhập (thành công hay thất bại), Dịch vụ ghi lại tên đăng nhập, Gmail, vai trò, thời điểm, kết quả và mã lỗi nếu có, để phát hiện truy cập bất thường. Nhật ký không chứa mật khẩu.',
           'Kết nối Facebook / Instagram (khi bạn đăng nhập Facebook và cấp quyền): ID, tên và ảnh đại diện tài khoản Facebook; ID, tên và mã truy cập (access token) của các Fanpage bạn quản lý; thông tin tài khoản Instagram chuyên nghiệp liên kết với Fanpage (ID, tên người dùng, ảnh đại diện, số người theo dõi). Mã truy cập được mã hóa AES-256-GCM trước khi lưu.',
           'Nội dung bạn tạo: bài viết, lịch đăng, ảnh / video tải lên, bình luận mồi, bản nháp và yêu cầu gửi cho trợ lý AI.',
           'Tin nhắn: hội thoại Messenger và Instagram Direct của Fanpage / tài khoản Instagram bạn kết nối (tên và ID người gửi do Meta cung cấp, nội dung, tệp đính kèm, thời gian) để hiển thị hộp thư, trả lời và trả lời tự động.',
@@ -37,6 +38,7 @@ const CONTENT = {
         ul: [
           'Meta Platforms (Facebook / Instagram Graph API): để đăng bài, đọc và gửi tin nhắn theo yêu cầu của bạn.',
           'Nhà cung cấp AI do quản trị viên cấu hình: chỉ khi bạn dùng tính năng AI. Dịch vụ gửi nội dung yêu cầu viết bài, và với trả lời tự động bằng AI là nội dung tin nhắn của khách, để tạo câu trả lời. Không gửi mã truy cập hay mật khẩu.',
+          'Google (Google Sheets qua Google Apps Script): nơi lưu nhật ký đăng ký / đăng nhập nêu ở mục 1; chỉ quản trị viên Dịch vụ xem được.',
           'Nhà cung cấp máy chủ lưu trữ Dịch vụ.',
           'Cơ quan nhà nước có thẩm quyền khi pháp luật yêu cầu.'
         ]
@@ -73,6 +75,7 @@ const CONTENT = {
         h: '1. Data we collect',
         ul: [
           'Service account: username, email, password (stored only as a salted hash), role and sign-in time.',
+          'Sign-up / sign-in log: for every sign-up or sign-in attempt (successful or not), the Service records the username, email, role, time, result and error code if any, to detect unusual access. The log never contains passwords.',
           'Facebook / Instagram connection (when you log in with Facebook and grant permissions): your Facebook user ID, name and profile picture; the IDs, names and access tokens of the Pages you manage; details of the Instagram professional account linked to each Page (ID, username, profile picture, follower counts). Access tokens are encrypted with AES-256-GCM before storage.',
           'Content you create: posts, schedules, uploaded images and videos, seeding comments, drafts and prompts sent to the AI assistant.',
           'Messages: Messenger and Instagram Direct conversations of the Pages and Instagram accounts you connect (sender name and ID provided by Meta, message text, attachments, timestamps), used to show the inbox, send your replies and send auto-replies.',
@@ -101,6 +104,7 @@ const CONTENT = {
         ul: [
           'Meta Platforms (Facebook / Instagram Graph API): to publish posts and read and send messages on your behalf.',
           'The AI provider configured by the administrator: only when you use AI features. The Service sends your writing prompt and, for AI auto-replies, the customer message text in order to generate a reply. Access tokens and passwords are never sent.',
+          'Google (Google Sheets via Google Apps Script): stores the sign-up / sign-in log described in section 1; only Service administrators can view it.',
           'The hosting provider that runs the Service.',
           'Competent authorities when required by law.'
         ]
