@@ -40,6 +40,7 @@ const messengerService = require('./utils/MessengerService');
 const autoReplyService = require('./utils/MessengerAutoReplyService');
 const instagramService = require('./utils/InstagramService');
 const tiktokService = require('./utils/TikTokService');
+const { cleanupTempUploads } = require('./utils/TikTokPuppeteerService');
 const commentAiService = require('./utils/CommentAiService');
 const { commentAiRouter } = require('./modules/comment-ai/comment-ai.routes');
 
@@ -1965,11 +1966,12 @@ app.post('/api/webhooks/messenger', async (req, res) => {
 });
 
 app.get('/api/posts/template', (_req, res) => {
-  const headers = ['STT', 'Fanpage Channel (Tên | Page ID)', 'Content', 'Schedule', 'Loại Media', 'Media Link', 'Media Thumb'];
+  const headers = ['STT', 'Nền tảng (FB/TikTok)', 'Kênh đăng (Fanpage hoặc TikTok ID/User)', 'Content', 'Schedule', 'Loại Media', 'Media Link', 'Media Thumb'];
   for (let index = 1; index <= 5; index++) headers.push(`Seeding Comment ${index}`, `Schedule Comment ${index}`, `Media Comment ${index}`);
 
   const sampleRow1 = [
     1,
+    'Facebook',
     'Fanpage của bạn | 1383891371465269',
     'Chào ngày mới tràn đầy năng lượng! Chúc cả nhà một ngày làm việc hiệu quả và nhiều may mắn 🌟 #morning #kinhdoanh',
     'Đăng ngay',
@@ -1982,30 +1984,45 @@ app.get('/api/posts/template', (_req, res) => {
   ];
   const sampleRow2 = [
     2,
-    'Fanpage của bạn | 1383891371465269',
-    'Chia sẻ bí quyết tăng tương tác Fanpage tự nhiên cực kỳ hiệu quả mà không cần tốn nhiều chi phí quảng cáo.',
+    'TikTok',
+    'Kênh TikTok | @username_tiktok',
+    'Bí quyết xây kênh triệu view và kiếm tiền từ video ngắn xu hướng 2026 🚀 #viral #tiktok #xuhuong #kinhdoanh',
     '05/10/2026_09:00',
-    'image',
-    'https://images.unsplash.com/photo-1460925895917-afdab827c52f',
+    'video',
+    'https://example.com/video_sample.mp4',
     '',
-    'Nhắn tin cho Page để nhận trọn bộ tài liệu hướng dẫn miễn phí nhé!',
+    '',
+    '',
+    ''
+  ];
+  const sampleRow3 = [
+    3,
+    'Cả hai',
+    'Fanpage FB | 1383891371465269',
+    'Video truyền cảm hứng tuần mới bùng nổ năng lượng! Đăng đồng thời Facebook Reels & TikTok 🔥 #motivation',
+    '05/10/2026_14:30',
+    'video',
+    'https://example.com/motivation.mp4',
+    '',
+    'Bình luận seeding trên Facebook',
     '5',
     ''
   ];
 
   const workbook = XLSX.utils.book_new();
   const worksheet = XLSX.utils.aoa_to_sheet([
-    ['MẪU UPLOAD BÀI ĐĂNG TỰ ĐỘNG - TOOL_FACE'],
-    ['Schedule: "Đăng ngay", "DD/MM/YYYY_HH:mm" (ví dụ: 05/10/2026_09:00). Cột Fanpage có thể điền Tên | ID hoặc chỉ ID số.'],
+    ['MẪU UPLOAD BÀI ĐĂNG TỰ ĐỘNG - HỖ TRỢ CẢ FACEBOOK VÀ TIKTOK (TOOL_FACE)'],
+    ['Schedule: "Đăng ngay", "DD/MM/YYYY_HH:mm" (ví dụ: 05/10/2026_09:00). Cột Nền tảng: "Facebook", "TikTok" hoặc "Cả hai". Cột Kênh: "Tên | ID" Fanpage hoặc ID/@username TikTok.'],
     headers,
     sampleRow1,
-    sampleRow2
+    sampleRow2,
+    sampleRow3
   ]);
   worksheet['!cols'] = headers.map((header) => ({ wch: Math.max(16, Math.min(38, header.length + 3)) }));
   XLSX.utils.book_append_sheet(workbook, worksheet, 'MAIN SHEET');
   const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-  res.setHeader('Content-Disposition', 'attachment; filename="Mau_Upload_Bai_Dang_ToolFB.xlsx"');
+  res.setHeader('Content-Disposition', 'attachment; filename="Mau_Upload_Bai_Dang_ToolFB_TikTok.xlsx"');
   return res.send(buffer);
 });
 
@@ -2564,16 +2581,94 @@ app.get('/api/reports/insights', requireAuth, async (req, res) => {
   const chartData = Object.values(dailyMap);
   const avgEngagementPerPost = totalPosts > 0 ? Math.round((totalEngagements / totalPosts) * 10) / 10 : 0;
 
+  // ═══ TIKTOK: Lấy bài đăng TikTok đã xuất bản từ database ═══
+  // TikTok không có API public Insights → chỉ đếm số bài đã đăng thành công
+  let tiktokSummary = { totalPosts: 0, totalAccounts: 0 };
+  const tiktokTopPosts = [];
+
+  try {
+    const tiktokDbRes = await pool.request()
+      .input('sinceDate', sql.DateTime2, since)
+      .query(`
+        SELECT p.id, p.content, p.media_links, p.tiktok_account_id, p.published_at, p.created_at,
+               t.username, t.nickname, t.avatar_url
+        FROM Posts p
+        LEFT JOIN TikTokAccounts t ON CAST(t.id AS VARCHAR(50)) = p.tiktok_account_id
+        WHERE p.platform = 'tiktok'
+          AND p.status = 'published'
+          AND (p.published_at >= @sinceDate OR p.created_at >= @sinceDate)
+        ORDER BY COALESCE(p.published_at, p.created_at) DESC
+      `);
+
+    const tiktokPosts = tiktokDbRes.recordset || [];
+    const accountSet = new Set();
+
+    for (const tp of tiktokPosts) {
+      if (tp.tiktok_account_id) accountSet.add(tp.tiktok_account_id);
+
+      const postTime = new Date(tp.published_at || tp.created_at || since);
+      const dateKey = postTime.toISOString().slice(0, 10);
+
+      // Cộng vào dailyMap chung (thêm cột tiktokPosts riêng)
+      if (dailyMap[dateKey]) {
+        dailyMap[dateKey].tiktokPosts = (dailyMap[dateKey].tiktokPosts || 0) + 1;
+      }
+
+      // Lấy thumbnail đầu tiên từ media_links
+      let thumbUrl = null;
+      if (tp.media_links) {
+        try {
+          const links = JSON.parse(tp.media_links);
+          thumbUrl = Array.isArray(links) ? links[0] : links;
+        } catch (_) { thumbUrl = tp.media_links; }
+      }
+
+      tiktokTopPosts.push({
+        id: `tiktok-${tp.id}`,
+        platform: 'tiktok',
+        pageId: tp.tiktok_account_id || '',
+        pageName: tp.nickname || tp.username || 'TikTok',
+        avatarUrl: tp.avatar_url || null,
+        message: tp.content || '(Video TikTok)',
+        created_time: tp.published_at || tp.created_at || '',
+        permalink_url: null,
+        full_picture: typeof thumbUrl === 'string' && thumbUrl.startsWith('local://') ? null : thumbUrl,
+        reactions: 0,
+        comments: 0,
+        shares: 0,
+        engagements: 0,
+        views: 0
+      });
+    }
+
+    tiktokSummary = { totalPosts: tiktokPosts.length, totalAccounts: accountSet.size };
+  } catch (ttErr) {
+    console.warn('[Insights] Không thể tải bài TikTok:', ttErr.message);
+  }
+
+  // Gộp TikTok vào danh sách bài chung (FB trước, TikTok sau, sắp theo ngày mới nhất)
+  allPostsList.forEach(p => { if (!p.platform) p.platform = 'facebook'; });
+  const combinedTopPosts = [...topPosts, ...tiktokTopPosts]
+    .sort((a, b) => new Date(b.created_time) - new Date(a.created_time))
+    .slice(0, 15);
+
+  const finalChartData = Object.values(dailyMap);
+
   const metrics = [
     {
       name: 'page_post_engagements',
       period: 'day',
-      values: chartData.map((d) => ({ endTime: d.endTime, value: d.engagements }))
+      values: finalChartData.map((d) => ({ endTime: d.endTime, value: d.engagements }))
     },
     {
       name: 'post_views',
       period: 'day',
-      values: chartData.map((d) => ({ endTime: d.endTime, value: d.views }))
+      values: finalChartData.map((d) => ({ endTime: d.endTime, value: d.views }))
+    },
+    {
+      name: 'tiktok_posts',
+      period: 'day',
+      values: finalChartData.map((d) => ({ endTime: d.endTime, value: d.tiktokPosts || 0 }))
     }
   ];
 
@@ -2595,14 +2690,16 @@ app.get('/api/reports/insights', requireAuth, async (req, res) => {
       totalComments,
       totalShares,
       totalPosts,
-      avgEngagementPerPost
+      avgEngagementPerPost,
+      tiktok: tiktokSummary
     },
-    chartData,
+    chartData: finalChartData,
     metrics,
-    topPosts,
+    topPosts: combinedTopPosts,
     message: null
   });
 });
+
 
 // ═══ CHI TIẾT BÀI ĐĂNG (KÈM SEEDING COMMENTS) ═══
 app.get('/api/posts/:postId', requireAuth, async (req, res) => {
@@ -2851,43 +2948,134 @@ app.delete('/api/posts/:postId', requireAuth, async (req, res) => {
   }
 });
 
+function findTikTokAccount(identifier, tiktokAccounts) {
+  if (!identifier) return null;
+  const idStr = String(identifier).trim();
+  const byId = tiktokAccounts.find((t) => String(t.id) === idStr);
+  if (byId) return byId;
+  const cleanUser = idStr.replace(/^@/, '').toLowerCase();
+  const byUser = tiktokAccounts.find((t) => (t.username && t.username.toLowerCase() === cleanUser));
+  if (byUser) return byUser;
+  const byNick = tiktokAccounts.find((t) => (t.nickname && t.nickname.toLowerCase() === idStr.toLowerCase()));
+  if (byNick) return byNick;
+  return null;
+}
+
 app.post('/api/posts/bulk-preview', requireAuth, memoryUpload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ success: false, message: 'Vui lòng upload file Excel để xem trước.' });
     await ensurePostOwnershipSchema();
-    const posts = parseBulkExcel(req.file.buffer);
+    const rawPosts = parseBulkExcel(req.file.buffer);
+
+    // 1. Danh sách Facebook Pages
     const connectedPages = await getConnectedPages(req.user.sub);
     const connectedMap = new Map(connectedPages.map((p) => [String(p.id), p.name]));
     const defaultPage = connectedPages[0];
 
-    const previewList = posts.map((post) => {
-      const pageId = String(post.pageId || req.body.defaultPageId || defaultPage?.id || '');
-      const isPageConnected = connectedMap.has(pageId);
-      const pageName = isPageConnected ? connectedMap.get(pageId) : (post.pageId ? `Page ${post.pageId} (Chưa kết nối)` : 'Chưa gán Page');
+    // 2. Danh sách TikTok Accounts
+    let tiktokAccounts = [];
+    try {
+      tiktokAccounts = await tiktokService.listTikTokAccounts(req.user.sub);
+    } catch (err) {
+      console.warn('[Bulk Preview] Chưa tải được TikTok accounts:', err.message);
+    }
+    const defaultTikTok = req.body.defaultTiktokAccountId
+      ? tiktokAccounts.find((t) => String(t.id) === String(req.body.defaultTiktokAccountId))
+      : tiktokAccounts[0];
 
-      let error = null;
-      if (!isPageConnected) {
-        error = 'Fanpage này chưa được kết nối với hệ thống.';
-      } else if (!post.content || post.content.trim().length === 0) {
-        error = 'Nội dung bài viết không được để trống.';
-      } else if (!post.scheduledAt || Number.isNaN(new Date(post.scheduledAt).getTime())) {
-        error = 'Thời gian đăng không hợp lệ.';
+    // Mở rộng bài đăng: platform='all' → FB + TikTok; nhiều pageIds → 1 post mỗi page
+    const expandedPosts = [];
+    for (const post of rawPosts) {
+      const ids = post.pageIds && post.pageIds.length > 0 ? post.pageIds : (post.pageId ? [post.pageId] : [null]);
+      if (post.platform === 'all') {
+        // Đăng lên tất cả FB pages trong ids
+        for (const pid of ids) {
+          expandedPosts.push({ ...post, pageId: pid, pageIds: [pid], platform: 'facebook', subRow: `FB | ${pid || 'default'}` });
+        }
+        // Đăng thêm TikTok (1 lần)
+        expandedPosts.push({ ...post, platform: 'tiktok', subRow: 'TikTok' });
+      } else if (ids.length > 1) {
+        // Nhiều Page IDs trong cùng 1 dòng → tạo 1 post riêng cho mỗi page
+        for (const pid of ids) {
+          expandedPosts.push({ ...post, pageId: pid, pageIds: [pid], subRow: pid || '' });
+        }
+      } else {
+        expandedPosts.push({ ...post, pageId: ids[0], pageIds: ids });
       }
+    }
 
-      return {
-        rowIndex: post.rowIndex,
-        pageId,
-        pageName,
-        isPageConnected,
-        content: post.content,
-        scheduledAt: post.scheduledAt,
-        mediaType: post.mediaType,
-        mediaLinks: post.mediaLinks,
-        commentsCount: post.comments.length,
-        comments: post.comments,
-        valid: !error,
-        error
-      };
+    const previewList = expandedPosts.map((post) => {
+      const isTikTok = post.platform === 'tiktok';
+
+      if (isTikTok) {
+        const ttAcc = findTikTokAccount(post.pageId, tiktokAccounts) || defaultTikTok;
+        const isConnected = Boolean(ttAcc);
+        const channelName = ttAcc
+          ? `${ttAcc.nickname || ttAcc.username || 'TikTok'} (@${ttAcc.username || ttAcc.id})`
+          : (post.pageId ? `TikTok ${post.pageId} (Chưa kết nối)` : 'Chưa gán tài khoản TikTok');
+        const channelId = ttAcc ? String(ttAcc.id) : (post.pageId || '');
+
+        let error = null;
+        if (!isConnected) {
+          error = 'Tài khoản TikTok này chưa được kết nối trong hệ thống.';
+        } else if (!post.content || post.content.trim().length === 0) {
+          error = 'Nội dung/Tiêu đề video TikTok không được để trống.';
+        } else if (!post.scheduledAt || Number.isNaN(new Date(post.scheduledAt).getTime())) {
+          error = 'Thời gian đăng không hợp lệ.';
+        } else if (!post.mediaLinks || post.mediaLinks.length === 0) {
+          error = 'Đăng TikTok bắt buộc phải có link video (cột Media Link).';
+        } else if (post.mediaType !== 'video' && post.mediaType !== 'reel') {
+          error = 'TikTok chỉ hỗ trợ đăng video (.mp4, .mov).';
+        }
+
+        return {
+          rowIndex: post.rowIndex,
+          subRow: post.subRow || null,
+          platform: 'tiktok',
+          pageId: channelId,
+          pageName: channelName,
+          isPageConnected: isConnected,
+          content: post.content,
+          scheduledAt: post.scheduledAt,
+          mediaType: 'video',
+          mediaLinks: post.mediaLinks,
+          commentsCount: 0,
+          comments: [],
+          valid: !error,
+          error
+        };
+      } else {
+        // Facebook Post
+        const pageId = String(post.pageId || req.body.defaultPageId || defaultPage?.id || '');
+        const isPageConnected = connectedMap.has(pageId);
+        const pageName = isPageConnected ? connectedMap.get(pageId) : (post.pageId ? `Page ${post.pageId} (Chưa kết nối)` : 'Chưa gán Page');
+
+        let error = null;
+        if (!isPageConnected) {
+          error = 'Fanpage này chưa được kết nối với hệ thống.';
+        } else if (!post.content || post.content.trim().length === 0) {
+          error = 'Nội dung bài viết không được để trống.';
+        } else if (!post.scheduledAt || Number.isNaN(new Date(post.scheduledAt).getTime())) {
+          error = 'Thời gian đăng không hợp lệ.';
+        }
+
+        return {
+          rowIndex: post.rowIndex,
+          subRow: post.subRow || null,
+          platform: 'facebook',
+          pageId,
+          pageName,
+          isPageConnected,
+          content: post.content,
+          scheduledAt: post.scheduledAt,
+          mediaType: post.mediaType,
+          mediaLinks: post.mediaLinks,
+          commentsCount: post.comments.length,
+          comments: post.comments,
+          valid: !error,
+          error
+        };
+      }
     });
 
     const validCount = previewList.filter((p) => p.valid).length;
@@ -2908,70 +3096,148 @@ app.post('/api/posts/bulk-upload', requireAuth, memoryUpload.single('file'), asy
   try {
     if (!req.file) return res.status(400).json({ success: false, message: 'Vui lòng upload file Excel.' });
     await ensurePostOwnershipSchema();
-    const posts = parseBulkExcel(req.file.buffer);
+    const rawPosts = parseBulkExcel(req.file.buffer);
     const pool = await getPool();
+
+    // 1. Facebook pages
     const connectedPages = await getConnectedPages(req.user.sub);
     const connectedPageIds = new Set(connectedPages.map((page) => String(page.id)));
     const defaultPageId = req.body.defaultPageId || connectedPages[0]?.id;
-    const createdIds = [];
-    const errors = [];
-    for (const post of posts) {
-      const transaction = new sql.Transaction(pool);
-      try {
-        await transaction.begin();
-        const pageId = String(post.pageId || defaultPageId || '');
-        if (!connectedPageIds.has(pageId)) throw new Error('Page trong dòng Excel chưa được kết nối với Facebook account này.');
-        const inserted = await new sql.Request(transaction)
-          .input('pageId', sql.VarChar, pageId)
-          .input('ownerId', sql.VarChar(64), req.user.sub)
-          .input('content', sql.NVarChar, post.content)
-          .input('mediaType', sql.VarChar, post.mediaType)
-          .input('mediaLinks', sql.NVarChar, JSON.stringify(post.mediaLinks))
-          .input('mediaThumb', sql.VarChar, post.mediaThumb)
-          .input('scheduledAt', sql.DateTime2, post.scheduledAt)
-          .input('status', sql.VarChar, 'pending')
-          .query('INSERT INTO Posts (page_id,content,media_type,media_links,media_thumb,scheduled_at,status,created_by_user_id) OUTPUT INSERTED.id VALUES (@pageId,@content,@mediaType,@mediaLinks,@mediaThumb,@scheduledAt,@status,@ownerId);');
-        const postId = inserted.recordset[0].id;
-        for (const comment of post.comments) {
-          await new sql.Request(transaction)
-            .input('postId', sql.Int, postId)
-            .input('commentIndex', sql.Int, comment.commentIndex)
-            .input('content', sql.NVarChar, comment.content)
-            .input('delay', sql.Int, comment.delayMinutes)
-            .input('mediaUrl', sql.VarChar, comment.mediaUrl)
-            .query("INSERT INTO PostComments (post_id,comment_index,content,delay_minutes,media_url,status) VALUES (@postId,@commentIndex,@content,@delay,@mediaUrl,'pending');");
+
+    // 2. TikTok accounts
+    let tiktokAccounts = [];
+    try {
+      tiktokAccounts = await tiktokService.listTikTokAccounts(req.user.sub);
+    } catch (err) {
+      console.warn('[Bulk Upload] Chưa tải được TikTok accounts:', err.message);
+    }
+    const defaultTikTok = req.body.defaultTiktokAccountId
+      ? tiktokAccounts.find((t) => String(t.id) === String(req.body.defaultTiktokAccountId))
+      : tiktokAccounts[0];
+
+    // Mở rộng bài đăng: platform='all' → FB + TikTok; nhiều pageIds → 1 post mỗi page
+    const posts = [];
+    for (const post of rawPosts) {
+      const ids = post.pageIds && post.pageIds.length > 0 ? post.pageIds : (post.pageId ? [post.pageId] : [null]);
+      if (post.platform === 'all') {
+        for (const pid of ids) {
+          posts.push({ ...post, pageId: pid, pageIds: [pid], platform: 'facebook', subRow: `FB | ${pid || 'default'}` });
         }
-        await transaction.commit();
-        if (canScheduleOnFacebook({ mediaType: post.mediaType, scheduledAt: post.scheduledAt })) {
-          try {
-            const fbPostId = await schedulePostOnFacebook({
-              pageId,
-              content: post.content,
-              mediaType: post.mediaType,
-              mediaLinks: post.mediaLinks,
-              scheduledAt: post.scheduledAt
-            });
-            await pool.request()
-              .input('id', sql.Int, postId)
-              .input('fbId', sql.NVarChar, fbPostId)
-              .query('UPDATE Posts SET facebook_post_id = @fbId WHERE id = @id');
-          } catch (fbErr) {
-            console.warn(`[Bulk FB Schedule Warning postId ${postId}]`, fbErr.response?.data?.error?.message || fbErr.message);
-          }
+        posts.push({ ...post, platform: 'tiktok', subRow: 'TikTok' });
+      } else if (ids.length > 1) {
+        for (const pid of ids) {
+          posts.push({ ...post, pageId: pid, pageIds: [pid], subRow: pid || '' });
         }
-        try {
-          await standaloneScheduler.schedulePost(postId, post.scheduledAt);
-          createdIds.push(postId);
-        } catch (error) {
-          console.error(`[Bulk Schedule Warning postId ${postId}]`, error.message);
-          createdIds.push(postId); // Vẫn đã lưu vào DB
-        }
-      } catch (error) {
-        await transaction.rollback().catch(() => {});
-        errors.push({ row: post.rowIndex, message: error.message });
+      } else {
+        posts.push({ ...post, pageId: ids[0], pageIds: ids });
       }
     }
-    return res.json({ success: errors.length === 0, data: createdIds, errors, message: `Đã xếp lịch thành công ${createdIds.length}/${posts.length} bài đăng.` });
+
+    const createdIds = [];
+    const errors = [];
+
+    for (const post of posts) {
+      const isTikTok = post.platform === 'tiktok';
+
+      if (isTikTok) {
+        try {
+          const ttAcc = findTikTokAccount(post.pageId, tiktokAccounts) || defaultTikTok;
+          if (!ttAcc) throw new Error('Tài khoản TikTok chưa được kết nối trong hệ thống.');
+          const ttId = String(ttAcc.id);
+
+          if (!post.mediaLinks || post.mediaLinks.length === 0) {
+            throw new Error('Đăng TikTok bắt buộc phải có link video (Media Link).');
+          }
+
+          const inserted = await pool.request()
+            .input('pageId', sql.VarChar, ttId)
+            .input('ownerId', sql.VarChar(64), req.user.sub)
+            .input('content', sql.NVarChar, post.content)
+            .input('mediaType', sql.VarChar, 'video')
+            .input('mediaLinks', sql.NVarChar, JSON.stringify(post.mediaLinks))
+            .input('mediaThumb', sql.VarChar, post.mediaThumb || null)
+            .input('scheduledAt', sql.DateTime2, post.scheduledAt)
+            .input('status', sql.VarChar, 'pending')
+            .input('platform', sql.VarChar(50), 'tiktok')
+            .input('tiktokAccountId', sql.VarChar(50), ttId)
+            .query(`
+              INSERT INTO Posts (page_id, content, media_type, media_links, media_thumb, scheduled_at, status, created_by_user_id, platform, tiktok_account_id)
+              OUTPUT INSERTED.id
+              VALUES (@pageId, @content, @mediaType, @mediaLinks, @mediaThumb, @scheduledAt, @status, @ownerId, @platform, @tiktokAccountId);
+            `);
+
+          const postId = inserted.recordset[0].id;
+          createdIds.push(postId);
+          await standaloneScheduler.schedulePost(postId, post.scheduledAt);
+        } catch (error) {
+          errors.push({ row: post.rowIndex, platform: 'tiktok', message: error.message });
+        }
+      } else {
+        // Facebook post
+        const transaction = new sql.Transaction(pool);
+        try {
+          await transaction.begin();
+          const pageId = String(post.pageId || defaultPageId || '');
+          if (!connectedPageIds.has(pageId)) throw new Error('Page trong dòng Excel chưa được kết nối với Facebook account này.');
+          const inserted = await new sql.Request(transaction)
+            .input('pageId', sql.VarChar, pageId)
+            .input('ownerId', sql.VarChar(64), req.user.sub)
+            .input('content', sql.NVarChar, post.content)
+            .input('mediaType', sql.VarChar, post.mediaType)
+            .input('mediaLinks', sql.NVarChar, JSON.stringify(post.mediaLinks))
+            .input('mediaThumb', sql.VarChar, post.mediaThumb)
+            .input('scheduledAt', sql.DateTime2, post.scheduledAt)
+            .input('status', sql.VarChar, 'pending')
+            .input('platform', sql.VarChar(50), 'facebook')
+            .query('INSERT INTO Posts (page_id,content,media_type,media_links,media_thumb,scheduled_at,status,created_by_user_id,platform) OUTPUT INSERTED.id VALUES (@pageId,@content,@mediaType,@mediaLinks,@mediaThumb,@scheduledAt,@status,@ownerId,@platform);');
+          const postId = inserted.recordset[0].id;
+          for (const comment of post.comments) {
+            await new sql.Request(transaction)
+              .input('postId', sql.Int, postId)
+              .input('commentIndex', sql.Int, comment.commentIndex)
+              .input('content', sql.NVarChar, comment.content)
+              .input('delay', sql.Int, comment.delayMinutes)
+              .input('mediaUrl', sql.VarChar, comment.mediaUrl)
+              .query("INSERT INTO PostComments (post_id,comment_index,content,delay_minutes,media_url,status) VALUES (@postId,@commentIndex,@content,@delay,@mediaUrl,'pending');");
+          }
+          await transaction.commit();
+          if (canScheduleOnFacebook({ mediaType: post.mediaType, scheduledAt: post.scheduledAt })) {
+            try {
+              const fbPostId = await schedulePostOnFacebook({
+                pageId,
+                content: post.content,
+                mediaType: post.mediaType,
+                mediaLinks: post.mediaLinks,
+                scheduledAt: post.scheduledAt
+              });
+              await pool.request()
+                .input('id', sql.Int, postId)
+                .input('fbId', sql.NVarChar, fbPostId)
+                .query('UPDATE Posts SET facebook_post_id = @fbId WHERE id = @id');
+            } catch (fbErr) {
+              console.warn(`[Bulk FB Schedule Warning postId ${postId}]`, fbErr.response?.data?.error?.message || fbErr.message);
+            }
+          }
+          try {
+            await standaloneScheduler.schedulePost(postId, post.scheduledAt);
+            createdIds.push(postId);
+          } catch (error) {
+            console.error(`[Bulk Schedule Warning postId ${postId}]`, error.message);
+            createdIds.push(postId);
+          }
+        } catch (error) {
+          await transaction.rollback().catch(() => {});
+          errors.push({ row: post.rowIndex, platform: 'facebook', message: error.message });
+        }
+      }
+    }
+
+    return res.json({
+      success: errors.length === 0,
+      data: createdIds,
+      errors,
+      message: `Đã xếp lịch thành công ${createdIds.length}/${posts.length} bài đăng (Facebook & TikTok).`
+    });
   } catch (error) {
     console.error('[Bulk Upload Error]', error.message);
     return res.status(400).json({ success: false, message: error.message });
@@ -3042,6 +3308,11 @@ const server = app.listen(PORT, () => {
 
   // Khởi tạo schema TikTok (bảng TikTokAccounts + cột Posts.platform, Posts.tiktok_account_id)
   tiktokService.ensureTikTokSchema().catch((error) => console.error('[TikTok Schema Init Error]', error.message));
+
+  // Dọn dẹp file video tạm TikTok: chạy ngay lúc khởi động và lặp lại mỗi 2 giờ
+  // Giải phóng ổ cứng khỏi file tạm bị nhồi dầy trong trường hợp Puppeteer bị crash giữa chừng
+  cleanupTempUploads().catch(() => {});
+  setInterval(() => cleanupTempUploads().catch(() => {}), 2 * 60 * 60 * 1000); // Mỗi 2 giờ
   // AI Bình luận: quét bình luận mới mỗi 2 phút (webhook feed vẫn là đường chính khi đã đăng ký)
   if (process.env.POLL_COMMENTS !== 'off') commentAiService.startPolling(120000);
 

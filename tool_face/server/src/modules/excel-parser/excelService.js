@@ -85,12 +85,17 @@ function parseBulkExcel(fileBuffer) {
     const content = cellValue(row, headers, ['Content', 'Nội dung', 'Nội dung bài đăng']);
     const rawSchedule = row[scheduleColumn];
     const channel = cellValue(row, headers, [
+      'Fanpage / TikTok Channel (Tên | Page ID)',
+      'Fanpage / TikTok Channel',
+      'Kênh đăng (Fanpage hoặc TikTok ID/User)',
+      'Kênh đăng (Fanpage hoặc TikTok)',
       'Fanpage Channel (Tên | Page ID)',
       'Fanpage Channel',
       'Channel',
       'Kênh',
       'Kênh đăng',
-      'Page ID'
+      'Page ID',
+      'Tài khoản'
     ]);
     const mediaLinks = parseMediaLinks(cellValue(row, headers, [
       'Media Link',
@@ -101,13 +106,50 @@ function parseBulkExcel(fileBuffer) {
     ]));
     if (!content && mediaLinks.length === 0) return;
 
-    let pageId = null;
+    const rawPlatform = cellValue(row, headers, [
+      'Platform',
+      'Nền tảng',
+      'Nen tang',
+      'Nền tảng (FB/TikTok)',
+      'Nen tang (FB/TikTok)',
+      'Nền tảng (Facebook/TikTok)',
+      'Nen tang (Facebook/TikTok)',
+      'Kênh MXH',
+      'Mạng xã hội'
+    ]);
+
+    let platform = null;
+    if (rawPlatform) {
+      const normP = normalizeHeader(rawPlatform);
+      if (normP.includes('tiktok') || normP === 'tt') platform = 'tiktok';
+      else if (normP.includes('facebook') || normP === 'fb' || normP === 'fanpage') platform = 'facebook';
+      else if (normP.includes('ca hai') || normP.includes('all') || normP.includes('both') || normP.includes('tat ca')) platform = 'all';
+    }
+
     const channelStr = String(channel || '').trim();
-    const channelMatch = channelStr.match(/\|\s*([a-f0-9]+)/i) || channelStr.match(/\|\s*([0-9a-zA-Z_]+)/);
-    if (channelMatch) {
-      pageId = channelMatch[1].trim();
-    } else if (/^\d{8,25}$/.test(channelStr) || /^\d+$/.test(channelStr)) {
-      pageId = channelStr;
+
+    // Hỗ trợ nhiều Page ID / kênh cách nhau bằng dấu phẩy hoặc dấu chấm phẩy
+    // Mỗi phần tử có thể ở dạng: "Tên Page | 123456" hoặc chỉ "123456" hoặc "@username"
+    const channelParts = channelStr
+      .split(/[,;]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const pageIds = channelParts.map((part) => {
+      const matchPipe = part.match(/\|\s*([0-9a-zA-Z_@.-]+)\s*$/);
+      if (matchPipe) return matchPipe[1].trim();
+      return part;
+    });
+
+    // pageId đầu tiên dùng để tự động nhận diện platform
+    const pageId = pageIds[0] || null;
+
+    // Tự động nhận diện platform qua channel nếu cột Nền tảng để trống
+    if (!platform && channelStr) {
+      const lowerChannel = channelStr.toLowerCase();
+      if (lowerChannel.startsWith('@') || lowerChannel.includes('tiktok') || lowerChannel.includes('tt |') || lowerChannel.includes('tt|')) {
+        platform = 'tiktok';
+      }
     }
 
     const postScheduledAt = parseSo9Schedule(rawSchedule);
@@ -144,14 +186,22 @@ function parseBulkExcel(fileBuffer) {
       });
     }
 
-    const mediaType = normalizeMediaType(
+    let mediaType = normalizeMediaType(
       cellValue(row, headers, ['Media Type', 'Loại Media', 'Loại nội dung', 'Type']),
       mediaLinks
     );
 
+    // TikTok yêu cầu video: nếu là TikTok và có file media, đảm bảo mediaType là video
+    if (platform === 'tiktok' && mediaLinks.length > 0 && mediaType !== 'reel') {
+      mediaType = 'video';
+    }
+
     parsedPosts.push({
       rowIndex: headerIndex + rowOffset + 2,
       pageId,
+      pageIds: pageIds.length > 0 ? pageIds : (pageId ? [pageId] : []),
+      channelRaw: channelStr,
+      platform: platform || 'facebook',
       content: String(content || '').trim(),
       scheduledAt: postScheduledAt,
       mediaType,

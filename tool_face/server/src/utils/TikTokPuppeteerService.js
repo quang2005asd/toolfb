@@ -14,6 +14,23 @@ const { sql, getPool } = require('../../config/db');
 puppeteer.use(StealthPlugin());
 
 /**
+ * Xóa file an toàn – không throw nếu file không tồn tại hoặc đang bị dùng
+ * @param {string} filePath
+ * @param {string} [label] - Nhãn log
+ */
+function safeDeleteFile(filePath, label = '') {
+  if (!filePath) return;
+  try {
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      console.log(`🗑️  [TikTok Cleanup${label ? ' ' + label : ''}] Đã xóa file: ${path.basename(filePath)}`);
+    }
+  } catch (err) {
+    console.warn(`[TikTok Cleanup] Không thể xóa ${filePath}:`, err.message);
+  }
+}
+
+/**
  * Tìm đường dẫn trình duyệt Chrome hoặc Edge có sẵn trên hệ điều hành
  */
 function getBrowserExecutablePath() {
@@ -100,6 +117,44 @@ async function prepareVideoFile(mediaLink) {
   });
 
   return { filePath: tempFilePath, isTemp: true };
+}
+
+/**
+ * Dọn dẹp thư mục uploads/temp: xóa mọi file tạm quá tuổi (mặc định 2 giờ)
+ * Gọi định kỳ từ app.js khi server khởi động để tránh ổ cứng đầy.
+ * @param {number} [maxAgeMs=7200000] - Tuổi tối đa (ms). Mặc định 2 giờ.
+ */
+async function cleanupTempUploads(maxAgeMs = 2 * 60 * 60 * 1000) {
+  const tempDir = process.env.APP_DATA_DIR
+    ? path.join(process.env.APP_DATA_DIR, 'uploads', 'temp')
+    : path.resolve(__dirname, '../../uploads/temp');
+
+  if (!fs.existsSync(tempDir)) return;
+
+  let deleted = 0;
+  let freed = 0;
+  const now = Date.now();
+
+  try {
+    const files = fs.readdirSync(tempDir);
+    for (const file of files) {
+      const filePath = path.join(tempDir, file);
+      try {
+        const stat = fs.statSync(filePath);
+        if (stat.isFile() && (now - stat.mtimeMs) > maxAgeMs) {
+          freed += stat.size;
+          fs.unlinkSync(filePath);
+          deleted++;
+        }
+      } catch (_) {}
+    }
+    if (deleted > 0) {
+      const freedMb = (freed / (1024 * 1024)).toFixed(1);
+      console.log(`🧹 [TikTok Temp Cleanup] Đã xóa ${deleted} file tạm cũ, giải phóng ${freedMb} MB ổ cứng.`);
+    }
+  } catch (err) {
+    console.warn('[TikTok Temp Cleanup Error]', err.message);
+  }
 }
 
 /**
@@ -463,17 +518,16 @@ async function uploadVideoToTikTok({ tiktokAccountId, mediaLink, caption }) {
     if (browser) {
       await browser.close().catch(() => {});
     }
-    // Dọn dẹp file video tạm nếu đã tải từ URL
+    // Dọn dẹp file video tạm nếu đã tải từ URL về thư mục temp
     if (isTemp && fs.existsSync(filePath)) {
-      try {
-        fs.unlinkSync(filePath);
-      } catch (_) {}
+      safeDeleteFile(filePath, 'URL temp');
     }
   }
 }
 
 /**
- * Thực thi xuất bản bài viết TikTok được gọi từ Queue / Scheduler
+ * executePublishTikTokPost: Thực thi xuất bản bài viết TikTok được gọi từ Queue / Scheduler
+ * Sau khi đăng xong, TỰ ĐỘNG XÓA file video đã upload lên server để giải phóng ổ cứng.
  */
 async function executePublishTikTokPost(postId) {
   console.log(`🚀 [TIKTOK WORKER] Bắt đầu xuất bản Post ID: #${postId}`);
@@ -495,7 +549,7 @@ async function executePublishTikTokPost(postId) {
 
   const claimResult = await pool.request()
     .input('id', sql.Int, postId)
-    .query("UPDATE Posts SET status = 'publishing' OUTPUT INSERTED.id WHERE id = @id AND status IN ('pending', 'scheduled')");
+    .query("UPDATE Posts SET status = 'publishing' OUTPUT INSERTED.id WHERE id = @id AND status IN ('pending', 'scheduled', 'queued')");
   if (claimResult.recordset.length === 0) return;
 
   try {
@@ -538,6 +592,20 @@ async function executePublishTikTokPost(postId) {
       `);
 
     console.log(`🎉 [TIKTOK SUCCESS] Xuất bản bài #${postId} lên TikTok thành công!`);
+
+    // ── Tự động xóa file video đã upload lên server để giải phóng ổ cứng ────
+    // Chỉ xóa nếu là file local:// (file user đã upload lên server của mình)
+    // Không xóa nếu là link ngoài (Google Drive, URL) vì không chiếm ổ cứng server
+    if (videoUrl && typeof videoUrl === 'string' && videoUrl.startsWith('local://')) {
+      const localFileName = videoUrl.slice('local://'.length);
+      const uploadsDir = process.env.APP_DATA_DIR
+        ? path.join(process.env.APP_DATA_DIR, 'uploads')
+        : path.resolve(__dirname, '../../uploads');
+      const localFilePath = path.join(uploadsDir, path.basename(localFileName));
+      // Delay nhỏ để đảm bảo browser đã hoàn toàn đóng và giải phóng file
+      setTimeout(() => safeDeleteFile(localFilePath, 'local after publish'), 5000);
+    }
+
   } catch (err) {
     console.error(`💥 [TIKTOK ERROR] Xuất bản bài #${postId} thất bại:`, err.message);
     await pool.request()
@@ -549,5 +617,6 @@ async function executePublishTikTokPost(postId) {
 
 module.exports = {
   uploadVideoToTikTok,
-  executePublishTikTokPost
+  executePublishTikTokPost,
+  cleanupTempUploads
 };

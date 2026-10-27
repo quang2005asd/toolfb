@@ -3,7 +3,8 @@ const path = require('path');
 
 const headers = [
   'STT',
-  'Fanpage Channel (Tên | Page ID)',
+  'Nền tảng (FB/TikTok)',
+  'Fanpage / TikTok Channel (Tên | Page ID)',
   'Content',
   'Schedule',
   'Loại Media',
@@ -29,6 +30,7 @@ const headers = [
 const samplePosts = [
   {
     stt: 1,
+    platform: 'Facebook',
     channel: 'Đài truyền hình ABC | 1383891371465269',
     content: 'Chào ngày mới tràn đầy năng lượng và nhiệt huyết! Chúc mọi người một ngày làm việc hiệu quả và gặt hái nhiều thành công 🌟 #morning #goodvibes #thanhcong',
     schedule: 'Đăng ngay',
@@ -41,24 +43,23 @@ const samplePosts = [
   },
   {
     stt: 2,
-    channel: 'Một Câu Chuyện | 1406154479236872',
-    content: '5 thói quen buổi sáng của những người thành công: 1. Dậy sớm tập thể dục 2. Đọc sách 20 phút 3. Lên danh sách việc cần làm 4. Uống 500ml nước ấm 5. Tránh lướt điện thoại 30 phút đầu ngày.',
+    platform: 'TikTok',
+    channel: 'Kênh TikTok Triệu View | @kenhtiktok_official',
+    content: '5 thói quen buổi sáng của những người thành công giúp bạn thay đổi tư duy và bứt phá sự nghiệp! 🚀🔥 #xuhuong #tiktok #thanhcong #kinhdoanh',
     schedule: '02/10/2026_09:00',
-    mediaType: 'image',
-    mediaLink: 'https://images.unsplash.com/photo-1499750310107-5fef28a66643',
+    mediaType: 'video',
+    mediaLink: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
     mediaThumb: '',
-    c1: 'Bạn đã thực hiện được bao nhiêu thói quen trong số này rồi?',
-    s1: '3',
-    c2: 'Tài liệu chi tiết hướng dẫn quản lý thời gian tặng miễn phí tại link bio nhé!',
-    s2: '10'
+    c1: '', s1: '', c2: '', s2: ''
   },
   {
     stt: 3,
-    channel: 'Đài truyền hình ABC | 1383891371465269',
-    content: 'Bản tin công nghệ 24h: Các xu hướng trí tuệ nhân tạo (AI) đang thay đổi hoàn toàn cách doanh nghiệp vận hành và tiếp cận khách hàng tiềm năng trong năm 2026.',
+    platform: 'Cả hai',
+    channel: 'Kênh Truyền Thông | 1383891371465269',
+    content: 'Bản tin công nghệ 24h: Các xu hướng AI đang thay đổi hoàn toàn cách doanh nghiệp vận hành. Đăng đồng thời Reels Facebook & TikTok! ⚡ #technology #ai',
     schedule: '02/10/2026_11:30',
-    mediaType: 'image',
-    mediaLink: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e',
+    mediaType: 'video',
+    mediaLink: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
     mediaThumb: '',
     c1: 'Đón xem phóng sự chuyên sâu lúc 19h00 tối nay trên sóng truyền hình.',
     s1: '5',
@@ -66,6 +67,7 @@ const samplePosts = [
   },
   {
     stt: 4,
+    platform: 'Facebook',
     channel: 'Một Câu Chuyện | 1406154479236872',
     content: 'Đôi khi trong cuộc sống, chậm lại một nhịp không phải là tụt hậu, mà là để chuẩn bị cho một bước nhảy xa hơn. Hãy kiên trì với mục tiêu của chính mình 🌿 #quote #tamsu #cuocsong',
     schedule: '02/10/2026_14:15',
@@ -275,11 +277,27 @@ const samplePosts = [
     s1: '2',
     c2: 'Cố lên mọi người ơi, tuần này nhất định sẽ bùng nổ!',
     s2: '6'
+  },
+  {
+    // ✅ VÍ DỤ ĐĂNG NHIỀU FANPAGE: 1 dòng → đăng lên 3 fanpage cùng lúc
+    stt: 21,
+    platform: 'Facebook',
+    channel: 'Đài ABC | 1383891371465269, Kênh Chuyện | 1406154479236872, Brand Page | 9876543210',
+    content: '🎉 Thông báo quan trọng! Chương trình ưu đãi đặc biệt dành cho tất cả khán giả và độc giả thân mến. Đừng bỏ lỡ cơ hội nhận quà giá trị từ chúng tôi! #khuyenmai #ưuđãi',
+    schedule: '05/10/2026_12:00',
+    mediaType: 'image',
+    mediaLink: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da',
+    mediaThumb: '',
+    c1: 'Bình luận SĐT để được tư vấn và nhận quà trực tiếp từ fanpage!',
+    s1: 'now',
+    c2: '',
+    s2: ''
   }
 ];
 
 const rows = samplePosts.map((p) => [
   p.stt,
+  p.platform || 'Facebook',
   p.channel,
   p.content,
   p.schedule,
@@ -295,15 +313,16 @@ const rows = samplePosts.map((p) => [
 
 const workbook = XLSX.utils.book_new();
 const worksheet = XLSX.utils.aoa_to_sheet([
-  ['MẪU UPLOAD BÀI ĐĂNG TỰ ĐỘNG - TOOL_FACE (20 BÀI ĐĂNG MẪU)'],
-  ['HƯỚNG DẪN: Sheet bắt buộc tên là "MAIN SHEET". Cột Schedule: "Đăng ngay" hoặc "DD/MM/YYYY_HH:mm". Cột Fanpage: "Tên | ID" hoặc chỉ ID số.'],
+  ['MẪU UPLOAD BÀI ĐĂNG TỰ ĐỘNG - HỖ TRỢ CẢ FACEBOOK VÀ TIKTOK (TOOL_FACE)'],
+  ['HƯỚNG DẪN: Sheet bắt buộc tên là "MAIN SHEET". Cột Schedule: "Đăng ngay" hoặc "DD/MM/YYYY_HH:mm". Cột Nền tảng: "Facebook", "TikTok" hoặc "Cả hai". Cột Kênh: Điền "Tên | ID" Fanpage hoặc ID/@username TikTok. ĐĂNG NHIỀU FANPAGE: Trong cột Kênh, liệt kê nhiều Page ID cách nhau bằng dấu phẩy. Ví dụ: "Page A | 111, Page B | 222, Page C | 333" → hệ thống sẽ tự đăng lên cả 3 fanpage cùng lúc.'],
   headers,
   ...rows
 ]);
 
 worksheet['!cols'] = [
   { wch: 6 },   // STT
-  { wch: 38 },  // Fanpage
+  { wch: 20 },  // Nền tảng
+  { wch: 38 },  // Fanpage / TikTok Channel
   { wch: 65 },  // Content
   { wch: 18 },  // Schedule
   { wch: 12 },  // Loại Media

@@ -165,7 +165,7 @@ async function addOrUpdateTikTokAccount({ userId, cookiesRaw, nicknameOverride }
       .input('nickname', sql.NVarChar(200), nickname)
       .input('avatarUrl', sql.NVarChar(1000), avatarUrl)
       .input('sessionId', sql.VarChar(255), sessionId || '')
-      .input('cookiesJson', sql.NText, cookiesJson)
+      .input('cookiesJson', sql.NVarChar(sql.MAX), cookiesJson)
       .input('status', sql.VarChar(50), 'active')
       .input('nowIso', sql.VarChar(50), nowIso)
       .query(`
@@ -197,7 +197,7 @@ async function addOrUpdateTikTokAccount({ userId, cookiesRaw, nicknameOverride }
     .input('nickname', sql.NVarChar(200), nickname)
     .input('avatarUrl', sql.NVarChar(1000), avatarUrl)
     .input('sessionId', sql.VarChar(255), sessionId || '')
-    .input('cookiesJson', sql.NText, cookiesJson)
+    .input('cookiesJson', sql.NVarChar(sql.MAX), cookiesJson)
     .input('status', sql.VarChar(50), 'active')
     .input('nowIso', sql.VarChar(50), nowIso)
     .query(`
@@ -319,7 +319,7 @@ async function ensureTikTokSchema() {
         nickname      NVARCHAR(200)     NULL,
         avatar_url    NVARCHAR(1000)    NULL,
         session_id    VARCHAR(255)      NULL,
-        cookies_json  NTEXT             NULL,
+        cookies_json  NVARCHAR(MAX)     NULL,
         status        VARCHAR(50)       NOT NULL DEFAULT 'active',
         error_message NVARCHAR(500)     NULL,
         created_at    VARCHAR(50)       NOT NULL,
