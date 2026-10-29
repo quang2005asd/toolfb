@@ -1,0 +1,1218 @@
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import {
+  Activity,
+  AlertCircle,
+  Bell,
+  Bot,
+  Check,
+  CheckCircle2,
+  Clock,
+  Cpu,
+  Database,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  Globe2,
+  HardDrive,
+  KeyRound,
+  Lock,
+  LogOut,
+  Palette,
+  RefreshCw,
+  Save,
+  Send,
+  Server,
+  Settings,
+  ShieldAlert,
+  ShieldCheck,
+  Sparkles,
+  User,
+  UserCog,
+  Zap
+} from 'lucide-react';
+import MainLayout from '../../components/layout/MainLayout';
+import RoleBadge from '../../components/RoleBadge';
+import settingsApi from '../../services/settingsApi';
+import authApi from '../../services/authApi';
+import userApi from '../../services/userApi';
+import useAuth from '../../hooks/useAuth';
+import { PERMISSIONS, PERMISSION_LABELS, formatDateTime } from '../../utils/permissions';
+
+// `permission`: tab chỉ hiển thị với tài khoản có quyền tương ứng
+const tabs = [
+  { id: 'account', label: 'Hồ sơ & bảo mật', icon: User },
+  { id: 'ai', label: 'Cấu hình AI Studio', icon: Sparkles, permission: PERMISSIONS.SETTINGS_SYSTEM },
+  { id: 'telegram', label: 'Giám sát & Bot Telegram', icon: Bell, permission: PERMISSIONS.SETTINGS_SYSTEM },
+  { id: 'publishing', label: 'Đăng bài & Lịch trình', icon: Clock, permission: PERMISSIONS.SETTINGS_SYSTEM },
+  { id: 'system', label: 'Hệ thống & Giao diện', icon: Cpu }
+];
+
+function InlineNotice({ notice }) {
+  const isError = notice.type === 'error';
+  return (
+    <div className={`notice settings-inline-notice ${isError ? 'is-error' : 'is-success'}`}>
+      {isError ? <AlertCircle size={15} /> : <CheckCircle2 size={15} />}
+      <span>{notice.text}</span>
+    </div>
+  );
+}
+
+const aiProviders = [
+  { id: 'openai', name: 'OpenAI (ChatGPT)', baseUrl: 'https://api.openai.com/v1', defaultModel: 'gpt-4o-mini' },
+  { id: 'deepseek', name: 'DeepSeek AI', baseUrl: 'https://api.deepseek.com/v1', defaultModel: 'deepseek-chat' },
+  { id: 'gemini', name: 'Google Gemini (OpenAI Protocol)', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/', defaultModel: 'gemini-1.5-flash' },
+  { id: 'groq', name: 'Groq (Ultra-fast LLM)', baseUrl: 'https://api.groq.com/openai/v1', defaultModel: 'openai/gpt-oss-120b' },
+  { id: 'custom', name: 'Tùy chỉnh Endpoint khác', baseUrl: '', defaultModel: 'gpt-4o-mini' }
+];
+
+const tonePresets = [
+  {
+    name: 'Viral & Hấp dẫn',
+    prompt: 'Bạn là chuyên gia sáng tạo nội dung Facebook triệu view. Sử dụng giọng văn gần gũi, cuốn hút, mở đầu bằng hook gây tò mò, kết thúc bằng lời kêu gọi tương tác (CTA) tự nhiên.'
+  },
+  {
+    name: 'Bán hàng & Chốt đơn',
+    prompt: 'Bạn là copywriter viết bài bán hàng đỉnh cao. Nêu bật lợi ích cốt lõi của sản phẩm, đánh trúng nỗi đau khách hàng, đưa ra ưu đãi thôi thúc hành động, chốt đơn mạnh mẽ.'
+  },
+  {
+    name: 'Chuyên nghiệp & Tin tức',
+    prompt: 'Bạn là biên tập viên tin tức và phân tích chuyên nghiệp. Giọng văn trang trọng, gãy gọn, khách quan, giàu thông tin giá trị và số liệu thực tế.'
+  },
+  {
+    name: 'Hài hước & Bắt trend',
+    prompt: 'Bạn là nhà sáng tạo nội dung Gen Z hài hước, dí dỏm. Khéo léo lồng ghép các câu nói hot trend, châm biếm nhẹ nhàng, tạo tiếng cười sảng khoái và kích thích chia sẻ.'
+  }
+];
+
+export default function SettingsPage() {
+  const { user, logout, can, refreshUser } = useAuth();
+  const canManageSystem = can(PERMISSIONS.SETTINGS_SYSTEM);
+  const visibleTabs = tabs.filter((tab) => !tab.permission || can(tab.permission));
+  const [activeTab, setActiveTab] = useState('account');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState({ type: '', text: '' });
+
+  // Hồ sơ cá nhân & đổi mật khẩu
+  const [profileForm, setProfileForm] = useState({ displayName: '', email: '' });
+  const [profileNotice, setProfileNotice] = useState({ type: '', text: '' });
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [passwordNotice, setPasswordNotice] = useState({ type: '', text: '' });
+  const [savingPassword, setSavingPassword] = useState(false);
+
+  useEffect(() => {
+    if (user) setProfileForm({ displayName: user.name || '', email: user.email || '' });
+  }, [user]);
+
+  // Meta App (App ID / App Secret) — chỉ Quản trị viên
+  const [metaAppForm, setMetaAppForm] = useState({ appId: '', appSecret: '' });
+  const [metaAppNotice, setMetaAppNotice] = useState({ type: '', text: '' });
+  const [savingMetaApp, setSavingMetaApp] = useState(false);
+
+  const handleSaveMetaApp = async (e) => {
+    e.preventDefault();
+    setSavingMetaApp(true);
+    setMetaAppNotice({ type: '', text: '' });
+    try {
+      const res = await settingsApi.saveMetaApp(metaAppForm);
+      setMetaAppNotice({ type: 'success', text: res.message || 'Đã lưu Meta App.' });
+      setMetaAppForm((current) => ({ ...current, appSecret: '' }));
+      await loadSettings();
+    } catch (err) {
+      setMetaAppNotice({ type: 'error', text: err.response?.data?.message || err.message });
+    } finally {
+      setSavingMetaApp(false);
+    }
+  };
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    setSavingProfile(true);
+    setProfileNotice({ type: '', text: '' });
+    try {
+      const res = await userApi.updateProfile({ displayName: profileForm.displayName.trim(), email: profileForm.email.trim() });
+      await refreshUser();
+      setProfileNotice({ type: 'success', text: res.message || 'Đã cập nhật thông tin cá nhân.' });
+    } catch (err) {
+      setProfileNotice({ type: 'error', text: err.response?.data?.message || err.message });
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPasswordNotice({ type: '', text: '' });
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordNotice({ type: 'error', text: 'Mật khẩu xác nhận không khớp.' });
+      return;
+    }
+    setSavingPassword(true);
+    try {
+      const res = await userApi.changePassword(passwordForm);
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setPasswordNotice({ type: 'success', text: res.message || 'Đã đổi mật khẩu thành công.' });
+    } catch (err) {
+      setPasswordNotice({ type: 'error', text: err.response?.data?.message || err.message });
+    } finally {
+      setSavingPassword(false);
+    }
+  };
+
+  // Form states
+  const [data, setData] = useState({
+    settings: {
+      ai_provider: 'openai',
+      ai_model: 'gpt-4o-mini',
+      ai_api_key_masked: '',
+      ai_has_key: false,
+      ai_base_url: 'https://api.openai.com/v1',
+      ai_system_prompt: '',
+      post_interval_minutes: 15,
+      default_hashtags: '#facebook #marketing #viral',
+      default_signature: '📌 Hãy bấm Theo dõi Fanpage để cập nhật bài viết mới nhất!',
+      auto_retry_count: 2,
+      enable_rgb_effects: true,
+      telegram_bot_token_masked: '',
+      telegram_has_token: false,
+      telegram_chat_id: '',
+      telegram_alert_enabled: true,
+      telegram_alert_on_expired: true,
+      telegram_alert_on_failed: true
+    },
+    account: {},
+    system: {}
+  });
+
+  const [newApiKey, setNewApiKey] = useState('');
+  const [showApiKey, setShowApiKey] = useState(false);
+
+  // Test AI state
+  const [testingAi, setTestingAi] = useState(false);
+  const [aiTestResult, setAiTestResult] = useState(null);
+
+  // Telegram Bot state (Module 2)
+  const [newTelegramToken, setNewTelegramToken] = useState('');
+  const [showTelegramToken, setShowTelegramToken] = useState(false);
+  const [testingTelegram, setTestingTelegram] = useState(false);
+  const [telegramTestResult, setTelegramTestResult] = useState(null);
+
+  // Token Health Check state (Module 2)
+  const [runningHealthCheck, setRunningHealthCheck] = useState(false);
+  const [healthCheckResult, setHealthCheckResult] = useState(null);
+
+  const loadSettings = async () => {
+    setLoading(true);
+    try {
+      const res = await settingsApi.get();
+      if (res.success) {
+        setData(res);
+      }
+    } catch (err) {
+      setNotice({ type: 'error', text: 'Không thể tải cài đặt từ máy chủ: ' + (err.response?.data?.message || err.message) });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  // Điền sẵn App ID đã lưu vào form Meta App
+  useEffect(() => {
+    setMetaAppForm((current) => ({ ...current, appId: current.appId || data.system?.metaAppId || '' }));
+  }, [data.system?.metaAppId]);
+
+  const handleProviderChange = (e) => {
+    const providerId = e.target.value;
+    const provider = aiProviders.find((p) => p.id === providerId);
+    setData((prev) => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        ai_provider: providerId,
+        ai_base_url: provider?.baseUrl || prev.settings.ai_base_url,
+        ai_model: provider?.defaultModel || prev.settings.ai_model
+      }
+    }));
+  };
+
+  const handleSave = async (e) => {
+    if (e) e.preventDefault();
+    setSaving(true);
+    setNotice({ type: '', text: '' });
+    try {
+      const payload = {
+        ai_provider: data.settings.ai_provider,
+        ai_model: data.settings.ai_model,
+        ai_base_url: data.settings.ai_base_url,
+        ai_system_prompt: data.settings.ai_system_prompt,
+        post_interval_minutes: data.settings.post_interval_minutes,
+        default_hashtags: data.settings.default_hashtags,
+        default_signature: data.settings.default_signature,
+        auto_retry_count: data.settings.auto_retry_count,
+        enable_rgb_effects: data.settings.enable_rgb_effects,
+        telegram_chat_id: data.settings.telegram_chat_id,
+        telegram_alert_enabled: data.settings.telegram_alert_enabled,
+        telegram_alert_on_expired: data.settings.telegram_alert_on_expired,
+        telegram_alert_on_failed: data.settings.telegram_alert_on_failed
+      };
+
+      if (newApiKey.trim()) {
+        payload.ai_api_key = newApiKey.trim();
+      }
+
+      if (newTelegramToken.trim()) {
+        payload.telegram_bot_token = newTelegramToken.trim();
+      }
+
+      const res = await settingsApi.update(payload);
+      setNotice({ type: 'success', text: res.message || 'Đã lưu cấu hình thành công!' });
+      setNewApiKey('');
+      setNewTelegramToken('');
+      await loadSettings();
+    } catch (err) {
+      setNotice({ type: 'error', text: 'Lưu cài đặt thất bại: ' + (err.response?.data?.message || err.message) });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleTestAi = async () => {
+    setTestingAi(true);
+    setAiTestResult(null);
+    try {
+      const res = await settingsApi.testAi({
+        apiKey: newApiKey.trim() || undefined,
+        model: data.settings.ai_model,
+        baseUrl: data.settings.ai_base_url
+      });
+      setAiTestResult({ success: true, message: res.reply || 'Kết nối thành công!' });
+    } catch (err) {
+      setAiTestResult({
+        success: false,
+        message: err.response?.data?.message || err.message
+      });
+    } finally {
+      setTestingAi(false);
+    }
+  };
+
+  const handleTestTelegram = async () => {
+    const hasToken = Boolean(newTelegramToken.trim() || data.settings.telegram_has_token);
+    const chatId = data.settings.telegram_chat_id ? String(data.settings.telegram_chat_id).trim() : '';
+
+    if (!hasToken) {
+      setTelegramTestResult({ success: false, message: 'Vui lòng nhập Telegram Bot Token trước khi gửi test.' });
+      return;
+    }
+    if (!chatId) {
+      setTelegramTestResult({ success: false, message: 'Bạn chưa nhập Telegram Chat ID! Hãy chat với bot @userinfobot để lấy ID của bạn rồi điền vào ô "Telegram Chat ID" bên dưới.' });
+      return;
+    }
+
+    setTestingTelegram(true);
+    setTelegramTestResult(null);
+    try {
+      const res = await settingsApi.testTelegram({
+        botToken: newTelegramToken.trim() || undefined,
+        chatId
+      });
+      setTelegramTestResult({ success: true, message: res.message || 'Gửi tin nhắn thử nghiệm thành công! Hãy kiểm tra Telegram.' });
+    } catch (err) {
+      setTelegramTestResult({
+        success: false,
+        message: err.response?.data?.message || err.message
+      });
+    } finally {
+      setTestingTelegram(false);
+    }
+  };
+
+  const handleRunHealthCheck = async () => {
+    setRunningHealthCheck(true);
+    setHealthCheckResult(null);
+    try {
+      const res = await settingsApi.runTokenHealthCheck();
+      if (res.success && res.summary) {
+        setHealthCheckResult({ success: true, summary: res.summary });
+      } else {
+        setHealthCheckResult({ success: false, message: res.message || 'Quét token thất bại.' });
+      }
+    } catch (err) {
+      setHealthCheckResult({ success: false, message: err.response?.data?.message || err.message });
+    } finally {
+      setRunningHealthCheck(false);
+    }
+  };
+
+  return (
+    <MainLayout
+      title="Cài đặt hệ thống"
+      actions={
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <button
+            type="button"
+            className="button button-secondary"
+            onClick={loadSettings}
+            disabled={loading || saving}
+            title="Tải lại cài đặt"
+          >
+            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} /> Làm mới
+          </button>
+          {canManageSystem && activeTab !== 'account' && (
+            <button
+              type="button"
+              className="button button-primary"
+              onClick={handleSave}
+              disabled={saving}
+            >
+              <Save size={15} /> {saving ? 'Đang lưu…' : 'Lưu cài đặt'}
+            </button>
+          )}
+        </div>
+      }
+    >
+      {notice.text && (
+        <div
+          className="notice"
+          style={{
+            marginBottom: 20,
+            borderColor: notice.type === 'error' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(16, 185, 129, 0.4)',
+            color: notice.type === 'error' ? '#ef4444' : '#10b981',
+            background: notice.type === 'error' ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 185, 129, 0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10
+          }}
+        >
+          {notice.type === 'error' ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
+          <span>{notice.text}</span>
+        </div>
+      )}
+
+      {/* Tabs navigation */}
+      <div className="step-strip" style={{ marginBottom: 22 }}>
+        {visibleTabs.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            type="button"
+            className={`step-button${activeTab === id ? ' is-current' : ''}`}
+            onClick={() => setActiveTab(id)}
+          >
+            <Icon size={16} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* ═══ TAB 1: HỒ SƠ & BẢO MẬT ═══ */}
+      {activeTab === 'account' && (
+        <div className="settings-account-grid">
+          {/* Card hồ sơ */}
+          <section className="panel" style={{ padding: 24, textAlign: 'center', alignSelf: 'start' }}>
+            <div className={`settings-avatar settings-avatar-${user?.role || 'user'}`}>
+              {user?.avatar ? (
+                <img src={user.avatar} alt={user.name} referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              ) : (
+                <span>{user?.name?.charAt(0)?.toUpperCase() || 'U'}</span>
+              )}
+            </div>
+
+            <h2 style={{ fontSize: 20, margin: '0 0 8px', color: 'var(--ink)', fontWeight: 900 }}>{user?.name || 'Tài khoản'}</h2>
+            <div style={{ marginBottom: 16 }}>
+              <RoleBadge role={user?.role} label={user?.roleLabel} />
+            </div>
+
+            <div className="settings-info-list">
+              <div><span className="muted">Tên đăng nhập</span><strong>@{user?.username || '—'}</strong></div>
+              <div><span className="muted">Gmail</span><strong>{user?.email || 'Chưa cập nhật'}</strong></div>
+              <div><span className="muted">Ngày tạo</span><strong>{formatDateTime(user?.createdAt)}</strong></div>
+              <div><span className="muted">Đăng nhập gần nhất</span><strong>{formatDateTime(user?.lastLoginAt)}</strong></div>
+              <div><span className="muted">Fanpage quản lý</span><strong style={{ color: 'var(--blue)' }}>{data.account.connectedPagesCount || 0} Fanpage</strong></div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <Link href="/channels" className="button button-primary" style={{ width: '100%' }}>
+                <Globe2 size={16} /> Kết nối Facebook & Fanpage
+              </Link>
+              {can(PERMISSIONS.USERS_MANAGE) && (
+                <Link href="/users" className="button button-secondary" style={{ width: '100%' }}>
+                  <UserCog size={16} /> Quản lý thành viên
+                </Link>
+              )}
+              <button type="button" className="button button-danger" style={{ width: '100%' }} onClick={logout}>
+                <LogOut size={16} /> Đăng xuất khỏi hệ thống
+              </button>
+            </div>
+          </section>
+
+          <div style={{ display: 'grid', gap: 20, alignContent: 'start' }}>
+            {/* Thông tin cá nhân */}
+            <section className="panel">
+              <div className="panel-heading">
+                <h2><User size={16} style={{ verticalAlign: 'middle', marginRight: 8, color: 'var(--blue)' }} />Thông tin cá nhân</h2>
+              </div>
+              <form className="panel-body" onSubmit={handleSaveProfile}>
+                {profileNotice.text && <InlineNotice notice={profileNotice} />}
+                <div className="settings-form-grid">
+                  <div>
+                    <label className="field-label" htmlFor="profile-name">Tên hiển thị</label>
+                    <input id="profile-name" className="field" value={profileForm.displayName} onChange={(e) => setProfileForm({ ...profileForm, displayName: e.target.value })} placeholder="Nguyễn Văn A" maxLength={120} />
+                  </div>
+                  <div>
+                    <label className="field-label" htmlFor="profile-email">Gmail</label>
+                    <input id="profile-email" type="email" className="field" value={profileForm.email} onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })} placeholder="ten@gmail.com" />
+                  </div>
+                </div>
+                <small className="muted" style={{ display: 'block', margin: '10px 0 0', fontSize: 11.5 }}>
+                  Tên đăng nhập <strong>@{user?.username}</strong> và vai trò chỉ có thể được thay đổi bởi tài khoản cấp cao hơn.
+                </small>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+                  <button type="submit" className="button button-primary" disabled={savingProfile}>
+                    <Save size={15} /> {savingProfile ? 'Đang lưu…' : 'Lưu thông tin'}
+                  </button>
+                </div>
+              </form>
+            </section>
+
+            {/* Đổi mật khẩu */}
+            <section className="panel">
+              <div className="panel-heading">
+                <h2><Lock size={16} style={{ verticalAlign: 'middle', marginRight: 8, color: 'var(--blue)' }} />Đổi mật khẩu</h2>
+              </div>
+              <form className="panel-body" onSubmit={handleChangePassword}>
+                {passwordNotice.text && <InlineNotice notice={passwordNotice} />}
+                <div className="settings-form-grid settings-form-grid-3">
+                  <div>
+                    <label className="field-label" htmlFor="pw-current">Mật khẩu hiện tại</label>
+                    <input id="pw-current" type="password" className="field" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} autoComplete="current-password" required />
+                  </div>
+                  <div>
+                    <label className="field-label" htmlFor="pw-new">Mật khẩu mới</label>
+                    <input id="pw-new" type="password" className="field" value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} placeholder="Tối thiểu 6 ký tự" autoComplete="new-password" required />
+                  </div>
+                  <div>
+                    <label className="field-label" htmlFor="pw-confirm">Xác nhận mật khẩu mới</label>
+                    <input id="pw-confirm" type="password" className="field" value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} autoComplete="new-password" required />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+                  <button type="submit" className="button button-primary" disabled={savingPassword}>
+                    <KeyRound size={15} /> {savingPassword ? 'Đang đổi…' : 'Đổi mật khẩu'}
+                  </button>
+                </div>
+              </form>
+            </section>
+
+            {/* Quyền hạn theo vai trò */}
+            <section className="panel">
+              <div className="panel-heading">
+                <h2><ShieldCheck size={16} style={{ verticalAlign: 'middle', marginRight: 8, color: 'var(--blue)' }} />Quyền hạn của bạn</h2>
+                <RoleBadge role={user?.role} label={user?.roleLabel} size="sm" />
+              </div>
+              <div className="panel-body">
+                <ul className="settings-permission-list">
+                  <li><Check size={14} /> Viết bài, lên lịch, AI Studio, tải Excel và quản lý Fanpage của mình</li>
+                  {Object.entries(PERMISSION_LABELS).map(([permission, label]) => (
+                    <li key={permission} className={can(permission) ? '' : 'is-off'}>
+                      {can(permission) ? <Check size={14} /> : <Lock size={14} />} {label}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </section>
+
+            {/* Meta App: App ID / App Secret để tự đổi token dài hạn & đăng nhập lại Facebook 1 chạm */}
+            {canManageSystem && (
+              <section className="panel">
+                <div className="panel-heading">
+                  <h2><KeyRound size={16} style={{ verticalAlign: 'middle', marginRight: 8, color: 'var(--blue)' }} />Meta App · Tự động gia hạn token</h2>
+                  <span className={`status-pill ${data.system.metaAppConfigured ? 'published' : 'pending'}`}>
+                    {data.system.metaAppConfigured ? 'Đang tự gia hạn' : 'Chưa cấu hình'}
+                  </span>
+                </div>
+                <form className="panel-body" onSubmit={handleSaveMetaApp}>
+                  {metaAppNotice.text && <InlineNotice notice={metaAppNotice} />}
+                  <p className="muted" style={{ marginTop: 0, fontSize: 12.5, lineHeight: 1.6 }}>
+                    Token lấy từ Graph API Explorer chỉ sống 1–2 giờ. Khi có App ID & App Secret, tool tự đổi sang <strong>token dài hạn (~60 ngày)</strong>,
+                    token Fanpage lấy từ đó <strong>không hết hạn</strong>, tự lấy lại token Fanpage khi hỏng, và cho phép <strong>đăng nhập lại Facebook 1 chạm</strong>.
+                  </p>
+                  <div className="settings-form-grid">
+                    <div>
+                      <label className="field-label" htmlFor="meta-app-id">App ID</label>
+                      <input id="meta-app-id" className="field" inputMode="numeric" placeholder="VD: 1397216959190868" value={metaAppForm.appId} onChange={(e) => setMetaAppForm({ ...metaAppForm, appId: e.target.value.trim() })} required />
+                    </div>
+                    <div>
+                      <label className="field-label" htmlFor="meta-app-secret">
+                        App Secret {data.system.metaAppSecretMasked && <span style={{ color: '#10b981', fontWeight: 600 }}>({data.system.metaAppSecretMasked})</span>}
+                      </label>
+                      <input id="meta-app-secret" className="field" type="password" autoComplete="off" placeholder={data.system.metaAppSecretMasked ? 'Để trống nếu giữ nguyên' : 'Dán App Secret…'} value={metaAppForm.appSecret} onChange={(e) => setMetaAppForm({ ...metaAppForm, appSecret: e.target.value.trim() })} />
+                    </div>
+                  </div>
+                  <small className="muted" style={{ display: 'block', marginTop: 8, fontSize: 11.5, lineHeight: 1.6 }}>
+                    Lấy tại <a href="https://developers.facebook.com/apps/" target="_blank" rel="noreferrer" style={{ color: 'var(--blue)' }}>Meta for Developers</a> → ứng dụng của bạn → Cài đặt ứng dụng → Thông tin cơ bản.
+                    Token dán vào tool phải được tạo từ <strong>cùng ứng dụng này</strong> (chọn đúng app trong Graph API Explorer).
+                  </small>
+                  {data.system.facebookRedirectUri && (
+                    <div style={{ marginTop: 14 }}>
+                      <span className="field-label">Valid OAuth Redirect URI (để đăng nhập Facebook 1 chạm)</span>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <input className="field" readOnly value={data.system.facebookRedirectUri} onFocus={(e) => e.target.select()} style={{ fontFamily: 'monospace', fontSize: 12.5 }} />
+                        <button type="button" className="button button-secondary" style={{ flexShrink: 0 }} onClick={() => navigator.clipboard?.writeText(data.system.facebookRedirectUri)}>Sao chép</button>
+                      </div>
+                      <small className="muted" style={{ display: 'block', marginTop: 6, fontSize: 11.5 }}>
+                        Thêm vào Meta App → Facebook Login → Cài đặt → Valid OAuth Redirect URIs (khi chạy localhost thường đã được cho phép sẵn).
+                      </small>
+                    </div>
+                  )}
+                  <div style={{ marginTop: 18, display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
+                    {data.system.metaAppConfigured && (
+                      <a href={authApi.facebookLoginUrl} className="button button-secondary">
+                        Đăng nhập lại Facebook <ExternalLink size={13} />
+                      </a>
+                    )}
+                    <button type="submit" className="button button-primary" disabled={savingMetaApp || !metaAppForm.appId}>
+                      <Save size={15} /> {savingMetaApp ? 'Đang xác thực…' : 'Lưu & xác thực'}
+                    </button>
+                  </div>
+                </form>
+              </section>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ═══ TAB 2: CẤU HÌNH AI STUDIO ═══ */}
+      {activeTab === 'ai' && (
+        <form onSubmit={handleSave} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(300px, 0.8fr)', gap: 20 }}>
+          <section className="panel">
+            <div className="panel-heading">
+              <h2><Sparkles size={16} style={{ verticalAlign: 'middle', marginRight: 8, color: '#00f2fe' }} />Nhà cung cấp & Model Trí tuệ nhân tạo (AI)</h2>
+              <span className={`status-pill ${data.settings.ai_has_key ? 'published' : 'pending'}`}>
+                {data.settings.ai_has_key ? 'Đã kích hoạt' : 'Chưa nhập Key'}
+              </span>
+            </div>
+            <div className="panel-body">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16, marginBottom: 18 }}>
+                <div>
+                  <label className="field-label" htmlFor="ai-provider">Nhà cung cấp AI (Provider)</label>
+                  <select
+                    id="ai-provider"
+                    className="field"
+                    value={data.settings.ai_provider}
+                    onChange={handleProviderChange}
+                  >
+                    {aiProviders.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="field-label" htmlFor="ai-model">Model AI</label>
+                  <input
+                    id="ai-model"
+                    className="field"
+                    placeholder="Ví dụ: gpt-4o-mini, gemini-1.5-flash..."
+                    value={data.settings.ai_model}
+                    onChange={(e) => setData({ ...data, settings: { ...data.settings, ai_model: e.target.value } })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 18 }}>
+                <label className="field-label" htmlFor="ai-base-url">API Base URL (Endpoint)</label>
+                <input
+                  id="ai-base-url"
+                  className="field"
+                  placeholder="https://api.openai.com/v1"
+                  value={data.settings.ai_base_url}
+                  onChange={(e) => setData({ ...data, settings: { ...data.settings, ai_base_url: e.target.value } })}
+                  required
+                />
+              </div>
+
+              <div style={{ marginBottom: 18 }}>
+                <label className="field-label" htmlFor="ai-api-key">
+                  AI API Key {data.settings.ai_has_key && <span style={{ color: '#10b981', fontWeight: 600 }}>({data.settings.ai_api_key_masked})</span>}
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    id="ai-api-key"
+                    className="field"
+                    type={showApiKey ? 'text' : 'password'}
+                    placeholder={data.settings.ai_has_key ? 'Nhập key mới nếu bạn muốn thay đổi...' : 'sk-proj-... hoặc AIzaSy...'}
+                    value={newApiKey}
+                    onChange={(e) => setNewApiKey(e.target.value)}
+                    style={{ paddingRight: 42 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKey(!showApiKey)}
+                    style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer' }}
+                  >
+                    {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                <small className="muted" style={{ display: 'block', marginTop: 6, fontSize: 11.5 }}>
+                  Khóa API được mã hóa an toàn trên máy chủ. Bạn có thể sử dụng API Key từ OpenAI, DeepSeek hoặc Gemini.
+                </small>
+              </div>
+
+              <div style={{ marginBottom: 18 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <label className="field-label" style={{ margin: 0 }} htmlFor="ai-prompt">Giọng văn & Chỉ dẫn AI mặc định (System Prompt)</label>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {tonePresets.map((preset) => (
+                      <button
+                        key={preset.name}
+                        type="button"
+                        className="button button-quiet"
+                        style={{ fontSize: 11, minHeight: 24, padding: '0 8px' }}
+                        onClick={() => setData({ ...data, settings: { ...data.settings, ai_system_prompt: preset.prompt } })}
+                      >
+                        {preset.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <textarea
+                  id="ai-prompt"
+                  className="field"
+                  rows={4}
+                  placeholder="Định hình phong cách, ngôn từ và giọng điệu mà AI sẽ áp dụng khi viết bài..."
+                  value={data.settings.ai_system_prompt}
+                  onChange={(e) => setData({ ...data, settings: { ...data.settings, ai_system_prompt: e.target.value } })}
+                  style={{ lineHeight: 1.5 }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
+                <button
+                  type="button"
+                  className="button button-secondary"
+                  onClick={handleTestAi}
+                  disabled={testingAi || (!data.settings.ai_has_key && !newApiKey.trim())}
+                >
+                  <Zap size={15} style={{ color: '#00f2fe' }} /> {testingAi ? 'Đang kiểm tra AI…' : 'Kiểm tra kết nối AI'}
+                </button>
+                <button type="submit" className="button button-primary" disabled={saving}>
+                  <Save size={15} /> {saving ? 'Đang lưu…' : 'Lưu cấu hình AI'}
+                </button>
+              </div>
+            </div>
+          </section>
+
+          {/* Hộp thử nghiệm & Hướng dẫn */}
+          <div>
+            <section className="panel" style={{ marginBottom: 16 }}>
+              <div className="panel-heading"><h2>Kết quả kiểm tra AI</h2></div>
+              <div className="panel-body">
+                {testingAi ? (
+                  <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--muted)' }}>
+                    <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 10px', color: '#00f2fe' }} />
+                    <p style={{ margin: 0, fontSize: 13 }}>Đang gửi prompt thử nghiệm tới AI model…</p>
+                  </div>
+                ) : aiTestResult ? (
+                  <div style={{ padding: 14, borderRadius: 10, background: aiTestResult.success ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)', border: `1px solid ${aiTestResult.success ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}` }}>
+                    <div style={{ color: aiTestResult.success ? '#10b981' : '#ef4444', fontWeight: 800, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {aiTestResult.success ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                      {aiTestResult.success ? 'AI phản hồi thành công:' : 'Lỗi kết nối:'}
+                    </div>
+                    <div style={{ fontSize: 12.5, color: 'var(--ink)', fontStyle: 'italic', lineHeight: 1.5 }}>
+                      &ldquo;{aiTestResult.message}&rdquo;
+                    </div>
+                  </div>
+                ) : (
+                  <div className="muted" style={{ fontSize: 12.5, lineHeight: 1.6 }}>
+                    Bấm nút <strong>&ldquo;Kiểm tra kết nối AI&rdquo;</strong> sau khi điền API Key để hệ thống kiểm tra xem model có hoạt động chuẩn xác hay không.
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <section className="panel">
+              <div className="panel-heading"><h2>Gợi ý lấy API Key</h2></div>
+              <div className="panel-body" style={{ fontSize: 12, lineHeight: 1.6 }}>
+                <p style={{ margin: '0 0 10px' }} className="muted">Bạn có thể tạo API Key từ các nền tảng sau:</p>
+                <ul style={{ paddingLeft: 18, margin: 0 }} className="muted">
+                  <li style={{ marginBottom: 6 }}><a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer" style={{ color: '#00f2fe', textDecoration: 'underline' }}>OpenAI Platform</a> (khuyên dùng `gpt-4o-mini`)</li>
+                  <li style={{ marginBottom: 6 }}><a href="https://platform.deepseek.com/" target="_blank" rel="noreferrer" style={{ color: '#00f2fe', textDecoration: 'underline' }}>DeepSeek API</a> (rẻ và viết tiếng Việt rất tốt)</li>
+                  <li><a href="https://aistudio.google.com/" target="_blank" rel="noreferrer" style={{ color: '#00f2fe', textDecoration: 'underline' }}>Google AI Studio</a> (Gemini 1.5 Flash)</li>
+                </ul>
+              </div>
+            </section>
+          </div>
+        </form>
+      )}
+
+      {/* ═══ TAB 3: GIÁM SÁT & BOT TELEGRAM (MODULE 2) ═══ */}
+      {activeTab === 'telegram' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.25fr) minmax(340px, 0.95fr)', gap: 20 }}>
+          {/* CỘT TRÁI: CẤU HÌNH BOT TELEGRAM */}
+          <form onSubmit={handleSave}>
+            <section className="panel" style={{ marginBottom: 20 }}>
+              <div className="panel-heading" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h2><Bell size={16} style={{ verticalAlign: 'middle', marginRight: 8, color: '#00f2fe' }} />Bot Cảnh Báo Telegram Real-time</h2>
+                {data.settings.telegram_has_token && data.settings.telegram_chat_id ? (
+                  <span className="status-pill published" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
+                    <Check size={12} /> Đã kích hoạt Bot
+                  </span>
+                ) : (
+                  <span className="status-pill draft" style={{ fontSize: 11 }}>Chưa thiết lập</span>
+                )}
+              </div>
+              <div className="panel-body">
+                {/* Switch Bật/Tắt Cảnh báo */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)', marginBottom: 20 }}>
+                  <div>
+                    <strong style={{ color: 'var(--ink)', fontSize: 13.5, display: 'block', marginBottom: 2 }}>Kích hoạt hệ thống cảnh báo Telegram</strong>
+                    <span className="muted" style={{ fontSize: 11.5 }}>Gửi thông báo tức thì về tài khoản hoặc nhóm Telegram của bạn</span>
+                  </div>
+                  <label style={{ position: 'relative', display: 'inline-block', width: 44, height: 24, cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={data.settings.telegram_alert_enabled}
+                      onChange={(e) => setData({ ...data, settings: { ...data.settings, telegram_alert_enabled: e.target.checked } })}
+                      style={{ opacity: 0, width: 0, height: 0 }}
+                    />
+                    <span
+                      style={{
+                        position: 'absolute',
+                        cursor: 'pointer',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: data.settings.telegram_alert_enabled ? '#00f2fe' : 'rgba(255,255,255,0.15)',
+                        borderRadius: 24,
+                        transition: '.25s'
+                      }}
+                    >
+                      <span
+                        style={{
+                          position: 'absolute',
+                          height: 18,
+                          width: 18,
+                          left: data.settings.telegram_alert_enabled ? 23 : 3,
+                          bottom: 3,
+                          backgroundColor: '#ffffff',
+                          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
+                          borderRadius: '50%',
+                          transition: '.25s'
+                        }}
+                      />
+                    </span>
+                  </label>
+                </div>
+
+                {/* Telegram Bot Token */}
+                <div style={{ marginBottom: 18 }}>
+                  <label className="field-label">
+                    Telegram Bot Token {data.settings.telegram_has_token && <span style={{ color: '#10b981', fontSize: 11 }}>• Đã lưu ({data.settings.telegram_bot_token_masked})</span>}
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      className="field"
+                      type={showTelegramToken ? 'text' : 'password'}
+                      value={newTelegramToken}
+                      onChange={(e) => setNewTelegramToken(e.target.value)}
+                      placeholder={data.settings.telegram_has_token ? 'Nhập Bot Token mới nếu muốn đổi…' : 'Ví dụ: 7894561230:AAHi98_xYz0123456789...'}
+                      style={{ paddingRight: 40, width: '100%', fontFamily: newTelegramToken ? 'monospace' : 'inherit' }}
+                    />
+                    <button
+                      type="button"
+                      className="button button-quiet"
+                      onClick={() => setShowTelegramToken(!showTelegramToken)}
+                      style={{ position: 'absolute', right: 4, top: 4, bottom: 4, minHeight: 0, padding: '0 8px' }}
+                      title={showTelegramToken ? 'Ẩn token' : 'Hiện token'}
+                    >
+                      {showTelegramToken ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                  <small className="muted" style={{ display: 'block', marginTop: 6, fontSize: 11.5 }}>
+                    Tạo Bot thông qua <strong>@BotFather</strong> trên Telegram để nhận Token này.
+                  </small>
+                </div>
+
+                {/* Telegram Chat ID */}
+                <div style={{ marginBottom: 20 }}>
+                  <label className="field-label">Telegram Chat ID (ID cá nhân hoặc Nhóm)</label>
+                  <input
+                    className="field"
+                    type="text"
+                    value={data.settings.telegram_chat_id || ''}
+                    onChange={(e) => setData({ ...data, settings: { ...data.settings, telegram_chat_id: e.target.value } })}
+                    placeholder="Ví dụ: 123456789 (chat riêng) hoặc -1001234567890 (nhóm chat)..."
+                    style={{ width: '100%', fontFamily: 'monospace' }}
+                  />
+                  <small className="muted" style={{ display: 'block', marginTop: 6, fontSize: 11.5 }}>
+                    Chat với bot <strong>@userinfobot</strong> hoặc thêm bot vào nhóm và lấy Chat ID.
+                  </small>
+                </div>
+
+                {/* Tùy chọn sự kiện nhận cảnh báo */}
+                <div style={{ marginBottom: 22, padding: '14px', background: 'var(--field-bg)', borderRadius: 10, border: '1px solid var(--line)' }}>
+                  <label className="field-label" style={{ marginBottom: 10 }}>Các sự kiện kích hoạt cảnh báo:</label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, cursor: 'pointer', fontSize: 12.5, color: 'var(--ink)' }}>
+                    <input
+                      type="checkbox"
+                      checked={data.settings.telegram_alert_on_expired}
+                      onChange={(e) => setData({ ...data, settings: { ...data.settings, telegram_alert_on_expired: e.target.checked } })}
+                      style={{ accentColor: 'var(--blue)', width: 16, height: 16 }}
+                    />
+                    <span>🚨 Cảnh báo ngay khi <strong>Token Fanpage hết hạn / bị thu hồi quyền</strong></span>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 12.5, color: 'var(--ink)' }}>
+                    <input
+                      type="checkbox"
+                      checked={data.settings.telegram_alert_on_failed}
+                      onChange={(e) => setData({ ...data, settings: { ...data.settings, telegram_alert_on_failed: e.target.checked } })}
+                      style={{ accentColor: 'var(--blue)', width: 16, height: 16 }}
+                    />
+                    <span>⚠️ Cảnh báo khẩn cấp khi <strong>bài đăng xuất bản Facebook thất bại</strong></span>
+                  </label>
+                </div>
+
+                {/* Hộp phản hồi thử nghiệm kết nối Telegram */}
+                {telegramTestResult && (
+                  <div style={{
+                    marginBottom: 18,
+                    padding: 12,
+                    borderRadius: 10,
+                    background: telegramTestResult.success ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+                    border: `1px solid ${telegramTestResult.success ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                    fontSize: 12.5,
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 8
+                  }}>
+                    {telegramTestResult.success ? <CheckCircle2 size={16} color="#10b981" style={{ flexShrink: 0, marginTop: 2 }} /> : <AlertCircle size={16} color="#ef4444" style={{ flexShrink: 0, marginTop: 2 }} />}
+                    <div style={{ color: telegramTestResult.success ? '#10b981' : '#f87171', lineHeight: 1.5 }}>
+                      <strong>{telegramTestResult.success ? 'Kết nối thành công!' : 'Lỗi kết nối:'}</strong> {telegramTestResult.message}
+                    </div>
+                  </div>
+                )}
+
+                {/* Hàng nút bấm Hành Động */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                  <button
+                    type="button"
+                    className="button button-secondary"
+                    onClick={handleTestTelegram}
+                    disabled={testingTelegram}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                  >
+                    <Send size={14} /> {testingTelegram ? 'Đang gửi test…' : 'Gửi tin nhắn test'}
+                  </button>
+                  <button type="submit" className="button button-primary" disabled={saving}>
+                    <Save size={15} /> {saving ? 'Đang lưu…' : 'Lưu cấu hình Telegram'}
+                  </button>
+                </div>
+              </div>
+            </section>
+          </form>
+
+          {/* CỘT PHẢI: TRUNG TÂM GIÁM SÁT SỨC KHỎE TOKEN */}
+          <div>
+            <section className="panel" style={{ marginBottom: 20 }}>
+              <div className="panel-heading" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h2><ShieldCheck size={16} style={{ verticalAlign: 'middle', marginRight: 8, color: '#00f2fe' }} />Sức Khỏe Token Fanpage</h2>
+                <span className="status-pill published" style={{ fontSize: 11 }}>Quét mỗi 6h</span>
+              </div>
+              <div className="panel-body">
+                <p className="muted" style={{ fontSize: 12, lineHeight: 1.6, margin: '0 0 16px' }}>
+                  Hệ thống tự động kiểm tra token chạy ngầm. Khi phát hiện bất kỳ Fanpage nào bị mất quyền, bot sẽ gửi cảnh báo tức thì kèm hướng dẫn xử lý.
+                </p>
+
+                <div style={{ marginBottom: 18 }}>
+                  <button
+                    type="button"
+                    className="button button-primary"
+                    style={{ width: '100%', justifyContent: 'center', gap: 8, minHeight: 38 }}
+                    onClick={handleRunHealthCheck}
+                    disabled={runningHealthCheck}
+                  >
+                    <Activity size={16} className={runningHealthCheck ? 'animate-spin' : ''} />
+                    {runningHealthCheck ? 'Đang kiểm tra toàn bộ Token…' : 'Quét kiểm tra sức khỏe Token ngay'}
+                  </button>
+                </div>
+
+                {/* Kết quả quét */}
+                {healthCheckResult && (
+                  <div>
+                    {healthCheckResult.success && healthCheckResult.summary ? (
+                      <div>
+                        {/* 3 Thẻ thống kê */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 14 }}>
+                          <div style={{ padding: '10px 8px', textAlign: 'center', background: 'var(--panel)', borderRadius: 8, border: '1px solid var(--line)' }}>
+                            <div className="muted" style={{ fontSize: 10 }}>Tổng Fanpage</div>
+                            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--ink)', marginTop: 2 }}>{healthCheckResult.summary.total}</div>
+                          </div>
+                          <div style={{ padding: '10px 8px', textAlign: 'center', background: 'rgba(16,185,129,0.06)', borderRadius: 8, border: '1px solid rgba(16,185,129,0.2)' }}>
+                            <div style={{ fontSize: 10, color: '#10b981' }}>Token Sống</div>
+                            <div style={{ fontSize: 18, fontWeight: 800, color: '#10b981', marginTop: 2 }}>{healthCheckResult.summary.valid}</div>
+                          </div>
+                          <div style={{ padding: '10px 8px', textAlign: 'center', background: healthCheckResult.summary.expired > 0 ? 'rgba(239,68,68,0.08)' : 'var(--panel)', borderRadius: 8, border: `1px solid ${healthCheckResult.summary.expired > 0 ? 'rgba(239,68,68,0.3)' : 'var(--line)'}` }}>
+                            <div style={{ fontSize: 10, color: healthCheckResult.summary.expired > 0 ? '#ef4444' : 'var(--muted)' }}>Hết hạn / Lỗi</div>
+                            <div style={{ fontSize: 18, fontWeight: 800, color: healthCheckResult.summary.expired > 0 ? '#ef4444' : 'var(--ink)', marginTop: 2 }}>{healthCheckResult.summary.expired}</div>
+                          </div>
+                        </div>
+
+                        {/* Danh sách Pages */}
+                        <div style={{ maxHeight: 220, overflowY: 'auto', border: '1px solid var(--line)', borderRadius: 8, padding: 6, background: 'var(--field-bg)' }}>
+                          {healthCheckResult.summary.pages?.map((p) => (
+                            <div key={p.pageId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', borderBottom: '1px solid var(--line)', fontSize: 12 }}>
+                              <div style={{ minWidth: 0, flex: 1, paddingRight: 8 }}>
+                                <div style={{ color: 'var(--ink)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                                {p.error && <div style={{ fontSize: 10.5, color: '#f87171' }}>{p.error}</div>}
+                              </div>
+                              <span className={`status-pill ${p.isValid ? 'published' : 'failed'}`} style={{ fontSize: 10, padding: '2px 8px' }}>
+                                {p.isValid ? 'Sống' : 'Hết hạn'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ padding: 12, borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#fca5a5', fontSize: 12 }}>
+                        {healthCheckResult.message}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* Hướng dẫn kết nối Telegram */}
+            <section className="panel">
+              <div className="panel-heading"><h2>3 Bước tạo Telegram Bot</h2></div>
+              <div className="panel-body" style={{ fontSize: 12, lineHeight: 1.6 }}>
+                <ol style={{ paddingLeft: 18, margin: 0 }} className="muted">
+                  <li style={{ marginBottom: 8 }}>
+                    Mở Telegram, chat với <a href="https://t.me/BotFather" target="_blank" rel="noreferrer" style={{ color: '#00f2fe', textDecoration: 'underline' }}>@BotFather</a>, gõ lệnh <code>/newbot</code> và làm theo hướng dẫn để nhận <strong>HTTP API Token</strong>.
+                  </li>
+                  <li style={{ marginBottom: 8 }}>
+                    Để lấy <strong>Chat ID cá nhân</strong>: Chat với <a href="https://t.me/userinfobot" target="_blank" rel="noreferrer" style={{ color: '#00f2fe', textDecoration: 'underline' }}>@userinfobot</a>. Hoặc để nhận vào nhóm: thêm Bot vào nhóm rồi thêm <a href="https://t.me/RawDataBot" target="_blank" rel="noreferrer" style={{ color: '#00f2fe', textDecoration: 'underline' }}>@RawDataBot</a> để xem Chat ID nhóm.
+                  </li>
+                  <li>
+                    Nhập Token và Chat ID vào bảng bên cạnh, bấm <strong>&ldquo;Gửi tin nhắn test&rdquo;</strong> để xác nhận kết nối rồi bấm Lưu.
+                  </li>
+                </ol>
+              </div>
+            </section>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ TAB 4: ĐĂNG BÀI & LỊCH TRÌNH ═══ */}
+      {activeTab === 'publishing' && (
+        <form onSubmit={handleSave} style={{ maxWidth: 840 }}>
+          <section className="panel">
+            <div className="panel-heading">
+              <h2><Clock size={16} style={{ verticalAlign: 'middle', marginRight: 8, color: '#00f2fe' }} />Cấu hình Lên lịch & An toàn Fanpage</h2>
+            </div>
+            <div className="panel-body">
+              <div style={{ marginBottom: 20 }}>
+                <label className="field-label" htmlFor="safe-interval">
+                  Khoảng cách tối thiểu giữa 2 bài đăng liên tiếp (Phút)
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <input
+                    id="safe-interval"
+                    type="number"
+                    min="1"
+                    max="1440"
+                    className="field"
+                    style={{ width: 140 }}
+                    value={data.settings.post_interval_minutes}
+                    onChange={(e) => setData({ ...data, settings: { ...data.settings, post_interval_minutes: parseInt(e.target.value, 10) || 15 } })}
+                  />
+                  <span className="muted" style={{ fontSize: 12 }}>phút giữa các bài trên cùng 1 Fanpage</span>
+                </div>
+                <small className="muted" style={{ display: 'block', marginTop: 6, fontSize: 11.5 }}>
+                  🛡️ <em>Khuyến nghị:</em> Đặt từ 15 - 30 phút trở lên để tránh Fanpage bị Facebook đánh dấu là spam hoặc giảm tương tác.
+                </small>
+              </div>
+
+              <div style={{ marginBottom: 20 }}>
+                <label className="field-label" htmlFor="retry-count">
+                  Số lần tự động thử lại khi đăng bài thất bại
+                </label>
+                <select
+                  id="retry-count"
+                  className="field"
+                  style={{ width: 220 }}
+                  value={data.settings.auto_retry_count}
+                  onChange={(e) => setData({ ...data, settings: { ...data.settings, auto_retry_count: parseInt(e.target.value, 10) || 0 } })}
+                >
+                  <option value={0}>Không thử lại (Báo lỗi ngay)</option>
+                  <option value={1}>Thử lại 1 lần sau 5 phút</option>
+                  <option value={2}>Thử lại 2 lần (Khuyên nghị)</option>
+                  <option value={3}>Thử lại 3 lần</option>
+                </select>
+              </div>
+
+              <div style={{ marginBottom: 20 }}>
+                <label className="field-label" htmlFor="default-hashtags">Hashtag mặc định</label>
+                <input
+                  id="default-hashtags"
+                  className="field"
+                  placeholder="#kinhdoanh #marketing #viral #xuhuong"
+                  value={data.settings.default_hashtags}
+                  onChange={(e) => setData({ ...data, settings: { ...data.settings, default_hashtags: e.target.value } })}
+                />
+                <small className="muted" style={{ display: 'block', marginTop: 6, fontSize: 11.5 }}>
+                  Các hashtag này sẽ hiển thị sẵn khi bạn bấm chọn &ldquo;Thêm Hashtag&rdquo; trong màn hình soạn thảo.
+                </small>
+              </div>
+
+              <div style={{ marginBottom: 24 }}>
+                <label className="field-label" htmlFor="default-signature">Chữ ký cuối bài viết mặc định</label>
+                <textarea
+                  id="default-signature"
+                  className="field"
+                  rows={3}
+                  placeholder="Ví dụ: 🌐 Website: https://... | ☎️ Hotline: 098... | 📌 Hãy Follow page để nhận thông tin mới!"
+                  value={data.settings.default_signature}
+                  onChange={(e) => setData({ ...data, settings: { ...data.settings, default_signature: e.target.value } })}
+                />
+                <small className="muted" style={{ display: 'block', marginTop: 6, fontSize: 11.5 }}>
+                  Chữ ký thương hiệu giúp bạn chèn nhanh link website, hotline hoặc lời kêu gọi vào cuối mỗi bài đăng.
+                </small>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+                <button type="submit" className="button button-primary" disabled={saving}>
+                  <Save size={15} /> {saving ? 'Đang lưu…' : 'Lưu cấu hình đăng bài'}
+                </button>
+              </div>
+            </div>
+          </section>
+        </form>
+      )}
+
+      {/* ═══ TAB 4: HỆ THỐNG & GIAO DIỆN ═══ */}
+      {activeTab === 'system' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(300px, 0.8fr)', gap: 20 }}>
+          <section className="panel">
+            <div className="panel-heading">
+              <h2><Palette size={16} style={{ verticalAlign: 'middle', marginRight: 8, color: '#00f2fe' }} />Tùy chọn giao diện & Hiệu ứng</h2>
+            </div>
+            <div className="panel-body">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 0', borderBottom: '1px solid var(--line)' }}>
+                <div>
+                  <strong style={{ color: 'var(--ink)', display: 'block', marginBottom: 4 }}>Hiệu ứng đèn viền LED RGB chạy tròn (spinLED)</strong>
+                  <span className="muted" style={{ fontSize: 12 }}>
+                    Hiển thị dải viền LED RGB xoay tròn nhiều màu ở thẻ banner, nút AI Writer và các Fanpage đã chọn.
+                    {!canManageSystem && ' Áp dụng cho toàn hệ thống — chỉ Quản trị viên được thay đổi.'}
+                  </span>
+                </div>
+                <label style={{ position: 'relative', display: 'inline-block', width: 44, height: 24, cursor: canManageSystem ? 'pointer' : 'not-allowed', opacity: canManageSystem ? 1 : 0.55 }}>
+                  <input
+                    type="checkbox"
+                    disabled={!canManageSystem}
+                    checked={data.settings.enable_rgb_effects}
+                    onChange={(e) => setData({ ...data, settings: { ...data.settings, enable_rgb_effects: e.target.checked } })}
+                    style={{ opacity: 0, width: 0, height: 0 }}
+                  />
+                  <span
+                    style={{
+                      position: 'absolute',
+                      cursor: 'pointer',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: data.settings.enable_rgb_effects ? '#00f2fe' : 'rgba(255,255,255,0.15)',
+                      borderRadius: 24,
+                      transition: '.25s'
+                    }}
+                  >
+                    <span
+                      style={{
+                        position: 'absolute',
+                        height: 18,
+                        width: 18,
+                        left: data.settings.enable_rgb_effects ? 23 : 3,
+                        bottom: 3,
+                        backgroundColor: '#ffffff',
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
+                        borderRadius: '50%',
+                        transition: '.25s'
+                      }}
+                    />
+                  </span>
+                </label>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 0', borderBottom: '1px solid var(--line)' }}>
+                <div>
+                  <strong style={{ color: 'var(--ink)', display: 'block', marginBottom: 4 }}>Bộ nhớ đệm trình duyệt (Client Cache)</strong>
+                  <span className="muted" style={{ fontSize: 12 }}>
+                    Xóa cache dữ liệu tạm thời trên trình duyệt để tải lại thông tin mới nhất.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="button button-secondary"
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      localStorage.clear();
+                      sessionStorage.clear();
+                      alert('Đã xóa bộ nhớ đệm trình duyệt thành công!');
+                    }
+                  }}
+                >
+                  Xóa bộ nhớ đệm
+                </button>
+              </div>
+
+              {canManageSystem && (
+                <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end' }}>
+                  <button type="button" className="button button-primary" onClick={handleSave} disabled={saving}>
+                    <Save size={15} /> {saving ? 'Đang lưu…' : 'Lưu tùy chọn'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Trạng thái dịch vụ máy chủ */}
+          <section className="panel">
+            <div className="panel-heading">
+              <h2><Server size={16} style={{ verticalAlign: 'middle', marginRight: 8, color: '#00f2fe' }} />Trạng thái hệ thống</h2>
+              <span className="status-pill published">Hoạt động</span>
+            </div>
+            <div className="panel-body" style={{ fontSize: 12.5 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <span className="muted" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Globe2 size={14} /> Frontend UI:</span>
+                <span style={{ color: '#10b981', fontWeight: 700 }}>Next.js (Port 3000)</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <span className="muted" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Server size={14} /> Backend API:</span>
+                <span style={{ color: '#10b981', fontWeight: 700 }}>Express Node {data.system.nodeVersion || 'v22'} (Port 5000)</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <span className="muted" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Database size={14} /> Cơ sở dữ liệu:</span>
+                <span style={{ color: '#10b981', fontWeight: 700 }}>{data.system.database || 'SQLite'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <span className="muted" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><HardDrive size={14} /> Hàng đợi đăng bài:</span>
+                <span style={{ color: '#10b981', fontWeight: 700 }}>Redis & BullMQ (Port 6379)</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0' }}>
+                <span className="muted" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Clock size={14} /> Giờ máy chủ:</span>
+                <span style={{ color: 'var(--ink)' }}>{new Date().toLocaleTimeString('vi-VN')}</span>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
+    </MainLayout>
+  );
+}

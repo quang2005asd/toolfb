@@ -1,0 +1,122 @@
+# ========================================================
+# Chạy trên VPS DÙNG CHUNG với các website khác (đã có nginx giữ cổng 80/443):
+#   - KHÔNG có Caddy, KHÔNG chiếm cổng 80/443; chỉ mở 127.0.0.1:${HOST_PORT} cho nginx sẵn có chuyển tới
+#   - Giới hạn RAM / CPU / log để không lấn tài nguyên của site khác
+#   docker compose -f docker-compose.shared.yml up -d
+# Cấu hình nginx mẫu: deploy/nginx/toolsocial.conf
+# ========================================================
+name: toolsocial
+
+x-app-env: &app-env
+  NODE_ENV: production
+  PORT: 5000
+  USE_SQLITE: "true"
+  DB_TYPE: sqlite
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  CLIENT_ORIGIN: https://${DOMAIN:?Thiếu DOMAIN trong .env}
+  FACEBOOK_REDIRECT_URI: https://${DOMAIN}/api/auth/facebook/callback
+  COOKIE_SECURE: "true"
+  SESSION_SECRET: ${SESSION_SECRET:?Thiếu SESSION_SECRET trong .env (openssl rand -hex 32)}
+  ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Thiếu ADMIN_PASSWORD trong .env (tối thiểu 8 ký tự)}
+  FACEBOOK_APP_ID: ${FACEBOOK_APP_ID:-}
+  FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET:-}
+  FB_GRAPH_VERSION: ${FB_GRAPH_VERSION:-v26.0}
+  FACEBOOK_LOGIN_SCOPES: ${FACEBOOK_LOGIN_SCOPES:-}
+  MESSENGER_SYNC_INTERVAL_SECONDS: ${MESSENGER_SYNC_INTERVAL_SECONDS:-5}
+  MESSENGER_VERIFY_TOKEN: ${MESSENGER_VERIFY_TOKEN:?Thiếu MESSENGER_VERIFY_TOKEN trong .env}
+  PUBLIC_APP_NAME: ${PUBLIC_APP_NAME:-Tool Face}
+  PUBLIC_OPERATOR_NAME: ${PUBLIC_OPERATOR_NAME:-}
+  PUBLIC_CONTACT_EMAIL: ${PUBLIC_CONTACT_EMAIL:?Thiếu PUBLIC_CONTACT_EMAIL (email liên hệ hiện trên trang Chính sách)}
+  PUBLIC_POLICY_UPDATED_AT: ${PUBLIC_POLICY_UPDATED_AT:-}
+  # AI Bình luận: quét bình luận mới mỗi 2 phút (off = chỉ dùng webhook), giãn cách trả lời trên cùng Fanpage
+  POLL_COMMENTS: ${POLL_COMMENTS:-on}
+  REPLY_MIN_GAP_MS: ${REPLY_MIN_GAP_MS:-6000}
+  # Thông báo khách tiềm năng qua Telegram (có thể nhập trong trang Cài đặt thay vì ở đây)
+  TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+  TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+  # AI Configuration (Groq Multi-Key Pool & Gemini)
+  AI_API_KEY: ${AI_API_KEY:-}
+  AI_API_KEY_1: ${AI_API_KEY_1:-}
+  AI_API_KEY_2: ${AI_API_KEY_2:-}
+  AI_API_KEY_3: ${AI_API_KEY_3:-}
+  AI_API_KEY_4: ${AI_API_KEY_4:-}
+  AI_API_KEY_5: ${AI_API_KEY_5:-}
+  GROQ_API_KEYS: ${GROQ_API_KEYS:-}
+  AI_API_BASE_URL: ${AI_API_BASE_URL:-https://api.groq.com/openai/v1}
+  AI_MODEL: ${AI_MODEL:-openai/gpt-oss-120b}
+  GEMINI_API_KEYS: ${GEMINI_API_KEYS:-}
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 200mb --maxmemory-policy noeviction
+    volumes:
+      - redis_data:/data
+    mem_limit: 256m
+    cpus: "0.5"
+    logging: *logging
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  server:
+    image: toolsocial-server:latest
+    build:
+      context: ./server
+    restart: unless-stopped
+    environment: *app-env
+    volumes:
+      - server_data:/app/data
+      - server_uploads:/app/uploads
+    mem_limit: 1536m
+    cpus: "2.0"
+    logging: *logging
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  worker:
+    image: toolsocial-server:latest
+    pull_policy: never
+    command: ["node", "queues/start.workers.js"]
+    restart: unless-stopped
+    environment: *app-env
+    volumes:
+      - server_data:/app/data
+      - server_uploads:/app/uploads
+    mem_limit: 1536m
+    cpus: "1.0"
+    logging: *logging
+    depends_on:
+      redis:
+        condition: service_healthy
+      server:
+        condition: service_started
+
+  client:
+    image: toolsocial-client:latest
+    build:
+      context: ./client
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${HOST_PORT:-3100}:3000"
+    mem_limit: 128m
+    cpus: "0.5"
+    logging: *logging
+    depends_on:
+      - server
+
+volumes:
+  redis_data:
+  server_data:
+  server_uploads:

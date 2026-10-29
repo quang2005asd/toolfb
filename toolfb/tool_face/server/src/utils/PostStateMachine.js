@@ -1,0 +1,827 @@
+/**
+ * PostStateMachine.js
+ * Quản lý toàn bộ State Machine vòng đời bài viết Facebook (14 Trạng thái chuẩn mực)
+ * 
+ * VÒNG ĐỜI:
+ * NEW -> GENERATING -> VALIDATING ->
+ *   [Lỗi schema] -> GENERATION_FAILED
+ *   [Đạt schema] -> SAFETY_CHECK ->
+ *     [Rủi ro nghiêm trọng] -> BLOCKED
+ *     [Cần kiểm tra] -> PENDING_REVIEW -> [Từ chối] -> REJECTED
+ *                                       -> [Duyệt]   -> APPROVED
+ *     [Đạt kiểm tra]  -> READY_FOR_APPROVAL -> [Từ chối] -> REJECTED
+ *                                           -> [Duyệt]   -> APPROVED
+ * APPROVED -> SCHEDULED -> PUBLISHING ->
+ *   [Thành công API] -> PUBLISHED
+ *   [Lỗi API]        -> PUBLISH_RETRY_OR_FAILED
+ */
+
+const crypto = require('crypto');
+const { sql, getPool } = require('../../config/db');
+
+const POST_STATES = {
+  NEW: 'NEW',
+  GENERATING: 'GENERATING',
+  VALIDATING: 'VALIDATING',
+  GENERATION_FAILED: 'GENERATION_FAILED',
+  SAFETY_CHECK: 'SAFETY_CHECK',
+  BLOCKED: 'BLOCKED',
+  PENDING_REVIEW: 'PENDING_REVIEW',
+  READY_FOR_APPROVAL: 'READY_FOR_APPROVAL',
+  REJECTED: 'REJECTED',
+  APPROVED: 'APPROVED',
+  SCHEDULED: 'SCHEDULED',
+  PUBLISHING: 'PUBLISHING',
+  PUBLISHED: 'PUBLISHED',
+  PUBLISH_RETRY_OR_FAILED: 'PUBLISH_RETRY_OR_FAILED'
+};
+
+const STATE_METADATA = {
+  [POST_STATES.NEW]: {
+    label: 'Khởi tạo mới',
+    color: '#64748b',
+    bg: '#f1f5f9',
+    desc: 'Bài viết vừa được tạo, sẵn sàng để AI sinh nội dung hoặc soạn thảo thủ công.'
+  },
+  [POST_STATES.GENERATING]: {
+    label: 'Đang tạo nội dung',
+    color: '#2563eb',
+    bg: '#eff6ff',
+    desc: 'AI đang tiến hành phân tích prompt và sinh nội dung bài viết.'
+  },
+  [POST_STATES.VALIDATING]: {
+    label: 'Kiểm tra Schema',
+    color: '#0891b2',
+    bg: '#ecfeff',
+    desc: 'Hệ thống đang kiểm tra tính hợp lệ của cấu trúc dữ liệu JSON, ký tự và định dạng.'
+  },
+  [POST_STATES.GENERATION_FAILED]: {
+    label: 'Lỗi tạo bài (Schema)',
+    color: '#dc2626',
+    bg: '#fef2f2',
+    desc: 'AI trả về dữ liệu sai cấu trúc hoặc lỗi trong quá trình sinh nội dung.'
+  },
+  [POST_STATES.SAFETY_CHECK]: {
+    label: 'Kiểm tra an toàn',
+    color: '#d97706',
+    bg: '#fffbeb',
+    desc: 'Đang quét nội dung theo Tiêu chuẩn cộng đồng Facebook & Chính sách quảng cáo Việt Nam.'
+  },
+  [POST_STATES.BLOCKED]: {
+    label: 'Bị chặn (Rủi ro vi phạm)',
+    color: '#b91c1c',
+    bg: '#fef2f2',
+    desc: 'Nội dung có nguy cơ vi phạm nghiêm trọng chính sách Meta. Không được phép đi tiếp; chỉ được sửa và tạo bản mới.'
+  },
+  [POST_STATES.PENDING_REVIEW]: {
+    label: 'Chờ kiểm duyệt',
+    color: '#ea580c',
+    bg: '#fff7ed',
+    desc: 'Phát hiện từ khóa nhạy cảm hoặc nghi ngờ, chờ quản trị viên xem xét và duyệt thủ công.'
+  },
+  [POST_STATES.READY_FOR_APPROVAL]: {
+    label: 'Đạt chuẩn - Chờ duyệt',
+    color: '#0284c7',
+    bg: '#f0f9ff',
+    desc: 'Nội dung vượt qua kiểm tra an toàn, sẵn sàng để người có thẩm quyền phê duyệt.'
+  },
+  [POST_STATES.REJECTED]: {
+    label: 'Bị từ chối',
+    color: '#991b1b',
+    bg: '#fef2f2',
+    desc: 'Nội dung bị người kiểm duyệt từ chối. Cần chỉnh sửa để tạo bản mới.'
+  },
+  [POST_STATES.APPROVED]: {
+    label: 'Đã phê duyệt',
+    color: '#16a34a',
+    bg: '#f0fdf4',
+    desc: 'Nội dung đã được duyệt cho phiên bản cụ thể này. Sẵn sàng lên lịch hoặc xuất bản.'
+  },
+  [POST_STATES.SCHEDULED]: {
+    label: 'Đã lên lịch hẹn',
+    color: '#7c3aed',
+    bg: '#f5f3ff',
+    desc: 'Bài viết đã có thời gian đăng hợp lệ và nằm trong hàng đợi xuất bản tự động.'
+  },
+  [POST_STATES.PUBLISHING]: {
+    label: 'Đang xuất bản lên FB',
+    color: '#2563eb',
+    bg: '#eff6ff',
+    desc: 'Hệ thống đang gọi Facebook Graph API để đăng bài lên Fanpage đích.'
+  },
+  [POST_STATES.PUBLISHED]: {
+    label: 'Đã đăng thành công',
+    color: '#059669',
+    bg: '#ecfdf5',
+    desc: 'Đã nhận mã xác nhận Facebook Post ID hợp lệ từ Facebook API.'
+  },
+  [POST_STATES.PUBLISH_RETRY_OR_FAILED]: {
+    label: 'Lỗi xuất bản / Chờ thử lại',
+    color: '#e11d48',
+    bg: '#fff1f2',
+    desc: 'Gặp sự cố khi gọi Facebook API (token hết hạn, mạng, lỗi phân quyền). Có thể thử lại.'
+  }
+};
+
+// Ma trận chuyển đổi trạng thái hợp lệ (14 trạng thái)
+const ALLOWED_TRANSITIONS = {
+  [POST_STATES.NEW]: [POST_STATES.GENERATING, POST_STATES.VALIDATING, POST_STATES.SAFETY_CHECK],
+  [POST_STATES.GENERATING]: [POST_STATES.VALIDATING, POST_STATES.GENERATION_FAILED],
+  [POST_STATES.VALIDATING]: [POST_STATES.SAFETY_CHECK, POST_STATES.GENERATION_FAILED],
+  [POST_STATES.GENERATION_FAILED]: [POST_STATES.NEW, POST_STATES.GENERATING],
+  [POST_STATES.SAFETY_CHECK]: [POST_STATES.BLOCKED, POST_STATES.PENDING_REVIEW, POST_STATES.READY_FOR_APPROVAL],
+  [POST_STATES.BLOCKED]: [POST_STATES.NEW], // Chỉ được sửa và tạo bản mới
+  [POST_STATES.PENDING_REVIEW]: [POST_STATES.APPROVED, POST_STATES.REJECTED, POST_STATES.NEW],
+  [POST_STATES.READY_FOR_APPROVAL]: [POST_STATES.APPROVED, POST_STATES.REJECTED, POST_STATES.NEW],
+  [POST_STATES.REJECTED]: [POST_STATES.NEW], // Sửa tạo bản mới
+  [POST_STATES.APPROVED]: [POST_STATES.SCHEDULED, POST_STATES.PUBLISHING, POST_STATES.NEW, POST_STATES.REJECTED, POST_STATES.PENDING_REVIEW, POST_STATES.READY_FOR_APPROVAL, POST_STATES.BLOCKED],
+  [POST_STATES.SCHEDULED]: [POST_STATES.PUBLISHING, POST_STATES.APPROVED, POST_STATES.NEW, POST_STATES.REJECTED, POST_STATES.PENDING_REVIEW, POST_STATES.READY_FOR_APPROVAL, POST_STATES.BLOCKED],
+  [POST_STATES.PUBLISHING]: [POST_STATES.PUBLISHED, POST_STATES.PUBLISH_RETRY_OR_FAILED, POST_STATES.PENDING_REVIEW],
+  [POST_STATES.PUBLISHED]: [], // Trạng thái kết thúc thành công
+  [POST_STATES.PUBLISH_RETRY_OR_FAILED]: [POST_STATES.PUBLISHING, POST_STATES.APPROVED, POST_STATES.SCHEDULED, POST_STATES.NEW, POST_STATES.REJECTED, POST_STATES.PENDING_REVIEW]
+};
+
+// ═══ CHUẨN HÓA TIẾNG VIỆT & BỎ DẤU ĐỂ MATCH TỪ KHÓA CHÍNH XÁC (KHÔNG DÙNG \b) ═══
+function removeAccents(str = '') {
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, (m) => (m === 'đ' ? 'd' : 'D'))
+    .toLowerCase();
+}
+
+const CRITICAL_RISK_KEYWORDS = [
+  'hang fake', 'super fake', 'rep 1:1', 'hang replica', 'nhai hang', 'gia cay', 'auth tuon',
+  'tri dut diem 100%', 'khoi han sau 1 dem', 'cam ket chua khoi hoan toan', 'thuoc tien', 'than duoc', 'bao dam 100% khong tai phat',
+  'ca do bong da', 'bao lo de', 'soi cau vip', 'tai xiu online', 'no hu doi thuong', 'keo baccarat', 'kiem tien hoa hong',
+  'sung dan', 'dao kiem tu che', 'chat kich thich', 'thuoc la dien tu pod', 'bong cuoi'
+];
+
+const MEDIUM_RISK_KEYWORDS = [
+  'cam ket 100%', 'chac chan 100%', 'tuyet doi khong', 'hoan tien 200%',
+  'giam can cap toc', 'giam 10kg', 'tang kich thuoc', 'lot xac sau 3 ngay',
+  'chuyen khoan dat coc truoc', 'stk', 'so tai khoan', 'chuyen coc gap'
+];
+
+// ═══ BỘ TỪ KHÓA PHÂN THEO 5 NHÓM NGÀNH NHẠY CẢM (QUÉT TOÀN DIỆN KHÔNG DẤU) ═══
+const SENSITIVE_INDUSTRY_GROUPS = {
+  SUC_KHOE_DUOC_PHAM: {
+    name: 'Sức khỏe & Dược phẩm / TPCN',
+    keywords: [
+      'thuoc', 'an than', 'mat ngu', 'ngu ngon', 'chua benh', 'dieu tri', 'khang sinh', 'tpcn',
+      'thuc pham chuc nang', 'thuc pham bao ve suc khoe', 'bo khop', 'glucosamine', 'chondroitin',
+      'canxi', 'loang xuong', 'tieu duong', 'duong huyet', 'huyet ap', 'tim mach', 'suy than', 'benh than',
+      'chuc nang than', 'viem gan', 'suy gan', 'men gan', 'gan nhiem mo',
+      'viem xoang', 'da day', 'tieu hoa', 'men vi sinh', 'trao nguoc', 'bo nao', 'bo mat', 'nho mat',
+      'tri mun', 'serum mun', 'kem trang da', 'tri nam', 'tan nhang', 'seo ro', 'giam can', 'giam beo',
+      'tang can', 'rung toc', 'collagen', 'de khang', 'mien dich', 'thai doc', 'detox', 'benh vien',
+      'phong kham', 'bac si', 'duoc si', 'don thuoc', 'toa thuoc', 'thoat vi dia dem'
+    ]
+  },
+  SUA_TRE_EM_ME_BE: {
+    name: 'Sữa dinh dưỡng & Mẹ và Bé',
+    keywords: [
+      'sua cong thuc', 'sua non', 'sua me', 'sua dinh duong', 'tre so sinh', 'tre nho', 'be so sinh',
+      'em be', 'thai nhi', 'mang thai', 'me bau', 'cho con bu', 'binh sua', 'num ti', 'ta bim',
+      'bieng an', 'suy dinh duong', 'coi xuong', 'cham noi', 'an dam', 'vac xin', 'tiem chung', 'tiem phong'
+    ]
+  },
+  TAI_CHINH_BAO_HIEM_DAU_TU: {
+    name: 'Tài chính, Ngân hàng & Bảo hiểm',
+    keywords: [
+      'vay tien', 'vay von', 'khoan vay', 'cho vay', 'vay nhanh', 'vay online', 'vay tin chap', 'vay the chap', 'vay tra gop',
+      'tra gop', 'tin dung', 'the tin dung', 'dao han', 'no xau', 'cic', 'giai ngan', 'lai suat',
+      'ky han', 'tiet kiem', 'gui tiet kiem', 'ngan hang', 'bao hiem', 'bao hiem nhan tho',
+      'bao hiem y te', 'bao hiem suc khoe', 'phi bao hiem', 'chung khoan', 'co phieu', 'trai phieu',
+      'quy dau tu', 'forex', 'tien ao', 'crypto', 'bitcoin', 'sinh loi', 'loi nhuan', 'kiem tien nhanh',
+      'lam giau nhanh', 'da cap', '50 trieu'
+    ]
+  },
+  BAT_DONG_SAN_NHA_DAT: {
+    name: 'Bất động sản & Nhà đất',
+    keywords: [
+      'bat dong san', 'bds', 'nha dat', 'dat nen', 'mua dat', 'ban dat', 'tach thua', 'phan lo',
+      'so do', 'so hong', 'vi bang', 'cong chung', 'quyen su dung dat', 'phap ly nha dat',
+      'quy hoach dat', 'den bu', 'giai toa', 'can ho', 'chung cu', 'chung cu cu', 'nha pho',
+      'biet thu', 'du an nha o', 'chu dau tu', 'dat coc mua nha', 'hop dong mua ban nha', 'pccc'
+    ]
+  },
+  PHAP_LY_LUAT_SU: {
+    name: 'Pháp lý & Luật sư',
+    keywords: [
+      'luat su', 'van phong luat', 'tu van luat', 'tranh chap', 'khoi kien', 'kien tung',
+      'toa an', 'to cao', 'khieu nai', 'thua ke', 'di san', 'di chuc', 'phan chia tai san',
+      'ly hon', 'quyen nuoi con', 'tam giam', 'khoi to', 'bao chua'
+    ]
+  }
+};
+
+// Gom toàn bộ từ khóa nhạy cảm thành 1 danh sách phẳng tiện tra cứu nhanh
+const ALL_SENSITIVE_KEYWORDS = [];
+for (const [groupKey, group] of Object.entries(SENSITIVE_INDUSTRY_GROUPS)) {
+  for (const kw of group.keywords) {
+    ALL_SENSITIVE_KEYWORDS.push({
+      groupKey,
+      groupName: group.name,
+      keyword: kw
+    });
+  }
+}
+
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Kiểm tra qua bộ từ khóa với Ranh giới từ (Word/Token Boundary)
+ * Tránh dính bẫy chuỗi con: 'cic' trong 'cicada', 'bds' trong 'bds...', v.v.
+ */
+function scanSensitiveKeywords(text = '', topicContext = '') {
+  const combined = ` ${removeAccents(text)} ${removeAccents(topicContext)} `;
+  for (const item of ALL_SENSITIVE_KEYWORDS) {
+    const kw = item.keyword.trim();
+    if (!kw) continue;
+    // Ranh giới token chuẩn xác (ký tự trước và sau không phải chữ/số latin)
+    const pattern = new RegExp(`(^|[^a-z0-9])${escapeRegex(kw)}([^a-z0-9]|$)`, 'i');
+    if (pattern.test(combined)) {
+      return {
+        matched: true,
+        groupKey: item.groupKey,
+        groupName: item.groupName,
+        keyword: item.keyword
+      };
+    }
+  }
+  return { matched: false };
+}
+
+// ═══ BỘ ĐẾM & GIÁM SÁT FALLBACK AI (CHỐNG NGHẼN HÀNG CHỜ ÂM THẦM) ═══
+const aiClassifierMetrics = {
+  totalCalls: 0,
+  keywordCaughtCount: 0,
+  aiCaughtCount: 0,
+  cleanCount: 0,
+  fallbackErrorCount: 0,
+  errors: []
+};
+
+function getAiClassifierMetrics() {
+  return {
+    ...aiClassifierMetrics,
+    fallbackRate: aiClassifierMetrics.totalCalls > 0
+      ? ((aiClassifierMetrics.fallbackErrorCount / aiClassifierMetrics.totalCalls) * 100).toFixed(1) + '%'
+      : '0.0%'
+  };
+}
+
+function resetAiClassifierMetrics() {
+  aiClassifierMetrics.totalCalls = 0;
+  aiClassifierMetrics.keywordCaughtCount = 0;
+  aiClassifierMetrics.aiCaughtCount = 0;
+  aiClassifierMetrics.cleanCount = 0;
+  aiClassifierMetrics.fallbackErrorCount = 0;
+  aiClassifierMetrics.errors = [];
+}
+
+/**
+ * Ghi nhận phản hồi từ Người duyệt khi phát hiện bài bị phân loại sót:
+ * Reviewer gắn nhãn 'missed_sensitive' kèm từ khóa đề xuất để mở rộng từ điển.
+ * Phân quyền: CHỈ reviewer / admin / manager mới được phép gọi.
+ * Từ khóa mới vào trạng thái PENDING_CONFIRMATION (chờ người quản trị xác nhận, KHÔNG TỰ ĐỘNG CÓ HIỆU LỰC).
+ */
+async function recordMissedSensitiveFeedback({
+  postId = null,
+  topic = '',
+  content = '',
+  missedKeywords = [],
+  reviewerNote = '',
+  reviewerId = 'reviewer',
+  reviewerRole = 'reviewer'
+}) {
+  const fs = require('fs');
+  const path = require('path');
+
+  const normalizedRole = String(reviewerRole || '').toLowerCase();
+  const allowedRoles = ['admin', 'manager', 'reviewer'];
+  if (!allowedRoles.includes(normalizedRole)) {
+    throw new Error('Chỉ kiểm duyệt viên (reviewer) hoặc quản trị viên (admin) mới có quyền báo cáo bài viết bị phân loại sót.');
+  }
+
+  const feedbackItem = {
+    id: Date.now().toString(36),
+    recordedAt: new Date().toISOString(),
+    postId,
+    topic,
+    contentSnippet: (content || '').slice(0, 300),
+    missedKeywords: Array.isArray(missedKeywords) ? missedKeywords : [missedKeywords].filter(Boolean),
+    reviewerNote,
+    reviewerId,
+    reviewerRole: normalizedRole,
+    status: 'PENDING_CONFIRMATION' // Chờ xác nhận, KHÔNG tự động có hiệu lực vào từ điển quét
+  };
+
+  try {
+    const logPath = path.resolve(__dirname, '../../eval/reviewer-missed-keywords.json');
+    let logs = [];
+    if (fs.existsSync(logPath)) {
+      logs = JSON.parse(fs.readFileSync(logPath, 'utf8') || '[]');
+    }
+    logs.push(feedbackItem);
+    fs.writeFileSync(logPath, JSON.stringify(logs, null, 2), 'utf8');
+    console.log(`[ReviewerFeedback] Đã lưu phản hồi bài #${postId}: Đề xuất từ khóa [${feedbackItem.missedKeywords.join(', ')}] (Trạng thái: PENDING_CONFIRMATION)`);
+  } catch (err) {
+    console.warn('[ReviewerFeedback Error]', err.message);
+  }
+
+  return feedbackItem;
+}
+
+/**
+ * Phân loại ngành nhạy cảm bằng AI (Qwen 27B / GPT-OSS 20B)
+ * Nguyên tắc an toàn: MẶC ĐỊNH CHỌN NHẠY CẢM KHI KHÔNG CHẮC HOẶC GẶP LỖI
+ */
+async function classifySensitiveIndustryWithAi(text = '', topicContext = '') {
+  aiClassifierMetrics.totalCalls++;
+  try {
+    // Lazy require để tránh circular dependency
+    const { callAiChat } = require('./AiClientService');
+    const prompt = `Bạn là Chuyên gia Kiểm duyệt An toàn Nội dung Facebook.
+Nhiệm vụ: Phân loại xem nội dung/chủ đề sau có thuộc bất kỳ ngành nào trong 5 NGÀNH NHẠY CẢM bắt buộc duyệt tay hay không:
+1. Sức khỏe, y tế, bệnh tật, thuốc, thực phẩm chức năng, làm đẹp/giảm cân điều trị
+2. Sữa trẻ em, trẻ sơ sinh, dinh dưỡng mẹ và bé, vắc xin
+3. Tài chính, vay vốn, trả góp, tín dụng, ngân hàng, bảo hiểm, đầu tư chứng khoán/crypto
+4. Bất động sản, mua bán đất nền, căn hộ, chung cư, pháp lý nhà đất, quy hoạch
+5. Pháp lý, luật sư, tranh chấp, kiện tụng, thừa kế, ly hôn
+
+[CHỦ ĐỀ]: "${topicContext}"
+[NỘI DUNG]:
+${text.slice(0, 1000)}
+
+QUY TẮC CỰC KỲ QUAN TRỌNG:
+- Nếu thuộc bất kỳ ngành nào ở trên: Trả về is_sensitive = true.
+- NẾU KHÔNG CHẮC CHẮN HOẶC CÓ LIÊN QUAN RĂM RÁP ĐẾN SỨC KHỎE/TIỀN BẠC/NHÀ ĐẤT: BẮT BUỘC MẶC ĐỊNH CHỌN is_sensitive = true!
+- Chỉ khi 100% là chủ đề đời thường vô hại (nấu ăn gia đình, du lịch tự túc, thời trang cơ bản, công nghệ văn phòng, mèo thú cưng...): mới trả về is_sensitive = false.
+
+Trả về DUY NHẤT một JSON hợp lệ:
+{
+  "is_sensitive": true,
+  "industry": "Tên ngành phát hiện (hoặc 'none')",
+  "reason": "Giải thích ngắn gọn 1 câu"
+}`;
+
+    const res = await callAiChat({
+      messages: [
+        { role: 'system', content: 'Bạn là chuyên gia an toàn nội dung, chỉ trả về JSON hợp lệ.' },
+        { role: 'user', content: prompt }
+      ],
+      model: 'qwen/qwen3.8-27b',
+      temperature: 0.1,
+      max_tokens: 250
+    });
+
+    const cleaned = res.content.replace(/```json/gi, '').replace(/```/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+    return {
+      isSensitive: Boolean(parsed.is_sensitive),
+      industry: parsed.industry || 'Chưa xác định',
+      reason: parsed.reason || 'AI phân loại ngành nhạy cảm'
+    };
+  } catch (err) {
+    aiClassifierMetrics.fallbackErrorCount++;
+    if (aiClassifierMetrics.errors.length < 50) {
+      aiClassifierMetrics.errors.push({
+        time: new Date().toISOString(),
+        error: err.message,
+        snippet: text.slice(0, 100)
+      });
+    }
+    // NGUYÊN TẮC AN TOÀN: Khi lỗi AI, mặc định bảo vệ bằng cách coi là nhạy cảm!
+    console.warn(`[PostStateMachine] AI Classifier gặp sự cố (${err.message}). Fallback count: ${aiClassifierMetrics.fallbackErrorCount}/${aiClassifierMetrics.totalCalls}. Kích hoạt PENDING_REVIEW an toàn.`);
+    return {
+      isSensitive: true,
+      industry: 'Bảo vệ an toàn (AI Fallback)',
+      reason: 'Hệ thống tự động kích hoạt kiểm duyệt an toàn do AI classifier gặp sự cố kết nối.'
+    };
+  }
+}
+
+/**
+ * Chạy bộ lọc an toàn chính sách Meta Đồng bộ (Dựa trên bộ từ khóa mở rộng toàn diện)
+ */
+function evaluateContentSafety(title = '', content = '', topicContext = '') {
+  const fullTextNFC = `${title}\n${content}`.normalize('NFC').trim();
+  const fullTextUnaccented = removeAccents(fullTextNFC);
+  const criticalViolations = [];
+  const warningViolations = [];
+
+  // 1. Quét rủi ro nghiêm trọng (Critical Risk -> BLOCKED)
+  for (const kw of CRITICAL_RISK_KEYWORDS) {
+    if (fullTextUnaccented.includes(kw)) {
+      criticalViolations.push(`Phát hiện từ khóa cấm/vi phạm chính sách Meta: "${kw}"`);
+    }
+  }
+
+  if (criticalViolations.length > 0) {
+    return {
+      state: POST_STATES.BLOCKED,
+      score: 10,
+      reasons: criticalViolations,
+      notes: 'Bị chặn do vi phạm Tiêu chuẩn cộng đồng Facebook hoặc Luật Quảng cáo Việt Nam.'
+    };
+  }
+
+  // 2. CHỐT CỨNG BẰNG CODE CHO NGÀNH NHẠY CẢM (Toàn bộ 5 nhóm ngành) -> LUÔN VÀO PENDING_REVIEW
+  const kwMatch = scanSensitiveKeywords(fullTextNFC, topicContext);
+  if (kwMatch.matched) {
+    return {
+      state: POST_STATES.PENDING_REVIEW,
+      score: 70,
+      reasons: [`[${kwMatch.groupName}] Khớp từ khóa ngành nhạy cảm: "${kwMatch.keyword}"`],
+      notes: `[CHỐT CỨNG TỪ KHÓA] Thuộc ${kwMatch.groupName} - Luôn cần quản trị viên duyệt trước khi xuất bản.`
+    };
+  }
+
+  // 3. Quét rủi ro trung bình (Medium Risk -> PENDING_REVIEW)
+  for (const kw of MEDIUM_RISK_KEYWORDS) {
+    if (fullTextUnaccented.includes(kw)) {
+      warningViolations.push(`Chứa cụm từ nhạy cảm cần rà soát: "${kw}"`);
+    }
+  }
+
+  if (content.length < 30) {
+    warningViolations.push('Nội dung quá ngắn (dưới 30 ký tự), cần kiểm tra tính hoàn chỉnh.');
+  }
+
+  if (warningViolations.length > 0) {
+    return {
+      state: POST_STATES.PENDING_REVIEW,
+      score: 60,
+      reasons: warningViolations,
+      notes: 'Cần quản trị viên kiểm tra và duyệt thủ công trước khi xuất bản.'
+    };
+  }
+
+  // 4. Đạt an toàn 100% -> READY_FOR_APPROVAL
+  return {
+    state: POST_STATES.READY_FOR_APPROVAL,
+    score: 98,
+    reasons: ['Nội dung đạt Tiêu chuẩn cộng đồng Facebook và Chính sách quảng cáo.'],
+    notes: 'Đã sẵn sàng để người quản trị phê duyệt xuất bản.'
+  };
+}
+
+/**
+ * Chạy bộ lọc an toàn BẤT ĐỒNG BỘ: HỢP BẰNG OR (Từ khóa OR AI Classifier)
+ * Bảo đảm 100% các ngành nhạy cảm đều bị đưa vào PENDING_REVIEW
+ */
+async function evaluateContentSafetyAsync(title = '', content = '', topicContext = '') {
+  const syncResult = evaluateContentSafety(title, content, topicContext);
+  
+  // Nếu đã bị BLOCKED hoặc đã dính từ khóa PENDING_REVIEW -> Trả về ngay lập tức
+  if (syncResult.state === POST_STATES.BLOCKED || syncResult.state === POST_STATES.PENDING_REVIEW) {
+    aiClassifierMetrics.keywordCaughtCount++;
+    return syncResult;
+  }
+
+  // Nếu bộ từ khóa chưa bắt được -> Gọi AI Classifier phân loại ngữ nghĩa sâu (Logic OR)
+  const aiCheck = await classifySensitiveIndustryWithAi(`${title}\n${content}`, topicContext);
+  if (aiCheck.isSensitive) {
+    aiClassifierMetrics.aiCaughtCount++;
+    return {
+      state: POST_STATES.PENDING_REVIEW,
+      score: 70,
+      reasons: [`[AI Phân loại: ${aiCheck.industry}] ${aiCheck.reason}`],
+      notes: `[CHỐT CHẶN AI] Phát hiện nội dung thuộc nhóm ngành nhạy cảm (${aiCheck.industry}) - Bắt buộc duyệt thủ công.`
+    };
+  }
+
+  aiClassifierMetrics.cleanCount++;
+  return syncResult;
+}
+
+/**
+ * Kiểm tra xem có được phép chuyển từ currentState sang nextState hay không
+ * QUY TẮC: Cùng trạng thái thì FALSE với PUBLISHING và PUBLISHED để tránh bắn duplicate
+ */
+function canTransition(currentState, nextState) {
+  if (!currentState || !nextState) return false;
+  if (currentState === nextState) {
+    if (currentState === POST_STATES.PUBLISHING || currentState === POST_STATES.PUBLISHED) {
+      return false;
+    }
+    return true;
+  }
+  const allowed = ALLOWED_TRANSITIONS[currentState] || [];
+  return allowed.includes(nextState);
+}
+
+/**
+ * Tính mã SHA256 canonical hash của bài viết
+ * Hash bao gồm: Page ID, Tiêu đề, Nội dung, Media Type, Media Links, Thời gian hẹn giờ
+ */
+function computePostHash(post = {}) {
+  const pageId = String(post.pageId || post.page_id || '').trim();
+  const title = String(post.title || '').trim();
+  const content = String(post.content || '').trim();
+  const mediaType = String(post.mediaType || post.media_type || 'text').trim();
+  let mediaLinks = '';
+  try {
+    const raw = post.mediaLinks || post.media_links;
+    if (raw) {
+      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      mediaLinks = Array.isArray(parsed) ? parsed.join(',') : String(parsed);
+    }
+  } catch {
+    mediaLinks = String(post.mediaLinks || post.media_links || '').trim();
+  }
+  const scheduledTime = post.scheduledAt || post.scheduled_at
+    ? new Date(post.scheduledAt || post.scheduled_at).toISOString()
+    : '';
+
+  const rawString = `${pageId}|${title}|${content}|${mediaType}|${mediaLinks}|${scheduledTime}`;
+  return crypto.createHash('sha256').update(rawString, 'utf8').digest('hex');
+}
+
+/**
+ * Kiểm tra Fanpage có nằm trong Whitelist được phép thao tác/xuất bản hay không.
+ * Nguyên tắc: FAIL-CLOSED (Nếu rỗng hoặc không cấu hình thì từ chối tất cả).
+ */
+function isPageIdAllowed(pageId) {
+  if (!pageId) return false;
+  const rawList = process.env.ALLOWED_PAGE_IDS || '';
+  const allowed = rawList
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+  const isProduction = process.env.NODE_ENV === 'production' || process.env.APP_ENV === 'production';
+  const isMock = !isProduction && (
+    String(pageId).startsWith('SYSTEM_TEST_') ||
+    String(pageId).startsWith('page_') ||
+    String(pageId).startsWith('tiktok_')
+  );
+  if (isMock) return true;
+  if (allowed.length === 0) return false; // Fail-closed!
+  return allowed.includes(String(pageId).trim());
+}
+
+/**
+ * Hàm chuẩn hóa và tạo Payload dữ liệu bài viết duy nhất dùng chung cho mọi luồng (API create, Draft publish, Excel Bulk Upload)
+ * Đảm bảo:
+ * 1. Kiểm tra Whitelist Page ngay từ đầu (Chặn từ bước tạo bài, ném lỗi 403).
+ * 2. Tính toán Hash đầy đủ và đồng nhất 100% với hàm đối soát của Poller (computePostHash).
+ * 3. Chuẩn hóa mediaLinks dạng JSON string nhất quán.
+ * 4. Chuẩn hóa scheduledAt dạng Date chuẩn.
+ */
+function prepareStandardPostInsert({
+  pageId,
+  content = '',
+  mediaType = 'text',
+  mediaLinks = [],
+  mediaThumb = null,
+  scheduledAt = null,
+  ownerId = null,
+  status = POST_STATES.APPROVED
+}) {
+  const cleanPageId = String(pageId || '').trim();
+  if (!isPageIdAllowed(cleanPageId)) {
+    const err = new Error(`Fanpage ID "${cleanPageId}" nằm ngoài danh sách được phép thao tác (ALLOWED_PAGE_IDS trong .env).`);
+    err.statusCode = 403;
+    err.code = 'PAGE_NOT_ALLOWED';
+    throw err;
+  }
+
+  const cleanMediaType = ['text', 'image', 'video', 'reel', 'story'].includes(mediaType) ? mediaType : 'text';
+  const cleanMediaLinksArray = Array.isArray(mediaLinks)
+    ? mediaLinks.filter(Boolean)
+    : (typeof mediaLinks === 'string' && mediaLinks ? [mediaLinks] : []);
+  const mediaLinksJson = JSON.stringify(cleanMediaLinksArray);
+
+  const scheduledDate = scheduledAt ? new Date(scheduledAt) : null;
+  const finalScheduledAt = (scheduledDate && !Number.isNaN(scheduledDate.getTime())) ? scheduledDate : null;
+
+  const hash = computePostHash({
+    page_id: cleanPageId,
+    content: String(content || '').trim(),
+    media_type: cleanMediaType,
+    media_links: mediaLinksJson,
+    scheduled_at: finalScheduledAt
+  });
+
+  const shouldApprove = status === POST_STATES.APPROVED || status === POST_STATES.SCHEDULED;
+
+  return {
+    pageId: cleanPageId,
+    content: String(content || '').trim(),
+    mediaType: cleanMediaType,
+    mediaLinks: cleanMediaLinksArray,
+    mediaLinksJson,
+    mediaThumb: mediaThumb || null,
+    scheduledAt: finalScheduledAt,
+    ownerId: ownerId ? String(ownerId) : null,
+    status,
+    contentHash: hash,
+    approvedHash: shouldApprove ? hash : null,
+    approvedBy: shouldApprove ? (ownerId ? String(ownerId) : 'system_creator') : null
+  };
+}
+
+/**
+ * Chốt chặn kiểm định tính hợp lệ trước khi xuất bản (Gate Check):
+ * 1. Trạng thái phải nằm trong nhóm cho phép xuất bản: APPROVED, SCHEDULED, PUBLISH_RETRY_OR_FAILED
+ * 2. approved_hash bắt buộc phải tồn tại (đã qua cổng phê duyệt của con người)
+ * 3. approved_by bắt buộc phải tồn tại
+ * 4. Content hash hiện tại phải khớp 100% với approved_hash (chống sửa đổi sau khi duyệt)
+ */
+function assertPublishable(post) {
+  if (!post) throw new Error('Không tìm thấy thông tin bài viết để kiểm tra xuất bản.');
+
+  const candidateStates = [
+    POST_STATES.APPROVED,
+    POST_STATES.SCHEDULED,
+    POST_STATES.PUBLISH_RETRY_OR_FAILED
+  ];
+
+  if (!candidateStates.includes(post.status)) {
+    throw new Error(`Bài viết #${post.id} ở trạng thái "${post.status}", không nằm trong nhóm được phép xuất bản (${candidateStates.join(', ')}).`);
+  }
+
+  if (!post.approved_hash || typeof post.approved_hash !== 'string' || !post.approved_hash.trim()) {
+    throw new Error(`Bài viết #${post.id} chưa có approved_hash hợp lệ (chưa được phê duyệt hoặc đã bị hủy duyệt).`);
+  }
+
+  if (!post.approved_by || typeof post.approved_by !== 'string' || !post.approved_by.trim()) {
+    throw new Error(`Bài viết #${post.id} thiếu thông tin người phê duyệt (approved_by).`);
+  }
+
+  const currentContentHash = computePostHash(post);
+  if (post.approved_hash !== currentContentHash) {
+    throw new Error(`Nội dung bài viết #${post.id} đã bị chỉnh sửa sau khi duyệt (approved_hash không khớp với content_hash hiện tại).`);
+  }
+
+  return { valid: true, contentHash: currentContentHash };
+}
+
+/**
+ * Thực hiện chuyển trạng thái (Transition) kèm kiểm tra bảng quyền và ghi PostAuditLog
+ * @param {object} post Bản ghi bài viết hiện tại
+ * @param {string} nextState Trạng thái đích muốn chuyển sang
+ * @param {object} options { actor, reason, facebookPostId, approvedBy }
+ */
+async function transition(post, nextState, options = {}) {
+  const { actor = 'system', reason = null, facebookPostId = null, approvedBy = null } = options;
+  const currentState = post.status;
+
+  if (global.__MOCK_TRANSITION_ERROR__) {
+    throw new Error(global.__MOCK_TRANSITION_ERROR__);
+  }
+
+  // 1. Kiểm tra ma trận chuyển trạng thái
+  if (!canTransition(currentState, nextState)) {
+    throw new Error(`Chuyển trạng thái không hợp lệ: từ "${currentState}" sang "${nextState}".`);
+  }
+
+  // 2. Bảng phân quyền Actor
+  if (actor === 'ai') {
+    const allowedForAi = [
+      POST_STATES.GENERATING,
+      POST_STATES.VALIDATING,
+      POST_STATES.GENERATION_FAILED,
+      POST_STATES.SAFETY_CHECK,
+      POST_STATES.READY_FOR_APPROVAL,
+      POST_STATES.PENDING_REVIEW,
+      POST_STATES.BLOCKED
+    ];
+    if (!allowedForAi.includes(nextState)) {
+      throw new Error(`AI không có quyền chuyển bài sang trạng thái "${nextState}".`);
+    }
+  }
+
+  // Trạng thái APPROVED bắt buộc phải do Người (Human) duyệt
+  if (nextState === POST_STATES.APPROVED && actor === 'ai') {
+    throw new Error('Chỉ người dùng có thẩm quyền mới được phê duyệt bài viết (APPROVED).');
+  }
+
+  // Trạng thái PUBLISHED bắt buộc phải có Facebook Post ID hợp lệ từ Graph API
+  if (nextState === POST_STATES.PUBLISHED) {
+    const fbId = facebookPostId || post.facebook_post_id;
+    if (!fbId || typeof fbId !== 'string' || !fbId.trim()) {
+      throw new Error('Không thể chuyển sang PUBLISHED khi chưa có Facebook Post ID từ Graph API.');
+    }
+  }
+
+  // Trạng thái SCHEDULED bắt buộc phải có approved_hash và approved_by (đã qua duyệt)
+  if (nextState === POST_STATES.SCHEDULED) {
+    if (!post.approved_hash || !post.approved_by) {
+      throw new Error(`Bài viết #${post.id} chưa được phê duyệt (thiếu approved_hash hoặc approved_by), không được phép lên lịch xuất bản (SCHEDULED).`);
+    }
+  }
+
+  const pool = await getPool();
+  const newContentHash = computePostHash(post);
+
+  // Nếu chuyển sang APPROVED: gắn approved_hash = content_hash và lưu approved_by
+  let updateQuery = 'UPDATE Posts SET status = @nextState, content_hash = @contentHash';
+  const request = pool.request()
+    .input('id', sql.Int, post.id)
+    .input('nextState', sql.VarChar(50), nextState)
+    .input('contentHash', sql.VarChar(64), newContentHash);
+
+  if (nextState === POST_STATES.APPROVED) {
+    updateQuery += ', approved_hash = @contentHash, approved_by = @approvedBy';
+    request.input('approvedBy', sql.VarChar(64), approvedBy || actor);
+  } else if ([POST_STATES.PENDING_REVIEW, POST_STATES.BLOCKED, POST_STATES.REJECTED, POST_STATES.SAFETY_CHECK, POST_STATES.NEW, POST_STATES.READY_FOR_APPROVAL, POST_STATES.GENERATION_FAILED].includes(nextState)) {
+    // Tước bỏ approved_hash và approved_by khi bài quay về các trạng thái chưa duyệt
+    updateQuery += ', approved_hash = NULL, approved_by = NULL';
+  }
+
+  if (options.errorMessage) {
+    updateQuery += ', error_message = @errorMessage';
+    request.input('errorMessage', sql.NVarChar(sql.MAX), options.errorMessage);
+  }
+
+  if (nextState === POST_STATES.PUBLISHING) {
+    updateQuery += ', publishing_started_at = SYSUTCDATETIME()';
+  }
+
+  if (nextState === POST_STATES.PUBLISHED) {
+    updateQuery += ', published_at = SYSUTCDATETIME()';
+    if (facebookPostId) {
+      updateQuery += ', facebook_post_id = @fbPostId';
+      request.input('fbPostId', sql.NVarChar(200), facebookPostId);
+    }
+  }
+
+  updateQuery += ' WHERE id = @id';
+  await request.query(updateQuery);
+
+  // Ghi nhật ký kiểm toán (PostAuditLog)
+  try {
+    await pool.request()
+      .input('postId', sql.Int, post.id)
+      .input('actor', sql.VarChar(100), actor)
+      .input('fromState', sql.VarChar(50), currentState)
+      .input('toState', sql.VarChar(50), nextState)
+      .input('reason', sql.NVarChar, reason || `Chuyển trạng thái sang ${nextState}`)
+      .query(`
+        INSERT INTO PostAuditLog (post_id, actor, from_state, to_state, reason, created_at)
+        VALUES (@postId, @actor, @fromState, @toState, @reason, SYSUTCDATETIME());
+      `);
+  } catch (auditErr) {
+    console.warn(`[AuditLog Warning] Không thể ghi audit log bài #${post.id}:`, auditErr.message);
+  }
+
+  return { success: true, fromState: currentState, toState: nextState, approvedBy: approvedBy || actor };
+}
+
+/**
+ * Quy tắc bắt buộc:
+ * "Sửa nội dung ở bất kỳ trạng thái nào thì hủy duyệt.
+ * Hash gồm cả title, content, media, Page, giờ đăng."
+ */
+function handleContentMutation(currentPost, newPostData) {
+  const oldApprovedHash = currentPost.approved_hash;
+  const newHash = computePostHash({ ...currentPost, ...newPostData });
+
+  // Nếu bài đã có approved_hash mà hash mới bị thay đổi -> Hủy duyệt ngay lập tức!
+  if (oldApprovedHash && oldApprovedHash !== newHash) {
+    const safetyResult = evaluateContentSafety(
+      newPostData.title !== undefined ? newPostData.title : currentPost.title,
+      newPostData.content !== undefined ? newPostData.content : currentPost.content
+    );
+
+    return {
+      invalidated: true,
+      nextState: safetyResult.state,
+      newContentHash: newHash,
+      safetyNotes: `[HỦY DUYỆT DO THAY ĐỔI DỮ LIỆU ĐÃ DUYỆT] ${safetyResult.notes}`,
+      reasons: safetyResult.reasons
+    };
+  }
+
+  return { invalidated: false, nextState: currentPost.status, newContentHash: newHash };
+}
+
+module.exports = {
+  isPageIdAllowed,
+  prepareStandardPostInsert,
+  POST_STATES,
+  STATE_METADATA,
+  ALLOWED_TRANSITIONS,
+  canTransition,
+  evaluateContentSafety,
+  evaluateContentSafetyAsync,
+  classifySensitiveIndustryWithAi,
+  scanSensitiveKeywords,
+  SENSITIVE_INDUSTRY_GROUPS,
+  ALL_SENSITIVE_KEYWORDS,
+  computePostHash,
+  assertPublishable,
+  transition,
+  handleContentMutation,
+  removeAccents,
+  CRITICAL_RISK_KEYWORDS,
+  MEDIUM_RISK_KEYWORDS,
+  getAiClassifierMetrics,
+  resetAiClassifierMetrics,
+  recordMissedSensitiveFeedback
+};

@@ -1,0 +1,407 @@
+{
+  "executedAt": "2026-10-27T01:27:14.068Z",
+  "sensitiveMetrics": {
+    "totalTested": 30,
+    "pendingOrBlockedCount": 30,
+    "passRate": "100.0%"
+  },
+  "negativeControlMetrics": {
+    "totalTested": 5,
+    "readyCount": 5,
+    "passRate": "100.0%"
+  },
+  "sensitiveResults": [
+    {
+      "id": 1,
+      "group": "SUC_KHOE_DUOC_PHAM",
+      "topic": "thực đơn cho người tiểu đường type 2 ổn định đường huyết",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "TỪ KHÓA (Keyword Match)",
+      "reasons": [
+        "[Sức khỏe & Dược phẩm / TPCN] Khớp từ khóa ngành nhạy cảm: \"tieu duong\""
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 2,
+      "group": "SUC_KHOE_DUOC_PHAM",
+      "topic": "thuốc nhỏ mắt chống khô mỏi cho dân văn phòng",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "TỪ KHÓA (Keyword Match)",
+      "reasons": [
+        "[Sức khỏe & Dược phẩm / TPCN] Khớp từ khóa ngành nhạy cảm: \"thuoc\""
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 3,
+      "group": "SUC_KHOE_DUOC_PHAM",
+      "topic": "viên uống trắng da mờ nám glutathione",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "AI CLASSIFIER",
+      "reasons": [
+        "[AI Phân loại: Sức khỏe, y tế, bệnh tật, thuốc, thực phẩm chức năng, làm đẹp/giảm cân điều trị] Nội dung đề cập đến viên uống glutathione, một loại thực phẩm chức năng dùng cho mục đích làm đẹp và điều trị da, thuộc phạm vi ngành sức khỏe và làm đẹp."
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 4,
+      "group": "SUC_KHOE_DUOC_PHAM",
+      "topic": "mẹo giảm trào ngược dạ dày thực quản về đêm",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "TỪ KHÓA (Keyword Match)",
+      "reasons": [
+        "[Sức khỏe & Dược phẩm / TPCN] Khớp từ khóa ngành nhạy cảm: \"da day\""
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 5,
+      "group": "SUC_KHOE_DUOC_PHAM",
+      "topic": "bổ sung men vi sinh cho người rối loạn tiêu hóa",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "TỪ KHÓA (Keyword Match)",
+      "reasons": [
+        "[Sức khỏe & Dược phẩm / TPCN] Khớp từ khóa ngành nhạy cảm: \"khang sinh\""
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 6,
+      "group": "SUC_KHOE_DUOC_PHAM",
+      "topic": "bài tập vật lý trị liệu cho người thoát vị đĩa đệm",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "TỪ KHÓA (Keyword Match)",
+      "reasons": [
+        "[Sức khỏe & Dược phẩm / TPCN] Khớp từ khóa ngành nhạy cảm: \"thoat vi dia dem\""
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 7,
+      "group": "SUA_TRE_EM_ME_BE",
+      "topic": "sữa non kích thích miễn dịch cho bé hay ốm vặt",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "TỪ KHÓA (Keyword Match)",
+      "reasons": [
+        "[Sức khỏe & Dược phẩm / TPCN] Khớp từ khóa ngành nhạy cảm: \"de khang\""
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 8,
+      "group": "SUA_TRE_EM_ME_BE",
+      "topic": "chọn tã dán thoáng khí chống hăm cho trẻ sơ sinh",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "TỪ KHÓA (Keyword Match)",
+      "reasons": [
+        "[Sữa dinh dưỡng & Mẹ và Bé] Khớp từ khóa ngành nhạy cảm: \"tre so sinh\""
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 9,
+      "group": "SUA_TRE_EM_ME_BE",
+      "topic": "mẹo dân gian trị tắc tia sữa cho mẹ sau sinh",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "AI CLASSIFIER",
+      "reasons": [
+        "[AI Phân loại: Sức khỏe, y tế, bệnh tật, thuốc, thực phẩm chức năng, làm đẹp/giảm cân điều trị] Nội dung liên quan trực tiếp đến vấn đề sức khỏe của mẹ sau sinh (tắc tia sữa) và khuyến nghị y tế."
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 10,
+      "group": "SUA_TRE_EM_ME_BE",
+      "topic": "bổ sung DHA và vi chất cho trẻ chậm nói",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "TỪ KHÓA (Keyword Match)",
+      "reasons": [
+        "[Sữa dinh dưỡng & Mẹ và Bé] Khớp từ khóa ngành nhạy cảm: \"tre nho\""
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 11,
+      "group": "SUA_TRE_EM_ME_BE",
+      "topic": "thực đơn ăn dặm tự chỉ huy cho bé 7 tháng",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "TỪ KHÓA (Keyword Match)",
+      "reasons": [
+        "[Sữa dinh dưỡng & Mẹ và Bé] Khớp từ khóa ngành nhạy cảm: \"em be\""
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 12,
+      "group": "SUA_TRE_EM_ME_BE",
+      "topic": "lịch tiêm chủng vắc xin 6 trong 1 cho trẻ dưới 1 tuổi",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "TỪ KHÓA (Keyword Match)",
+      "reasons": [
+        "[Sữa dinh dưỡng & Mẹ và Bé] Khớp từ khóa ngành nhạy cảm: \"vac xin\""
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 13,
+      "group": "TAI_CHINH_BAO_HIEM_DAU_TU",
+      "topic": "bảo hiểm nhân thọ có rút được tiền gốc trước hạn không?",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "TỪ KHÓA (Keyword Match)",
+      "reasons": [
+        "[Tài chính, Ngân hàng & Bảo hiểm] Khớp từ khóa ngành nhạy cảm: \"bao hiem\""
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 14,
+      "group": "TAI_CHINH_BAO_HIEM_DAU_TU",
+      "topic": "nợ xấu nhóm 3 có vay thế chấp ngân hàng được không?",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "TỪ KHÓA (Keyword Match)",
+      "reasons": [
+        "[Tài chính, Ngân hàng & Bảo hiểm] Khớp từ khóa ngành nhạy cảm: \"vay the chap\""
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 15,
+      "group": "TAI_CHINH_BAO_HIEM_DAU_TU",
+      "topic": "cách dùng thẻ tín dụng hạn mức 50 triệu không lo bị phạt lãi",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "TỪ KHÓA (Keyword Match)",
+      "reasons": [
+        "[Tài chính, Ngân hàng & Bảo hiểm] Khớp từ khóa ngành nhạy cảm: \"tin dung\""
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 16,
+      "group": "TAI_CHINH_BAO_HIEM_DAU_TU",
+      "topic": "so sánh gửi tiết kiệm ngân hàng kỳ hạn 6 tháng và 12 tháng",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "TỪ KHÓA (Keyword Match)",
+      "reasons": [
+        "[Tài chính, Ngân hàng & Bảo hiểm] Khớp từ khóa ngành nhạy cảm: \"lai suat\""
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 17,
+      "group": "TAI_CHINH_BAO_HIEM_DAU_TU",
+      "topic": "kinh nghiệm đầu tư chứng khoán cho người mới bắt đầu",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "TỪ KHÓA (Keyword Match)",
+      "reasons": [
+        "[Tài chính, Ngân hàng & Bảo hiểm] Khớp từ khóa ngành nhạy cảm: \"chung khoan\""
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 18,
+      "group": "TAI_CHINH_BAO_HIEM_DAU_TU",
+      "topic": "nên mua vàng nhẫn tích trữ hay gửi tiết kiệm thời điểm này?",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "TỪ KHÓA (Keyword Match)",
+      "reasons": [
+        "[Tài chính, Ngân hàng & Bảo hiểm] Khớp từ khóa ngành nhạy cảm: \"tiet kiem\""
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 19,
+      "group": "BAT_DONG_SAN_NHA_DAT",
+      "topic": "mua nhà đất giấy tay có được cấp sổ đỏ không?",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "TỪ KHÓA (Keyword Match)",
+      "reasons": [
+        "[Bất động sản & Nhà đất] Khớp từ khóa ngành nhạy cảm: \"nha dat\""
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 20,
+      "group": "BAT_DONG_SAN_NHA_DAT",
+      "topic": "lưu ý pháp lý khi mua đất dự án phân lô bán nền",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "TỪ KHÓA (Keyword Match)",
+      "reasons": [
+        "[Bất động sản & Nhà đất] Khớp từ khóa ngành nhạy cảm: \"mua dat\""
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 21,
+      "group": "BAT_DONG_SAN_NHA_DAT",
+      "topic": "chính sách đền bù giải tỏa đất nông nghiệp làm đường",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "TỪ KHÓA (Keyword Match)",
+      "reasons": [
+        "[Bất động sản & Nhà đất] Khớp từ khóa ngành nhạy cảm: \"den bu\""
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 22,
+      "group": "BAT_DONG_SAN_NHA_DAT",
+      "topic": "giải quyết tranh chấp ranh giới đất liền kề giữa hàng xóm",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "TỪ KHÓA (Keyword Match)",
+      "reasons": [
+        "[Pháp lý & Luật sư] Khớp từ khóa ngành nhạy cảm: \"tranh chap\""
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 23,
+      "group": "BAT_DONG_SAN_NHA_DAT",
+      "topic": "tiêu chuẩn PCCC bắt buộc khi thuê chung cư mini",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "TỪ KHÓA (Keyword Match)",
+      "reasons": [
+        "[Bất động sản & Nhà đất] Khớp từ khóa ngành nhạy cảm: \"chung cu\""
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 24,
+      "group": "BAT_DONG_SAN_NHA_DAT",
+      "topic": "kinh nghiệm đàm phán hợp đồng mua bán căn hộ chung cư cao cấp",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "TỪ KHÓA (Keyword Match)",
+      "reasons": [
+        "[Bất động sản & Nhà đất] Khớp từ khóa ngành nhạy cảm: \"so hong\""
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 25,
+      "group": "PHAP_LY_LUAT_SU",
+      "topic": "thủ tục ly hôn đơn phương và quyền nuôi con dưới 36 tháng",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "TỪ KHÓA (Keyword Match)",
+      "reasons": [
+        "[Pháp lý & Luật sư] Khớp từ khóa ngành nhạy cảm: \"ly hon\""
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 26,
+      "group": "PHAP_LY_LUAT_SU",
+      "topic": "quy trình khởi kiện đòi nợ cá nhân quá hạn tại tòa án",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "TỪ KHÓA (Keyword Match)",
+      "reasons": [
+        "[Tài chính, Ngân hàng & Bảo hiểm] Khớp từ khóa ngành nhạy cảm: \"vay tien\""
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 27,
+      "group": "PHAP_LY_LUAT_SU",
+      "topic": "phân chia di sản thừa kế khi người mất không để lại di chúc",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "TỪ KHÓA (Keyword Match)",
+      "reasons": [
+        "[Sức khỏe & Dược phẩm / TPCN] Khớp từ khóa ngành nhạy cảm: \"thuoc\""
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 28,
+      "group": "PHAP_LY_LUAT_SU",
+      "topic": "vai trò của luật sư bào chữa trong giai đoạn tạm giam điều tra",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "TỪ KHÓA (Keyword Match)",
+      "reasons": [
+        "[Pháp lý & Luật sư] Khớp từ khóa ngành nhạy cảm: \"luat su\""
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 29,
+      "group": "PHAP_LY_LUAT_SU",
+      "topic": "rủi ro pháp lý khi công chứng hợp đồng ủy quyền toàn quyền mua bán xe",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "TỪ KHÓA (Keyword Match)",
+      "reasons": [
+        "[Bất động sản & Nhà đất] Khớp từ khóa ngành nhạy cảm: \"cong chung\""
+      ],
+      "isPassed": true
+    },
+    {
+      "id": 30,
+      "group": "PHAP_LY_LUAT_SU",
+      "topic": "mức phạt hành vi làm nhục người khác trên mạng xã hội",
+      "state": "PENDING_REVIEW",
+      "score": 70,
+      "detectionSource": "AI CLASSIFIER",
+      "reasons": [
+        "[AI Phân loại: Pháp lý, luật sư, tranh chấp, kiện tụng, thừa kế, ly hôn] Nội dung đề cập đến mức phạt hành chính và trách nhiệm hình sự, thuộc phạm vi tư vấn pháp luật và xử lý vi phạm pháp luật."
+      ],
+      "isPassed": true
+    }
+  ],
+  "negativeResults": [
+    {
+      "id": 101,
+      "topic": "mẹo chiên trứng vàng xốp thơm ngon",
+      "state": "READY_FOR_APPROVAL",
+      "isCorrect": true
+    },
+    {
+      "id": 102,
+      "topic": "kinh nghiệm du lịch Đà Nẵng 3 ngày 2 đêm tự túc",
+      "state": "READY_FOR_APPROVAL",
+      "isCorrect": true
+    },
+    {
+      "id": 103,
+      "topic": "cách chọn size áo thun nam nữ vừa vặn",
+      "state": "READY_FOR_APPROVAL",
+      "isCorrect": true
+    },
+    {
+      "id": 104,
+      "topic": "mẹo sắp xếp bàn làm việc ngăn nắp",
+      "state": "READY_FOR_APPROVAL",
+      "isCorrect": true
+    },
+    {
+      "id": 105,
+      "topic": "cách chăm sóc cây sen đá trong nhà",
+      "state": "READY_FOR_APPROVAL",
+      "isCorrect": true
+    }
+  ]
+}

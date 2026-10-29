@@ -1,0 +1,320 @@
+{
+  "executedAt": "2026-10-27T01:50:42.491Z",
+  "totalPairs": 10,
+  "optimizedWins": 10,
+  "baselineWins": 0,
+  "ties": 0,
+  "winRate": "100.0%",
+  "results": [
+    {
+      "pairId": 1,
+      "topic": "Bí quyết pha cà phê phin đậm đà không bị chua tại nhà",
+      "industry": "Ẩm thực & F&B",
+      "blindAssignment": {
+        "sample1": "OPTIMIZED",
+        "sample2": "BASELINE"
+      },
+      "judgeScores": {
+        "sample1": {
+          "hook": 9,
+          "authenticity": 9,
+          "tone": 9,
+          "cta": 8,
+          "cleanFormat": 10,
+          "total": 45
+        },
+        "sample2": {
+          "hook": 4,
+          "authenticity": 3,
+          "tone": 4,
+          "cta": 5,
+          "cleanFormat": 4,
+          "total": 20
+        }
+      },
+      "judgeWinner": "SAMPLE 1",
+      "actualWinner": "OPTIMIZED_SYSTEM",
+      "judgeReason": "Sample 1 có mở đầu sinh động, chi tiết và không dùng câu hỏi sáo rỗng; ngôn ngữ tự nhiên, CTA rõ ràng và định dạng sạch, trong khi Sample 2 dùng markdown, câu hỏi sáo rỗng và cụm từ robot, giảm điểm đáng kể.",
+      "durationMs": 2473
+    },
+    {
+      "pairId": 2,
+      "topic": "Kinh nghiệm chống thấm dột góc tường ban công mùa mưa",
+      "industry": "Đời sống & Nhà cửa",
+      "blindAssignment": {
+        "sample1": "OPTIMIZED",
+        "sample2": "BASELINE"
+      },
+      "judgeScores": {
+        "sample1": {
+          "hook": 9,
+          "authenticity": 9,
+          "tone": 8,
+          "cta": 8,
+          "cleanFormat": 10,
+          "total": 44
+        },
+        "sample2": {
+          "hook": 4,
+          "authenticity": 3,
+          "tone": 4,
+          "cta": 5,
+          "cleanFormat": 3,
+          "total": 19
+        }
+      },
+      "judgeWinner": "SAMPLE 1",
+      "actualWinner": "OPTIMIZED_SYSTEM",
+      "judgeReason": "Bài 1 mở đầu sinh động, tránh ngôn ngữ sáo rỗng, tone chuyên gia và CTA khuyến khích thảo luận, đồng thời không dùng markdown; bài 2 dùng câu hỏi rỗng, ngôn ngữ sáo rỗng, CTA chung chung và có markdown.",
+      "durationMs": 2546
+    },
+    {
+      "pairId": 3,
+      "topic": "Mẹo tập cho bé ăn dặm hào hứng không nước mắt",
+      "industry": "Mẹ & Bé",
+      "blindAssignment": {
+        "sample1": "BASELINE",
+        "sample2": "OPTIMIZED"
+      },
+      "judgeScores": {
+        "sample1": {
+          "hook": 6,
+          "authenticity": 6,
+          "tone": 6,
+          "cta": 7,
+          "cleanFormat": 4,
+          "total": 29
+        },
+        "sample2": {
+          "hook": 9,
+          "authenticity": 8,
+          "tone": 8,
+          "cta": 7,
+          "cleanFormat": 9,
+          "total": 41
+        }
+      },
+      "judgeWinner": "SAMPLE 2",
+      "actualWinner": "OPTIMIZED_SYSTEM",
+      "judgeReason": "Bài 2 có hook sinh động, tone chân thực hơn, và không dùng markdown, nên tổng điểm cao hơn.",
+      "durationMs": 2541
+    },
+    {
+      "pairId": 4,
+      "topic": "Cách quản lý chi tiêu gia đình trẻ không áp lực cuối tháng",
+      "industry": "Tài chính cá nhân",
+      "blindAssignment": {
+        "sample1": "OPTIMIZED",
+        "sample2": "BASELINE"
+      },
+      "judgeScores": {
+        "sample1": {
+          "hook": 7,
+          "authenticity": 8,
+          "tone": 8,
+          "cta": 8,
+          "cleanFormat": 10,
+          "total": 41
+        },
+        "sample2": {
+          "hook": 4,
+          "authenticity": 4,
+          "tone": 5,
+          "cta": 5,
+          "cleanFormat": 3,
+          "total": 21
+        }
+      },
+      "judgeWinner": "SAMPLE 1",
+      "actualWinner": "OPTIMIZED_SYSTEM",
+      "judgeReason": "Bài 1 có mở đầu sinh động, gắn liền với tình huống thực tế và không dùng câu hỏi sáo rỗng; ngôn ngữ tự nhiên, CTA mời thảo luận cụ thể và không có markdown. Bài 2 dùng ngôn từ chung chung, có markdown và CTA kém hấp dẫn.",
+      "durationMs": 2534
+    },
+    {
+      "pairId": 5,
+      "topic": "Cách bảo dưỡng xe máy sau khi lội nước mưa ngập đường",
+      "industry": "Kỹ thuật & Đời sống",
+      "blindAssignment": {
+        "sample1": "OPTIMIZED",
+        "sample2": "BASELINE"
+      },
+      "judgeScores": {
+        "sample1": {
+          "hook": 9,
+          "authenticity": 9,
+          "tone": 8,
+          "cta": 8,
+          "cleanFormat": 10,
+          "total": 44
+        },
+        "sample2": {
+          "hook": 5,
+          "authenticity": 6,
+          "tone": 5,
+          "cta": 6,
+          "cleanFormat": 3,
+          "total": 25
+        }
+      },
+      "judgeWinner": "SAMPLE 1",
+      "actualWinner": "OPTIMIZED_SYSTEM",
+      "judgeReason": "Bài mẫu 1 có mở đầu sinh động, hình ảnh thực tế, không dùng câu hỏi sáo rỗng, ngôn ngữ chân thực và CTA rõ ràng, đồng thời không có markdown. Bài mẫu 2 mở đầu chung chung, có markdown và ngôn ngữ hơi máy móc, nên điểm thấp hơn.",
+      "durationMs": 2621
+    },
+    {
+      "pairId": 6,
+      "topic": "Mẹo sắp xếp bàn làm việc tối giản tăng tập trung",
+      "industry": "Góc làm việc & Năng suất",
+      "blindAssignment": {
+        "sample1": "OPTIMIZED",
+        "sample2": "BASELINE"
+      },
+      "judgeScores": {
+        "sample1": {
+          "hook": 9,
+          "authenticity": 9,
+          "tone": 8,
+          "cta": 8,
+          "cleanFormat": 9,
+          "total": 43
+        },
+        "sample2": {
+          "hook": 4,
+          "authenticity": 3,
+          "tone": 4,
+          "cta": 5,
+          "cleanFormat": 2,
+          "total": 18
+        }
+      },
+      "judgeWinner": "SAMPLE 1",
+      "actualWinner": "OPTIMIZED_SYSTEM",
+      "judgeReason": "Sample 1 uses a vivid, concrete opening, avoids buzzwords, sounds like a real expert, includes a specific photo‑comment CTA and follows a clean plain‑text format, outperforming Sample 2.",
+      "durationMs": 3613
+    },
+    {
+      "pairId": 7,
+      "topic": "Chăm sóc da khô nứt nẻ mùa đông tại nhà",
+      "industry": "Làm đẹp & Skincare",
+      "blindAssignment": {
+        "sample1": "OPTIMIZED",
+        "sample2": "BASELINE"
+      },
+      "judgeScores": {
+        "sample1": {
+          "hook": 8,
+          "authenticity": 9,
+          "tone": 9,
+          "cta": 8,
+          "cleanFormat": 10,
+          "total": 44
+        },
+        "sample2": {
+          "hook": 4,
+          "authenticity": 5,
+          "tone": 5,
+          "cta": 6,
+          "cleanFormat": 4,
+          "total": 24
+        }
+      },
+      "judgeWinner": "SAMPLE 1",
+      "actualWinner": "OPTIMIZED_SYSTEM",
+      "judgeReason": "Bài 1 có hook sinh động, nội dung chi tiết và lời kêu gọi rõ ràng, đồng thời không dùng markdown. Bài 2 thiếu hook hấp dẫn, có câu hỏi sáo rỗng và sử dụng markdown, nên điểm thấp hơn.",
+      "durationMs": 2559
+    },
+    {
+      "pairId": 8,
+      "topic": "Cách phối đồ công sở nam trẻ trung không bị già",
+      "industry": "Thời trang & Phong cách",
+      "blindAssignment": {
+        "sample1": "OPTIMIZED",
+        "sample2": "BASELINE"
+      },
+      "judgeScores": {
+        "sample1": {
+          "hook": 8,
+          "authenticity": 9,
+          "tone": 8,
+          "cta": 8,
+          "cleanFormat": 10,
+          "total": 43
+        },
+        "sample2": {
+          "hook": 5,
+          "authenticity": 5,
+          "tone": 5,
+          "cta": 6,
+          "cleanFormat": 4,
+          "total": 25
+        }
+      },
+      "judgeWinner": "SAMPLE 1",
+      "actualWinner": "OPTIMIZED_SYSTEM",
+      "judgeReason": "Bài 1 có hook sinh động, nội dung thực tế, tránh ngôn ngữ sáo rỗng, giọng điệu chuyên gia và CTA khuyến khích thảo luận, đồng thời định dạng sạch. Bài 2 dùng markdown, ngôn ngữ chung chung và CTA kém hấp dẫn.",
+      "durationMs": 3285
+    },
+    {
+      "pairId": 9,
+      "topic": "Cách làm bánh mì bơ tỏi giòn tan bằng nồi chiên không dầu",
+      "industry": "Ẩm thực & Nấu nướng",
+      "blindAssignment": {
+        "sample1": "OPTIMIZED",
+        "sample2": "BASELINE"
+      },
+      "judgeScores": {
+        "sample1": {
+          "hook": 9,
+          "authenticity": 9,
+          "tone": 8,
+          "cta": 6,
+          "cleanFormat": 10,
+          "total": 42
+        },
+        "sample2": {
+          "hook": 5,
+          "authenticity": 5,
+          "tone": 5,
+          "cta": 8,
+          "cleanFormat": 3,
+          "total": 26
+        }
+      },
+      "judgeWinner": "SAMPLE 1",
+      "actualWinner": "OPTIMIZED_SYSTEM",
+      "judgeReason": "Sample 1 có hook hấp dẫn, ngôn ngữ tự nhiên, không dùng markdown và trình bày sạch sẽ, tổng điểm cao hơn đáng kể.",
+      "durationMs": 2380
+    },
+    {
+      "pairId": 10,
+      "topic": "Phương pháp rèn luyện thói quen đọc sách 15 phút mỗi ngày",
+      "industry": "Phát triển bản thân",
+      "blindAssignment": {
+        "sample1": "OPTIMIZED",
+        "sample2": "BASELINE"
+      },
+      "judgeScores": {
+        "sample1": {
+          "hook": 8,
+          "authenticity": 8,
+          "tone": 8,
+          "cta": 8,
+          "cleanFormat": 10,
+          "total": 42
+        },
+        "sample2": {
+          "hook": 5,
+          "authenticity": 4,
+          "tone": 5,
+          "cta": 6,
+          "cleanFormat": 4,
+          "total": 24
+        }
+      },
+      "judgeWinner": "SAMPLE 1",
+      "actualWinner": "OPTIMIZED_SYSTEM",
+      "judgeReason": "Bài 1 mở đầu bằng hình ảnh thực tế sinh động, không dùng câu hỏi sáo rỗng, ngôn ngữ tự nhiên và CTA rõ ràng, đồng thời không có markdown. Bài 2 mang tính chung chung, dùng câu hỏi rỗng và có markdown, khiến nó kém hấp dẫn và ít chân thực hơn.",
+      "durationMs": 1983
+    }
+  ]
+}

@@ -1,0 +1,133 @@
+{
+  "executedAt": "2026-10-27T02:52:52.681Z",
+  "totalTopics": 5,
+  "summary": {
+    "typingEffort": {
+      "manual": "273 ký tự (~82s gõ tay)",
+      "kb": "0 ký tự (0s - Tự động nạp từ KB)",
+      "timeSavedPercent": "100% tiết kiệm thao tác gõ lặp lại"
+    },
+    "missingFactsRate": {
+      "manual": "5/5 bài (100%)",
+      "kb": "0/5 bài (0%)"
+    },
+    "flaggedClaimsCount": {
+      "manual": 0,
+      "kb": 0
+    },
+    "rewriterInterventionRate": {
+      "manual": "0% (0/5 bài)",
+      "kb": "0% (0/5 bài)"
+    }
+  },
+  "details": {
+    "manualMode": {
+      "totalTypingTimeSec": 82,
+      "totalCharsInput": 273,
+      "flaggedClaimsCount": 0,
+      "rewriterInterventions": 0,
+      "missingEssentialFactsCount": 5,
+      "details": [
+        {
+          "topicId": 1,
+          "title": "Máy pha cà phê Espresso gia đình",
+          "charsInput": 52,
+          "typingTimeSec": 16,
+          "flaggedClaims": 0,
+          "violations": [],
+          "missingEssentialFacts": true
+        },
+        {
+          "topicId": 2,
+          "title": "Khóa học lập trình Web Fullstack",
+          "charsInput": 60,
+          "typingTimeSec": 18,
+          "flaggedClaims": 0,
+          "violations": [],
+          "missingEssentialFacts": true
+        },
+        {
+          "topicId": 3,
+          "title": "Buffet lẩu nướng hải sản",
+          "charsInput": 45,
+          "typingTimeSec": 14,
+          "flaggedClaims": 0,
+          "violations": [],
+          "missingEssentialFacts": true
+        },
+        {
+          "topicId": 4,
+          "title": "Combo Serum B5 phục hồi da",
+          "charsInput": 58,
+          "typingTimeSec": 17,
+          "flaggedClaims": 0,
+          "violations": [],
+          "missingEssentialFacts": true
+        },
+        {
+          "topicId": 5,
+          "title": "Gói bảo dưỡng xe máy tổng quát",
+          "charsInput": 58,
+          "typingTimeSec": 17,
+          "flaggedClaims": 0,
+          "violations": [],
+          "missingEssentialFacts": true
+        }
+      ]
+    },
+    "kbMode": {
+      "totalTypingTimeSec": 0,
+      "totalCharsInput": 0,
+      "flaggedClaimsCount": 0,
+      "rewriterInterventions": 0,
+      "missingEssentialFactsCount": 0,
+      "details": [
+        {
+          "topicId": 1,
+          "title": "Máy pha cà phê Espresso gia đình",
+          "charsInput": 0,
+          "typingTimeSec": 0,
+          "flaggedClaims": 0,
+          "violations": [],
+          "missingEssentialFacts": false
+        },
+        {
+          "topicId": 2,
+          "title": "Khóa học lập trình Web Fullstack",
+          "charsInput": 0,
+          "typingTimeSec": 0,
+          "flaggedClaims": 0,
+          "violations": [],
+          "missingEssentialFacts": false
+        },
+        {
+          "topicId": 3,
+          "title": "Buffet lẩu nướng hải sản",
+          "charsInput": 0,
+          "typingTimeSec": 0,
+          "flaggedClaims": 0,
+          "violations": [],
+          "missingEssentialFacts": false
+        },
+        {
+          "topicId": 4,
+          "title": "Combo Serum B5 phục hồi da",
+          "charsInput": 0,
+          "typingTimeSec": 0,
+          "flaggedClaims": 0,
+          "violations": [],
+          "missingEssentialFacts": false
+        },
+        {
+          "topicId": 5,
+          "title": "Gói bảo dưỡng xe máy tổng quát",
+          "charsInput": 0,
+          "typingTimeSec": 0,
+          "flaggedClaims": 0,
+          "violations": [],
+          "missingEssentialFacts": false
+        }
+      ]
+    }
+  }
+}
