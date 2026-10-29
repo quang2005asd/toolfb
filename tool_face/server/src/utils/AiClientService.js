@@ -376,5 +376,6 @@ async function callAiChat({ messages, temperature = 0.7, max_tokens = 4096, json
 
 module.exports = {
   callAiChat,
+  getGroqKey,
   getGeminiKeysPool
 };

@@ -321,12 +321,17 @@ const COLUMN_MIGRATIONS = {
     tiktok_account_id: 'TEXT',
     tiktok_publish_id: 'TEXT',
     topic_key: 'TEXT',
-    force_review: 'INTEGER NOT NULL DEFAULT 0'
+    force_review: 'INTEGER NOT NULL DEFAULT 0',
+    // Knowledge Base (KbFactsService): khách hàng + facts đã dùng trong bài
+    customer_id: 'TEXT',
+    used_fact_ids: 'TEXT'
   },
   AiGeneratedDrafts: {
     topic_key: 'TEXT',
     force_review: 'INTEGER NOT NULL DEFAULT 0',
-    safety_notes: 'TEXT'
+    safety_notes: 'TEXT',
+    customer_id: 'TEXT',
+    used_fact_ids: 'TEXT'
   },
   AppUsers: {
     email: 'TEXT',
