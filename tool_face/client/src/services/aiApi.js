@@ -48,14 +48,16 @@ export const aiApi = {
   },
 
   // ── AI Content Generator ──
-  generatePosts: async ({ prompt, tone, includeHashtags, includeEmoji, enableWebSearch, eventDetails }) => {
+  generatePosts: async ({ prompt, tone, includeHashtags, includeEmoji, enableWebSearch, eventDetails, customerId, facts }) => {
     const response = await api.post('/ai/generate-posts', {
       prompt,
       tone,
       includeHashtags,
       includeEmoji,
       enableWebSearch,
-      eventDetails
+      eventDetails,
+      customerId,
+      facts
     });
     return response.data;
   },
@@ -102,6 +104,42 @@ export const aiApi = {
 
   batchGenerateImages: async ({ drafts, style = 'photorealistic', ratio = '1:1' }) => {
     const response = await api.post('/ai/batch-generate-images', { drafts, style, ratio });
+    return response.data;
+  },
+
+  // ── Knowledge Base (Facts khách / sản phẩm) ──
+  getKbCustomers: async () => {
+    const response = await api.get('/kb/customers');
+    return response.data;
+  },
+
+  getKbFacts: async (customerId, status = 'ALL') => {
+    const response = await api.get('/kb/facts', { params: { customer_id: customerId, status } });
+    return response.data;
+  },
+
+  createKbFact: async (data) => {
+    const response = await api.post('/kb/facts', data);
+    return response.data;
+  },
+
+  updateKbFact: async (id, data) => {
+    const response = await api.put(`/kb/facts/${id}`, data);
+    return response.data;
+  },
+
+  confirmKbFact: async (id) => {
+    const response = await api.post(`/kb/facts/${id}/confirm`);
+    return response.data;
+  },
+
+  retireKbFact: async (id) => {
+    const response = await api.post(`/kb/facts/${id}/retire`);
+    return response.data;
+  },
+
+  deleteKbFact: async (id) => {
+    const response = await api.delete(`/kb/facts/${id}`);
     return response.data;
   }
 };

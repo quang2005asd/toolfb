@@ -18,28 +18,92 @@ function removeAccents(str = '') {
 }
 
 /**
- * Chuẩn hóa số trong chuỗi để so sánh facts (4.990.000đ, 4,990,000, 4.99tr -> 4990000)
+ * Chuẩn hóa số trong chuỗi để so sánh facts (4.990.000đ, 4,990,000, 4.99tr -> 4990000, 185k, 185 nghìn -> 185000)
  */
 function extractNormalizedNumbers(text = '') {
   if (!text) return [];
   const numbers = [];
-  // Tìm các định dạng tiền tệ hoặc số có dấu chấm/phẩy: 4.990.000, 4,990,000, 1.200.000
+  const seenRaw = new Set();
+
+  // 1. Dạng k (185k, 185 k, 1.5k)
+  const kRegex = /\b(\d+(?:[.,]\d+)?)\s*k\b/gi;
+  let match;
+  while ((match = kRegex.exec(text)) !== null) {
+    const raw = match[0].trim();
+    if (!seenRaw.has(raw)) {
+      seenRaw.add(raw);
+      const val = parseFloat(match[1].replace(',', '.'));
+      if (!isNaN(val)) {
+        numbers.push({ raw, normalized: String(Math.round(val * 1000)), type: 'currency' });
+      }
+    }
+  }
+
+  // 2. Dạng nghìn / ngàn (185 nghìn, 185 ngàn)
+  const thousandRegex = /\b(\d+(?:[.,]\d+)?)\s*(?:nghìn|ngàn|ngan)\s*(?:đ|dong|vnd)?\b/gi;
+  while ((match = thousandRegex.exec(text)) !== null) {
+    const raw = match[0].trim();
+    if (!seenRaw.has(raw)) {
+      seenRaw.add(raw);
+      const val = parseFloat(match[1].replace(',', '.'));
+      if (!isNaN(val)) {
+        numbers.push({ raw, normalized: String(Math.round(val * 1000)), type: 'currency' });
+      }
+    }
+  }
+
+  // 3. Dạng triệu / tr (4.99tr, 4.99 triệu, 2 tr)
+  const millionRegex = /\b(\d+(?:[.,]\d+)?)\s*(?:tr|trieu|triệu)\s*(?:đ|dong|vnd)?\b/gi;
+  while ((match = millionRegex.exec(text)) !== null) {
+    const raw = match[0].trim();
+    if (!seenRaw.has(raw)) {
+      seenRaw.add(raw);
+      const val = parseFloat(match[1].replace(',', '.'));
+      if (!isNaN(val)) {
+        numbers.push({ raw, normalized: String(Math.round(val * 1000000)), type: 'currency' });
+      }
+    }
+  }
+
+  // 4. Định dạng tiền tệ có dấu phân cách: 185.000đ, 185,000, 4.990.000
   const currencyMatches = text.match(/\b\d{1,3}(?:[.,]\d{3})+(?:[.,]\d+)?\s*(?:đ|dong|vnd)?\b/gi) || [];
   currencyMatches.forEach((m) => {
-    const rawVal = m.replace(/[.,\sđvnddong]/gi, '');
-    if (rawVal) numbers.push({ raw: m.trim(), normalized: rawVal, type: 'currency' });
+    const raw = m.trim();
+    if (!seenRaw.has(raw)) {
+      seenRaw.add(raw);
+      const rawVal = m.replace(/[.,\sđvnddong]/gi, '');
+      if (rawVal) numbers.push({ raw, normalized: rawVal, type: 'currency' });
+    }
   });
 
-  // Tìm phần trăm: 20%, 15%, 80%
+  // 5. Số liền kề ký hiệu tiền tệ: 185000đ
+  const plainCurrencyRegex = /\b(\d{4,})\s*(?:đ|dong|vnd)\b/gi;
+  while ((match = plainCurrencyRegex.exec(text)) !== null) {
+    const raw = match[0].trim();
+    if (!seenRaw.has(raw)) {
+      seenRaw.add(raw);
+      numbers.push({ raw, normalized: match[1], type: 'currency' });
+    }
+  }
+
+  // 6. Phần trăm: 20%, 15%, 80%
   const percentMatches = text.match(/\b\d+(\.\d+)?\s*%/g) || [];
   percentMatches.forEach((m) => {
-    numbers.push({ raw: m.trim(), normalized: m.replace(/\s+/g, ''), type: 'percent' });
+    const raw = m.trim();
+    if (!seenRaw.has(raw)) {
+      seenRaw.add(raw);
+      numbers.push({ raw, normalized: m.replace(/\s+/g, ''), type: 'percent' });
+    }
   });
 
-  // Tìm khoảng cách / đơn vị đo: 5km, 65m2, 6L, 1800W, 5mg
-  const unitMatches = text.match(/\b\d+(\.\d+)?\s*(?:km|m2|m²|l|lit|lít|w|watt|mg|mcg|pn|phòng ngủ)\b/gi) || [];
+  // 7. Khoảng cách / đơn vị đo / định lượng: 5km, 65m2, 6L, 1800W, 5mg, 250g, 500ml
+  const unitMatches = text.match(/\b\d+(\.\d+)?\s*(?:km|m2|m²|l|lit|lít|w|watt|mg|mcg|pn|phòng ngủ|g|kg|ml)\b/gi) || [];
   unitMatches.forEach((m) => {
-    numbers.push({ raw: m.trim(), normalized: m.replace(/\s+/g, '').toLowerCase(), type: 'measurement' });
+    const raw = m.trim();
+    if (!seenRaw.has(raw)) {
+      seenRaw.add(raw);
+      numbers.push({ raw, normalized: m.replace(/\s+/g, '').toLowerCase(), type: 'measurement' });
+    }
   });
 
   return numbers;
@@ -143,6 +207,21 @@ function verifyClaimsByCode(content = '', facts = '', options = {}) {
         type: 'UNGROUNDED_HOOK_OR_FEAR',
         claim: item.pattern,
         message: item.msg
+      });
+    }
+  }
+
+  // 2.3. Kiểm tra chất liệu sản phẩm (Claim không phải số) ngoài facts
+  const UNBACKED_MATERIAL_PATTERNS = [
+    'cotton', 'da bo', 'lua to tam', 'vai dui', 'da ca sau', 'da pu', 'denim',
+    'bac 925', 'vang 18k', 'vang 24k', 'go soi', 'kim cuong', 'long vu'
+  ];
+  for (const mat of UNBACKED_MATERIAL_PATTERNS) {
+    if (unaccContent.includes(mat) && !unaccFacts.includes(mat)) {
+      violations.push({
+        type: 'UNBACKED_MATERIAL',
+        claim: mat,
+        message: `Khẳng định chất liệu sản phẩm "${mat}" không có trong facts cung cấp.`
       });
     }
   }
