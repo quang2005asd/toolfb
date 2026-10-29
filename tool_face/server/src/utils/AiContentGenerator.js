@@ -43,8 +43,23 @@ const {
   evaluateContentSafetyAsync,
   handleContentMutation
 } = require('./PostStateMachine');
-const { validateContent } = require('./ContentValidator');
-const kbFactsService = require('./KbFactsService');
+// Phần riêng của AI Studio (KB-facts, bộ kiểm duyệt theo ngành): nạp khi cần — thiếu file hoặc lỗi
+// thì bộ tạo bài chung vẫn chạy như trước (không facts, không kiểm duyệt ngành), máy chủ không sập
+const optionalModules = new Map();
+function optionalModule(path, label) {
+  if (!optionalModules.has(path)) {
+    let loaded = null;
+    try {
+      loaded = require(path);
+    } catch (error) {
+      console.warn(`[AI Studio] Tạm tắt ${label}: ${error.message}`);
+    }
+    optionalModules.set(path, loaded);
+  }
+  return optionalModules.get(path);
+}
+const kbFactsModule = () => optionalModule('./KbFactsService', 'KB-facts');
+const contentValidatorModule = () => optionalModule('./ContentValidator', 'bộ kiểm duyệt nội dung theo ngành');
 
 // ═══ BỘ LỌC LÀM SẠCH BÀI ĐĂNG FACEBOOK (XÓA TRIỆT ĐỂ DẤU * VÀ MARKDOWN RÁC) ═══
 function cleanFacebookContent(text) {
@@ -367,7 +382,8 @@ async function generatePosts(userId, options = {}) {
 
   // Nạp facts CONFIRMED và còn hạn từ Knowledge Base nếu có chọn khách hàng
   let kbFacts = [];
-  if (customerId && customerId.trim()) {
+  const kbFactsService = customerId && customerId.trim() ? kbFactsModule() : null;
+  if (kbFactsService) {
     try {
       kbFacts = await kbFactsService.getActiveFactsForPrompt(customerId.trim());
       if (kbFacts.length > 0) {
@@ -551,12 +567,20 @@ ${layer3Constraints}
 
     // Chốt chặn bằng code (Code Content Validator against pack rules & JSON platform/industry rules)
     const ruleViolations = validatePostAgainstRules(cleanTitle, cleanContent, pack, mergedRules);
-    const contentValidation = validateContent({
-      title: cleanTitle,
-      content: cleanContent,
-      platform: 'facebook',
-      industryKey: pack.parent_key || pack.topic_key || 'general'
-    });
+    let contentValidation = { isValid: true, errors: [] };
+    const contentValidator = contentValidatorModule();
+    if (contentValidator) {
+      try {
+        contentValidation = contentValidator.validateContent({
+          title: cleanTitle,
+          content: cleanContent,
+          platform: 'facebook',
+          industryKey: pack.parent_key || pack.topic_key || 'general'
+        });
+      } catch (error) {
+        console.warn('[AI Studio] Bộ kiểm duyệt nội dung theo ngành lỗi, bỏ qua bước này:', error.message);
+      }
+    }
 
     if (!ruleViolations.isValid || !contentValidation.isValid) {
       const hasCritical = (ruleViolations.violations || []).some((v) => v.includes('nghiêm trọng') || v.includes('Markdown')) ||
@@ -613,8 +637,9 @@ ${layer3Constraints}
     savedDrafts.push(formatDraft(insertedDraft));
 
     // Ghi nhận Audit Log PostFacts (Item 5: Lịch sử và truy vết bài)
-    if (kbFacts && kbFacts.length > 0) {
-      await kbFactsService.recordPostFactsUsage(insertedDraft.id, customerId, kbFacts);
+    if (kbFactsService && kbFacts && kbFacts.length > 0) {
+      await kbFactsService.recordPostFactsUsage(insertedDraft.id, customerId, kbFacts)
+        .catch((error) => console.warn('[AI Studio] Không ghi được nhật ký facts:', error.message));
     }
   }
 

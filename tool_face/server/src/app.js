@@ -70,7 +70,13 @@ const {
 } = require('./utils/AppUserService');
 const { PERMISSIONS, assignableRoles, hasPermission, isTopRole, publicRoles, rolesAtOrAbove, rolesBelow } = require('./utils/Roles');
 const aiContentGenerator = require('./utils/AiContentGenerator');
-const kbFactsService = require('./utils/KbFactsService');
+// Phần riêng KB-facts (AI Studio): module độc lập — thiếu file hoặc lỗi thì chỉ tắt /api/kb, máy chủ vẫn chạy
+let kbModule = null;
+try {
+  kbModule = require('./modules/kb/kb.routes');
+} catch (error) {
+  console.warn('[KB-facts] Tạm tắt module KB-facts:', error.message);
+}
 const { cleanFacebookContent } = aiContentGenerator;
 const { callAiChat } = require('./utils/AiClientService');
 const aiImageService = require('./utils/AiImageService');
@@ -113,6 +119,7 @@ app.use(express.json({
 }));
 app.use('/api', loadSession);
 app.use('/api/comment-ai', commentAiRouter);
+if (kbModule) app.use('/api/kb', kbModule.kbRouter);
 // Đường Webhook thứ hai dùng chung bộ xử lý của /api/webhooks/messenger (chữ ký theo Meta App của người dùng)
 app.post('/api/webhooks/facebook', handleMetaWebhook);
 app.use('/api/webhooks/facebook', facebookWebhookRouter);
@@ -675,11 +682,13 @@ app.post('/api/ai/chat', requireAuth, async (req, res) => {
 // /api/ai/generate-draft: tên route trên nhánh AI Studio (KB-facts) — dùng chung một xử lý
 app.post(['/api/ai/generate-posts', '/api/ai/generate-draft'], requireAuth, async (req, res) => {
   try {
-    const { prompt, tone, includeHashtags, includeEmoji, customerId, facts, eventDetails } = req.body;
+    const { prompt, tone, includeHashtags, includeEmoji, facts, eventDetails } = req.body;
+    // Khách hàng KB chỉ dùng khi module KB-facts đang chạy
+    const customerId = kbModule && req.body?.customerId ? String(req.body.customerId).trim() : '';
 
     // Kiểm tra cách ly dữ liệu: User chỉ được sinh bài bằng facts của khách mình quản lý
-    if (customerId && String(customerId).trim() && req.user?.role !== 'admin') {
-      const hasAccess = await kbFactsService.checkUserHasCustomerAccess(req.user.sub, String(customerId).trim(), req.user.role);
+    if (customerId && req.user?.role !== 'admin') {
+      const hasAccess = await kbModule.kbFactsService.checkUserHasCustomerAccess(req.user.sub, customerId, req.user.role);
       if (!hasAccess) {
         return res.status(403).json({
           success: false,
@@ -693,7 +702,7 @@ app.post(['/api/ai/generate-posts', '/api/ai/generate-draft'], requireAuth, asyn
       tone: tone || '',
       includeHashtags: includeHashtags !== false,
       includeEmoji: includeEmoji !== false,
-      customerId: customerId ? String(customerId) : '',
+      customerId,
       facts: facts || '',
       eventDetails: eventDetails || ''
     });
@@ -772,156 +781,6 @@ app.delete('/api/ai/drafts/:id', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('[AI Delete Draft Error]', error.message);
     return res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// ═══ KNOWLEDGE BASE LOẠI 3: FACTS KHÁCH / SẢN PHẨM ═══
-app.get('/api/kb/customers', requireAuth, async (req, res) => {
-  try {
-    const customers = await kbFactsService.getKbCustomers(req.user.sub, req.user.role);
-    return res.json({ success: true, customers });
-  } catch (error) {
-    console.error('[KB Customers Error]', error.message);
-    return res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-app.post('/api/kb/assign-customer', requireAuth, async (req, res) => {
-  try {
-    const userRole = req.user?.role || 'user';
-    if (!['admin', 'manager'].includes(userRole.toLowerCase())) {
-      return res.status(403).json({ success: false, message: 'Chỉ quản trị viên mới có quyền gán quyền khách hàng.' });
-    }
-    const { user_id, customer_id, role = 'member' } = req.body || {};
-    if (!user_id || !customer_id) {
-      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp user_id và customer_id.' });
-    }
-    const result = await kbFactsService.assignUserToCustomer(user_id, customer_id, role);
-    return res.json({ success: true, ...result });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-app.get('/api/kb/facts', requireAuth, async (req, res) => {
-  try {
-    const { customer_id, status } = req.query;
-    if (!customer_id) {
-      return res.status(400).json({ success: false, message: 'Thiếu tham số customer_id.' });
-    }
-    const facts = await kbFactsService.getFactsByCustomer(customer_id, status || 'ALL', req.user.sub, req.user.role);
-    return res.json({ success: true, facts });
-  } catch (error) {
-    console.error('[KB Facts Error]', error.message);
-    const status = error.message.includes('Quyền truy cập bị từ chối') ? 403 : 500;
-    return res.status(status).json({ success: false, message: error.message });
-  }
-});
-
-app.post('/api/kb/facts', requireAuth, async (req, res) => {
-  try {
-    const { customer_id, fact_type, content, source, expires_at } = req.body || {};
-    const actorRole = req.user?.role || 'user';
-    const fact = await kbFactsService.createFact({
-      customerId: customer_id,
-      factType: fact_type,
-      content,
-      source,
-      expiresAt: expires_at,
-      actor: req.user?.sub || 'user',
-      actorRole
-    });
-    return res.json({ success: true, fact });
-  } catch (error) {
-    console.error('[KB Create Fact Error]', error.message);
-    const status = error.message.includes('Quyền truy cập bị từ chối') ? 403 : 500;
-    return res.status(status).json({ success: false, message: error.message });
-  }
-});
-
-app.put('/api/kb/facts/:id', requireAuth, async (req, res) => {
-  try {
-    const { fact_type, content, source, expires_at, expected_updated_at, expectedUpdatedAt } = req.body || {};
-    const actorRole = req.user?.role || 'user';
-    const fact = await kbFactsService.updateFact(req.params.id, {
-      factType: fact_type,
-      content,
-      source,
-      expiresAt: expires_at,
-      actorId: req.user?.sub || 'user',
-      actorRole,
-      expectedUpdatedAt: expected_updated_at || expectedUpdatedAt || null
-    });
-    return res.json({ success: true, fact });
-  } catch (error) {
-    console.error('[KB Update Fact Error]', error.message);
-    let status = 500;
-    if (error.message.includes('409 Conflict') || error.message.includes('Xung đột đồng thời')) {
-      status = 409;
-    } else if (error.message.includes('Quyền truy cập bị từ chối')) {
-      status = 403;
-    } else if (error.message.includes('vượt quá 1000 ký tự') || error.message.includes('nguồn chứng thực')) {
-      status = 400;
-    }
-    return res.status(status).json({ success: false, message: error.message });
-  }
-});
-
-app.post('/api/kb/facts/:id/confirm', requireAuth, async (req, res) => {
-  try {
-    const userRole = req.user?.role || 'user';
-    const { expected_updated_at, expectedUpdatedAt } = req.body || {};
-    const fact = await kbFactsService.confirmFact(req.params.id, {
-      confirmedBy: req.user?.sub || 'reviewer',
-      confirmedRole: userRole,
-      expectedUpdatedAt: expected_updated_at || expectedUpdatedAt || null
-    });
-    return res.json({ success: true, fact });
-  } catch (error) {
-    console.error('[KB Confirm Fact Error]', error.message);
-    let status = 500;
-    if (error.message.includes('409 Conflict') || error.message.includes('Xung đột đồng thời')) {
-      status = 409;
-    } else if (error.message.includes('Chỉ kiểm duyệt viên') || error.message.includes('Quyền truy cập bị từ chối')) {
-      status = 403;
-    } else if (error.message.includes('Xung đột quyền lợi')) {
-      status = 400;
-    }
-    return res.status(status).json({ success: false, message: error.message });
-  }
-});
-
-app.get('/api/kb/expired-published-alerts', requireAuth, async (req, res) => {
-  try {
-    const alerts = await kbFactsService.checkPublishedPostsWithExpiredFacts();
-    return res.json({ success: true, count: alerts.length, alerts });
-  } catch (error) {
-    console.error('[KB Expired Published Alerts Error]', error.message);
-    return res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-app.post('/api/kb/facts/:id/retire', requireAuth, async (req, res) => {
-  try {
-    const actorRole = req.user?.role || 'user';
-    const fact = await kbFactsService.retireFact(req.params.id, req.user?.sub, actorRole);
-    return res.json({ success: true, fact });
-  } catch (error) {
-    console.error('[KB Retire Fact Error]', error.message);
-    const status = error.message.includes('Quyền truy cập bị từ chối') ? 403 : 500;
-    return res.status(status).json({ success: false, message: error.message });
-  }
-});
-
-app.delete('/api/kb/facts/:id', requireAuth, async (req, res) => {
-  try {
-    const userRole = req.user?.role || 'user';
-    const deleted = await kbFactsService.deleteFact(req.params.id, req.user?.sub, userRole);
-    return res.json({ success: true, deleted });
-  } catch (error) {
-    console.error('[KB Delete Fact Error]', error.message);
-    const status = (error.message.includes('Chỉ quản trị viên') || error.message.includes('Quyền truy cập bị từ chối')) ? 403 : 500;
-    return res.status(status).json({ success: false, message: error.message });
   }
 });
 
