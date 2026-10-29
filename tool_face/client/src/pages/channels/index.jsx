@@ -37,7 +37,7 @@ import useAuth from '../../hooks/useAuth';
 import { PERMISSIONS } from '../../utils/permissions';
 import channelApi from '../../services/channelApi';
 import channelGroupApi from '../../services/channelGroupApi';
-import { markRedirectLogin, openLoginPopup, subscribeLoginResult, takeRedirectLoginPending } from '../../utils/facebookLoginBridge';
+import { FACEBOOK_HOME, markRedirectLogin, openLoginPopup, subscribeLoginResult, takeRedirectLoginPending } from '../../utils/facebookLoginBridge';
 
 const PRESET_COLORS = ['#00f2fe', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#3b82f6', '#f43f5e'];
 
@@ -166,7 +166,8 @@ export default function ChannelsPage() {
 
   // Kết quả Facebook Login (từ cửa sổ phụ hoặc khi cả trang quay về): báo thành công hoặc mở hộp thoại hướng dẫn
   // reason: 'no_permission' (Facebook không cấp quyền Fanpage) | 'no_pages' (nick chưa có Fanpage); missing: quyền còn thiếu
-  const handleLoginResult = ({ connected, token, error: code, reason, missing }) => {
+  // nick / nickId: nick Facebook vừa đăng nhập (Facebook tự chọn theo phiên trong trình duyệt) — luôn hiện để phát hiện nhầm nick
+  const handleLoginResult = ({ connected, token, error: code, reason, missing, nick, nickId }) => {
     const attempt = loginAttemptRef.current;
     attempt.active = false;
     clearTimeout(attempt.incompleteTimer);
@@ -183,8 +184,10 @@ export default function ChannelsPage() {
       return;
     }
     const missingScopes = String(missing || '').split(',').filter(Boolean);
+    const loginNick = nick ? { id: nickId ? String(nickId) : null, name: String(nick) } : null;
     if (reason === 'no_permission') {
-      setFbLogin({ phase: 'no-permission', missing: missingScopes, source: 'login' });
+      // Thiếu quyền Fanpage: tool chưa lưu nick này
+      setFbLogin({ phase: 'no-permission', missing: missingScopes, source: 'login', nick: loginNick && { ...loginNick, saved: false } });
       return;
     }
     loadData();
@@ -193,9 +196,12 @@ export default function ChannelsPage() {
     if (Number(connected) > 0) {
       const longLived = token === 'long' || token === 'never';
       setFbLogin(null);
-      setNotice(`✅ Đã đăng nhập Facebook và liên kết ${connected} Fanpage.${longLived ? ' Token dài hạn — token Fanpage sẽ không hết hạn.' : ''}${missingScopes.length ? ' Một số tính năng còn thiếu quyền — xem bảng trạng thái phía trên.' : ''}`);
+      setNotice({
+        text: `✅ Đã ${loginNick ? `kết nối nick ${loginNick.name}` : 'đăng nhập Facebook'} và liên kết ${connected} Fanpage.${longLived ? ' Token dài hạn — token Fanpage sẽ không hết hạn.' : ''}${missingScopes.length ? ' Một số tính năng còn thiếu quyền — xem bảng trạng thái phía trên.' : ''}`,
+        nick: loginNick && { ...loginNick, saved: true }
+      });
     } else {
-      setFbLogin({ phase: 'no-pages', source: 'login' });
+      setFbLogin({ phase: 'no-pages', source: 'login', nick: loginNick && { ...loginNick, saved: true } });
     }
   };
   loginResultHandlerRef.current = handleLoginResult;
@@ -213,20 +219,22 @@ export default function ChannelsPage() {
   // Cả trang quay về từ Facebook (khi trình duyệt chặn cửa sổ phụ)
   useEffect(() => {
     if (!router.isReady) return;
-    const { connected, token, error: oauthError, reason, missing } = router.query;
+    const { connected, token, error: oauthError, reason, missing, nick, nickId } = router.query;
     const pending = takeRedirectLoginPending();
     if (connected === undefined && !oauthError) {
       // Bấm Quay lại từ trang lỗi của Facebook (vd. “Ứng dụng không hoạt động”) mà chưa đăng nhập xong
       if (pending) setFbLogin({ phase: 'incomplete' });
       return;
     }
-    handleLoginResult({ connected, token, error: oauthError, reason, missing });
+    handleLoginResult({ connected, token, error: oauthError, reason, missing, nick, nickId });
     const rest = { ...router.query };
     delete rest.connected;
     delete rest.token;
     delete rest.error;
     delete rest.reason;
     delete rest.missing;
+    delete rest.nick;
+    delete rest.nickId;
     router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
   }, [router.isReady]);
 
@@ -310,6 +318,32 @@ export default function ChannelsPage() {
     setFbLogin({ phase: 'incomplete', appId: attempt.appId });
   };
 
+  // Facebook vào nhầm nick: tool không chọn được nick và không xóa được phiên Facebook trong trình duyệt,
+  // nên mở trang chủ Facebook (cùng cửa sổ đăng nhập) để người dùng đổi trang cá nhân / đăng xuất, rồi đăng nhập lại
+  const openSwitchNick = (nick = null) => {
+    const attempt = loginAttemptRef.current;
+    attempt.active = false;
+    clearTimeout(attempt.incompleteTimer);
+    attempt.incompleteTimer = null;
+    const popup = openLoginPopup(FACEBOOK_HOME);
+    popupRef.current = popup;
+    setNotice('');
+    setFbLogin({ phase: 'switch-nick', appId: attempt.appId, nick, popupBlocked: !popup });
+  };
+
+  // Gỡ nick Facebook trả về nhầm (cùng toàn bộ Fanpage của nick đó) ngay trong hộp thoại đổi nick
+  const removeLoginNick = async (nick) => {
+    if (!nick?.id || !confirm(`Gỡ nick Facebook "${nick.name}" khỏi tool? Toàn bộ Fanpage của nick này cũng được gỡ.`)) return;
+    try {
+      await channelApi.disconnectAccount(nick.id);
+      setFbLogin((current) => (current?.phase === 'switch-nick' ? { ...current, nick: { ...nick, removed: true } } : current));
+      await loadData();
+      loadFbStatus(true);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Không gỡ được nick Facebook.');
+    }
+  };
+
   const saveOwnMetaApp = async (appId, appSecret, label) => {
     const res = await channelApi.saveMyMetaApp(appId, appSecret, label);
     await loadFbStatus(true);
@@ -327,10 +361,10 @@ export default function ChannelsPage() {
     }
   };
 
-  // Thông báo thành công tự ẩn sau 8 giây (bấm × để tắt ngay)
+  // Thông báo thành công tự ẩn sau 8 giây (bấm × để tắt ngay); thông báo đăng nhập có nút "Không phải nick này?" giữ lâu hơn
   useEffect(() => {
     if (!notice) return undefined;
-    const timer = setTimeout(() => setNotice(''), 8000);
+    const timer = setTimeout(() => setNotice(''), notice.nick ? 20000 : 8000);
     return () => clearTimeout(timer);
   }, [notice]);
 
@@ -384,6 +418,20 @@ export default function ChannelsPage() {
     }
     return Object.values(map);
   }, [accounts, channels]);
+
+  // Thanh "Lọc theo nick FB": chỉ nick còn Fanpage (nick đã gỡ hết Fanpage vẫn ở tab "Nick Facebook đã kết nối" để gỡ hẳn)
+  const pageCountOf = (accId) => channels.filter((c) => (accId === 'manual' ? !c.fbAccountId : c.fbAccountId === accId)).length;
+  const filterAccounts = useMemo(() => {
+    const list = accountList.filter((acc) => pageCountOf(acc.id) > 0);
+    if (!list.some((acc) => acc.id === 'manual') && channels.some((c) => !c.fbAccountId)) {
+      list.push({ id: 'manual', name: 'Thêm thủ công / Token riêng', avatar: null });
+    }
+    return list;
+  }, [accountList, channels]);
+
+  useEffect(() => {
+    if (selectedFbFilter !== 'all' && !filterAccounts.some((acc) => acc.id === selectedFbFilter)) setSelectedFbFilter('all');
+  }, [filterAccounts, selectedFbFilter]);
 
   const applySyncResult = (res) => {
     if (Array.isArray(res.channels)) setChannels(res.channels);
@@ -801,7 +849,10 @@ export default function ChannelsPage() {
       {notice && typeof document !== 'undefined' && createPortal(
         <div className="notice channel-toast" role="status" aria-live="polite">
           <Check size={16} aria-hidden="true" />
-          <span>{notice}</span>
+          <span>
+            {typeof notice === 'string' ? notice : notice.text}
+            {notice.nick && <> <button type="button" className="auth-inline-link" onClick={() => openSwitchNick(notice.nick)}>Không phải nick này?</button></>}
+          </span>
           <button type="button" className="channel-toast-close" onClick={() => setNotice('')} aria-label="Đóng thông báo"><X size={14} /></button>
         </div>,
         document.body
@@ -820,6 +871,8 @@ export default function ChannelsPage() {
         onLoginWith={(appId) => startFacebookLogin(appId)}
         onFocusPopup={focusLoginPopup}
         onAppNotActive={handleAppNotActive}
+        onSwitchNick={openSwitchNick}
+        onRemoveNick={removeLoginNick}
         onOwnApp={(phase) => setFbLogin({ phase })}
         onSaveOwnApp={saveOwnMetaApp}
         onRemoveOwnApp={removeOwnMetaApp}
@@ -1082,13 +1135,13 @@ export default function ChannelsPage() {
                 {checkingTokens ? 'Đang kiểm tra token…' : 'Kiểm tra sức khỏe Token'}
               </button>
               <div className="muted" style={{ fontSize: 12 }}>
-                Tổng cộng: <strong style={{ color: 'var(--blue)' }}>{channels.length}</strong> Fanpage ({accountList.length} tài khoản FB)
+                Tổng cộng: <strong style={{ color: 'var(--blue)' }}>{channels.length}</strong> Fanpage ({filterAccounts.length} tài khoản FB)
               </div>
             </div>
           </div>
 
           {/* THANH LỌC THEO TỪNG NICK FACEBOOK */}
-          {accountList.length > 0 && (
+          {channels.length > 0 && filterAccounts.length > 0 && (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 18, overflowX: 'auto', paddingBottom: 6 }}>
               <span className="muted" style={{ fontSize: 12, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}>
                 <Users size={14} style={{ color: 'var(--blue)' }} /> Lọc theo nick FB:
@@ -1112,8 +1165,8 @@ export default function ChannelsPage() {
               >
                 Tất cả ({channels.length})
               </button>
-              {accountList.map((acc) => {
-                const count = channels.filter((c) => (acc.id === 'manual' ? !c.fbAccountId : c.fbAccountId === acc.id)).length;
+              {filterAccounts.map((acc) => {
+                const count = pageCountOf(acc.id);
                 const isActive = selectedFbFilter === acc.id;
                 return (
                   <button

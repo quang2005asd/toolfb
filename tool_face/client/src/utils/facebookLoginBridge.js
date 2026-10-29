@@ -7,6 +7,8 @@ const PENDING_KEY = 'tool-face-fb-login-pending';
 const PENDING_TTL_MS = 15 * 60 * 1000;
 
 export const POPUP_NAME = 'tool-face-fb-login';
+// Trang chủ Facebook: mở trong cùng cửa sổ đăng nhập để người dùng đổi trang cá nhân / đăng xuất nick đang dùng
+export const FACEBOOK_HOME = 'https://www.facebook.com/';
 
 export function publishLoginResult(result) {
   const payload = { ...result, id: `${Date.now()}-${Math.random().toString(36).slice(2)}` };

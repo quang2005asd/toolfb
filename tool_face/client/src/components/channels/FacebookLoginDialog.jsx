@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, AppWindow, CheckCircle2, KeyRound, Loader2, LogIn, PlusCircle, ShieldAlert, Trash2, X } from 'lucide-react';
-import { CreatePageSteps, Ext, OwnAppCreateSteps, OwnAppEnterSteps, OwnTokenSteps, UseCasePermissionBlocks } from './FacebookGuideSteps';
+import { AlertTriangle, AppWindow, CheckCircle2, KeyRound, Loader2, LogIn, PlusCircle, RefreshCw, ShieldAlert, Trash2, UserRound, X } from 'lucide-react';
+import { CreatePageSteps, Ext, OwnAppCreateSteps, OwnAppEnterSteps, OwnTokenSteps, SwitchNickSteps, UseCasePermissionBlocks } from './FacebookGuideSteps';
 
 const ERRORS = {
   oauth_denied: {
@@ -118,8 +118,55 @@ function OwnAppForm({ onSave, onLoginWith }) {
   );
 }
 
+// Nick Facebook vừa đăng nhập: Facebook tự chọn theo phiên trong trình duyệt → luôn cho người dùng thấy và đổi nếu nhầm
+function LoginNick({ nick, onSwitchNick }) {
+  if (!nick?.name) return null;
+  return (
+    <div className="fb-login-cause">
+      <strong><UserRound size={14} aria-hidden="true" /> Facebook vừa đăng nhập nick “{nick.name}”</strong>
+      <span>Không phải nick bạn muốn kết nối? Đổi nick trong cửa sổ Facebook rồi đăng nhập lại.</span>
+      <button type="button" className="button button-secondary fb-guide-action" onClick={() => onSwitchNick(nick)}><RefreshCw size={15} /> Không phải nick này — đổi nick</button>
+    </div>
+  );
+}
+
+// Đổi nick: mở trang chủ Facebook trong cửa sổ đăng nhập, người dùng đổi trang cá nhân / đăng xuất rồi đăng nhập lại
+function SwitchNickBody({ state, onRemoveNick }) {
+  const nick = state.nick;
+  let nickNote = <span>Tool chưa lưu nick này.</span>;
+  if (nick?.removed) nickNote = <span>Đã gỡ nick này (và Fanpage của nó) khỏi tool.</span>;
+  else if (nick?.saved && nick.id) {
+    nickNote = (
+      <>
+        <span>Nick này đã được thêm vào tool. Không dùng nick này thì gỡ khỏi tool:</span>
+        <button type="button" className="button button-quiet fb-guide-action" onClick={() => onRemoveNick(nick)}><Trash2 size={14} /> Gỡ nick “{nick.name}” khỏi tool</button>
+      </>
+    );
+  }
+  return (
+    <>
+      <p className="fb-login-lead">
+        Tool không tự chọn nick và không lưu phiên đăng nhập Facebook: Facebook luôn dùng nick (trang cá nhân) <em>đang đăng nhập trong trình duyệt này</em>, và chỉ Facebook / trình duyệt mới xóa được phiên đó.
+        {' '}{state.popupBlocked
+          ? <>Trình duyệt chặn cửa sổ phụ — mở <Ext href="https://www.facebook.com/">facebook.com</Ext> ở tab mới để đổi nick.</>
+          : 'Tool đã mở trang Facebook trong cửa sổ đăng nhập — đổi nick ngay ở đó:'}
+      </p>
+      {nick?.name && (
+        <div className="fb-login-cause">
+          <strong>Lần vừa rồi Facebook trả về nick “{nick.name}”</strong>
+          {nickNote}
+        </div>
+      )}
+      <div className="fb-login-cause is-main">
+        <strong>Đổi sang đúng nick trong cửa sổ Facebook</strong>
+        <SwitchNickSteps />
+      </div>
+    </>
+  );
+}
+
 // Facebook chặn đăng nhập ("Ứng dụng không hoạt động") hoặc người dùng đóng cửa sổ trước khi xong
-function IncompleteBody({ state, apps, onOwnApp, onLoginWith }) {
+function IncompleteBody({ state, apps, onOwnApp, onLoginWith, onSwitchNick }) {
   const used = apps.find((app) => app.appId === state.appId) || apps[0];
   return (
     <>
@@ -128,11 +175,14 @@ function IncompleteBody({ state, apps, onOwnApp, onLoginWith }) {
         <strong>Facebook báo “Ứng dụng không hoạt động”?</strong>
         <span>Nick đang đăng nhập trong cửa sổ Facebook <em>không có vai trò</em> trong Meta App này. Chọn một cách:</span>
         <ol className="fb-guide-substeps">
-          <li>Đăng nhập đúng <em>nick quản trị viên</em> của app: trong cửa sổ Facebook bấm ảnh đại diện → <em>Đăng xuất</em> / <em>Chuyển tài khoản</em> → đăng nhập nick đó → bấm Thử lại.</li>
+          <li>Đăng nhập đúng <em>nick quản trị viên</em> của app: bấm <em>Đổi nick Facebook</em> bên dưới → trong cửa sổ Facebook chọn đúng trang cá nhân (<em>Xem tất cả trang cá nhân</em>) hoặc đăng xuất rồi đăng nhập nick đó → bấm Đăng nhập lại.</li>
           <li>Thêm nick đang dùng vào app: <em>Vai trò trong ứng dụng</em> → <em>Thêm người</em> → <em>Quản trị viên</em> → nick đó chấp nhận tại <Ext href="https://developers.facebook.com/requests/">developers.facebook.com/requests</Ext>.</li>
           <li>Nick đó có Meta App riêng: thêm app đó vào tool rồi đăng nhập bằng app đó.</li>
         </ol>
-        <button type="button" className="button button-secondary fb-guide-action" onClick={() => onOwnApp('own-app')}><PlusCircle size={15} /> Thêm Meta App khác</button>
+        <div className="fb-own-app-actions">
+          <button type="button" className="button button-secondary fb-guide-action" onClick={() => onSwitchNick()}><RefreshCw size={15} /> Đổi nick Facebook</button>
+          <button type="button" className="button button-secondary fb-guide-action" onClick={() => onOwnApp('own-app')}><PlusCircle size={15} /> Thêm Meta App khác</button>
+        </div>
       </div>
       {apps.length > 1 && (
         <div className="fb-login-cause">
@@ -149,7 +199,7 @@ function IncompleteBody({ state, apps, onOwnApp, onLoginWith }) {
 }
 
 // Đăng nhập được nhưng Facebook không cấp quyền Fanpage
-function NoPermissionBody({ state, status }) {
+function NoPermissionBody({ state, status, onSwitchNick }) {
   const fromToken = state.source === 'token';
   return (
     <>
@@ -157,6 +207,7 @@ function NoPermissionBody({ state, status }) {
         {fromToken ? 'Token bạn vừa dán hợp lệ nhưng chưa có quyền quản lý Fanpage.' : 'Đăng nhập Facebook thành công, nhưng Facebook chưa cấp quyền quản lý Fanpage cho tool.'}
         {state.missing?.length ? <> Còn thiếu: {state.missing.map((scope) => <code key={scope}>{scope}</code>)}</> : null}
       </p>
+      {!fromToken && <LoginNick nick={state.nick} onSwitchNick={onSwitchNick} />}
       {!fromToken && (
         <div className="fb-login-cause">
           <strong>Bạn đã bỏ tích quyền khi đăng nhập?</strong>
@@ -178,7 +229,7 @@ function NoPermissionBody({ state, status }) {
   );
 }
 
-function NoPagesBody({ state }) {
+function NoPagesBody({ state, onSwitchNick }) {
   return (
     <>
       <p className="fb-login-lead">
@@ -187,6 +238,7 @@ function NoPagesBody({ state }) {
           : 'Đăng nhập Facebook thành công, nhưng nick này chưa có Fanpage nào (hoặc chưa tích Fanpage khi đăng nhập).'}
         {' '}Làm theo các bước sau:
       </p>
+      {state.source !== 'token' && <LoginNick nick={state.nick} onSwitchNick={onSwitchNick} />}
       <CreatePageSteps />
     </>
   );
@@ -194,10 +246,10 @@ function NoPagesBody({ state }) {
 
 /**
  * Hộp thoại đăng nhập Facebook trong tool (tool không có app chung — mỗi người dùng Meta App riêng, có thể nhiều app).
- * state.phase: 'waiting' | 'incomplete' | 'choose-app' | 'own-app' | 'own-app-enter' | 'own-app-create' | 'no-permission' | 'no-pages' | 'error'
- * state: { appId? (app vừa dùng), code?, missing?, source? ('login' | 'token') }
+ * state.phase: 'waiting' | 'incomplete' | 'switch-nick' | 'choose-app' | 'own-app' | 'own-app-enter' | 'own-app-create' | 'no-permission' | 'no-pages' | 'error'
+ * state: { appId? (app vừa dùng), code?, missing?, source? ('login' | 'token'), nick? ({ id, name, saved, removed } — nick Facebook vừa đăng nhập), popupBlocked? }
  */
-export default function FacebookLoginDialog({ state, status, onRetry, onLoginWith, onFocusPopup, onAppNotActive, onOwnApp, onSaveOwnApp, onRemoveOwnApp, onOpenGuide, onPasteToken, onClose }) {
+export default function FacebookLoginDialog({ state, status, onRetry, onLoginWith, onFocusPopup, onAppNotActive, onSwitchNick, onRemoveNick, onOwnApp, onSaveOwnApp, onRemoveOwnApp, onOpenGuide, onPasteToken, onClose }) {
   const primaryRef = useRef(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -235,8 +287,9 @@ export default function FacebookLoginDialog({ state, status, onRetry, onLoginWit
       <>
         <p className="fb-login-lead">Hoàn tất đăng nhập trong cửa sổ Facebook vừa mở{used ? <> (Meta App <strong>{appName(used)}</strong>)</> : null}. Ở bước hỏi quyền, chọn <em>Chỉnh sửa quyền truy cập</em> và tích đủ Fanpage.</p>
         <div className="fb-login-cause">
-          <strong>Muốn kết nối nick khác với nick đang hiện?</strong>
-          <span>Facebook dùng nick đang đăng nhập trong trình duyệt. Trong cửa sổ Facebook bấm ảnh đại diện → <em>Đăng xuất</em> / <em>Chuyển tài khoản</em> → đăng nhập nick cần thêm, rồi bấm “Mở lại cửa sổ Facebook”.</span>
+          <strong>Cửa sổ Facebook đang vào nhầm nick?</strong>
+          <span>Facebook dùng nick (trang cá nhân) đang đăng nhập trong trình duyệt — nhập đúng mật khẩu mà tài khoản có nhiều trang cá nhân thì Facebook vẫn mở trang cá nhân dùng gần nhất. Bấm để đổi nick ngay trong cửa sổ Facebook.</span>
+          <button type="button" className="button button-secondary fb-guide-action" onClick={() => onSwitchNick()}><RefreshCw size={15} /> Đổi nick Facebook</button>
         </div>
         <div className="fb-login-cause is-main">
           <strong>Facebook báo “Ứng dụng không hoạt động”?</strong>
@@ -253,12 +306,24 @@ export default function FacebookLoginDialog({ state, status, onRetry, onLoginWit
     );
   } else if (phase === 'incomplete') {
     title = 'Chưa đăng nhập được Facebook';
-    body = <IncompleteBody state={state} apps={apps} onOwnApp={onOwnApp} onLoginWith={onLoginWith} />;
+    body = <IncompleteBody state={state} apps={apps} onOwnApp={onOwnApp} onLoginWith={onLoginWith} onSwitchNick={onSwitchNick} />;
     actions = (
       <>
         <button ref={primaryRef} type="button" className="button button-primary" onClick={onRetry}><LogIn size={15} /> Thử lại</button>
         <button type="button" className="button button-secondary" onClick={() => onOpenGuide('login-errors')}>Bảng xử lý lỗi</button>
         {pasteButton(false)}
+        {closeButton}
+      </>
+    );
+  } else if (phase === 'switch-nick') {
+    Icon = RefreshCw;
+    tone = 'info';
+    title = 'Đổi sang đúng nick Facebook';
+    body = <SwitchNickBody state={state} onRemoveNick={onRemoveNick} />;
+    actions = (
+      <>
+        <button ref={primaryRef} type="button" className="button button-primary" onClick={onRetry}><LogIn size={15} /> Đã đổi xong — Đăng nhập lại</button>
+        <button type="button" className="button button-secondary" onClick={() => onSwitchNick(state.nick)}>Mở Facebook để đổi nick</button>
         {closeButton}
       </>
     );
@@ -340,7 +405,7 @@ export default function FacebookLoginDialog({ state, status, onRetry, onLoginWit
     );
   } else if (phase === 'no-permission') {
     title = 'Chưa đủ quyền dùng Fanpage';
-    body = <NoPermissionBody state={state} status={status} />;
+    body = <NoPermissionBody state={state} status={status} onSwitchNick={onSwitchNick} />;
     actions = (
       <>
         {fromToken ? pasteButton(true) : <button ref={primaryRef} type="button" className="button button-primary" onClick={onRetry}><LogIn size={15} /> Đăng nhập lại</button>}
@@ -350,7 +415,7 @@ export default function FacebookLoginDialog({ state, status, onRetry, onLoginWit
     );
   } else if (phase === 'no-pages') {
     title = 'Chưa có Fanpage nào để kết nối';
-    body = <NoPagesBody state={state} />;
+    body = <NoPagesBody state={state} onSwitchNick={onSwitchNick} />;
     actions = (
       <>
         {fromToken

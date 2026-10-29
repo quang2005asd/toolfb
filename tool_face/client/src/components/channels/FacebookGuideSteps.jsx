@@ -123,16 +123,23 @@ function OwnAppSettingsSteps({ app, webhook, missing }) {
   return (
     <>
       <li>
-        <strong>Khai báo tên miền của tool</strong>
-        <span>Menu trái <em>Cài đặt ứng dụng</em> → <em>Thông tin cơ bản</em>:</span>
+        <strong>Điền Thông tin cơ bản của app</strong>
+        <span>Menu trái <em>Cài đặt ứng dụng</em> → <em>Thông tin cơ bản</em> — điền đủ các ô dưới (Meta bắt buộc khi phát hành app):</span>
         <ol className="fb-guide-substeps">
           <li>Kéo xuống cuối trang → <em>+ Thêm nền tảng</em> → chọn <em>Trang web</em> → <em>Tiếp</em> → ô <em>URL trang web</em> dán giá trị bên dưới.</li>
-          <li>Kéo lên ô <em>Miền ứng dụng</em> → dán tên miền → nhấn Enter.</li>
+          <li>Ô <em>Miền ứng dụng</em> → dán tên miền → nhấn Enter.</li>
+          <li>Ô <em>URL chính sách quyền riêng tư</em> và ô <em>URL Điều khoản dịch vụ</em> → dán 2 URL bên dưới.</li>
+          <li>Mục <em>Xóa dữ liệu người dùng</em> → chọn <em>URL gọi lại xóa dữ liệu</em> → dán URL gọi lại bên dưới (tool tự xóa dữ liệu khi người dùng gỡ app trên Facebook). Ô này chỉ nhận <em>URL hướng dẫn xóa dữ liệu</em> thì dán URL hướng dẫn.</li>
+          <li><em>Biểu tượng ứng dụng</em> (ảnh vuông 1024 × 1024), <em>Hạng mục</em> (vd. Kinh doanh và trang) và <em>Email liên hệ</em>: điền thông tin của bạn.</li>
           <li>Bấm <em>Lưu thay đổi</em> ở cuối trang. Meta báo lỗi “miền phải khớp URL trang web” nghĩa là chưa thêm nền tảng Trang web.</li>
         </ol>
         <dl className="fb-guide-fields">
           <dt>URL trang web</dt><dd><CopyValue value={`${origin}/`} /></dd>
           <dt>Miền ứng dụng</dt><dd><CopyValue value={domain} /></dd>
+          <dt>URL chính sách quyền riêng tư</dt><dd><CopyValue value={`${origin}/privacy/`} /></dd>
+          <dt>URL Điều khoản dịch vụ</dt><dd><CopyValue value={`${origin}/terms/`} /></dd>
+          <dt>URL gọi lại xóa dữ liệu</dt><dd><CopyValue value={`${origin}/api/meta/data-deletion`} /></dd>
+          <dt>URL hướng dẫn xóa dữ liệu</dt><dd><CopyValue value={`${origin}/data-deletion/`} /></dd>
         </dl>
       </li>
       <li>
@@ -218,6 +225,20 @@ export function OwnAppCreateSteps({ app, webhook, missing }) {
 }
 
 // Một tài khoản tool quản lý nhiều nick Facebook / Fanpage
+// Đổi nick trong cửa sổ Facebook. Tool không chọn được nick và không xóa được phiên đăng nhập Facebook trong trình duyệt
+// (cookie của facebook.com chỉ Facebook / trình duyệt xóa được), nên hướng dẫn người dùng đổi ngay trên Facebook.
+export function SwitchNickSteps() {
+  return (
+    <ol className="fb-guide-substeps">
+      <li>Trong cửa sổ Facebook bấm <em>ảnh đại diện</em> (góc phải trên) để xem nick đang đăng nhập.</li>
+      <li>Có nút <em>Xem tất cả trang cá nhân</em>: tài khoản Facebook này có nhiều trang cá nhân — nhập đúng email / mật khẩu, Facebook vẫn mở <em>trang cá nhân dùng gần nhất</em>. Bấm nút đó → chọn đúng trang cá nhân cần kết nối (chọn trang cá nhân, không chọn Fanpage).</li>
+      <li>Nick cần dùng không có trong danh sách → <em>Đăng xuất</em>. Ở trang đăng nhập, nick cũ còn trong ô <em>Đăng nhập gần đây</em> thì bấm dấu <em>×</em> trên ô đó để Facebook quên nick cũ → đăng nhập nick cần dùng; Facebook hỏi lưu thông tin đăng nhập thì chọn <em>Lúc khác</em>.</li>
+      <li>Đang dùng cửa sổ ẩn danh / InPrivate: Facebook giữ phiên đăng nhập tới khi đóng <em>hết</em> các cửa sổ ẩn danh. Muốn làm mới hoàn toàn: đóng hết, mở cửa sổ ẩn danh mới, đăng nhập tool rồi đăng nhập Facebook.</li>
+      <li>Góc phải đã hiện đúng tên nick → quay lại tool bấm <em>Đã đổi xong — Đăng nhập lại</em> (hoặc <em>Đăng nhập Facebook</em>).</li>
+    </ol>
+  );
+}
+
 export function MultiNickSteps() {
   return (
     <ol className="fb-guide-steps">
@@ -227,7 +248,8 @@ export function MultiNickSteps() {
       </li>
       <li>
         <strong>Đăng nhập đúng nick trong cửa sổ Facebook</strong>
-        <span>Facebook dùng nick <em>đang đăng nhập trong trình duyệt</em>. Muốn thêm nick khác: trong cửa sổ Facebook bấm ảnh đại diện góc phải → <em>Đăng xuất</em> (hoặc <em>Chuyển tài khoản</em>) → đăng nhập nick cần thêm → đóng cửa sổ → bấm <em>Đăng nhập Facebook</em> trong tool lại và chọn đúng app.</span>
+        <span>Facebook dùng nick <em>đang đăng nhập trong trình duyệt</em> — tool không chọn và không xóa được phiên đó. Sau mỗi lần đăng nhập tool hiện tên nick vừa kết nối; nhầm nick thì bấm <em>Không phải nick này?</em> / <em>Đổi nick Facebook</em> rồi làm trong cửa sổ Facebook:</span>
+        <SwitchNickSteps />
       </li>
       <li>
         <strong>Fanpage của các nick hiển thị chung</strong>

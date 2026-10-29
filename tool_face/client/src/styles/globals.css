@@ -8793,3 +8793,7 @@ body.dark-mode .token-menu-item:hover, body.dark-mode .token-menu-item:focus-vis
   .fb-app-list-actions .button { flex: 1 1 auto; justify-content: center; }
   .notice.channel-toast { right: 16px; left: 16px; bottom: 16px; max-width: none; }
 }
+
+/* Tên nick Facebook vừa đăng nhập + nút đổi nick trong thông báo */
+.fb-login-cause > strong svg { vertical-align: -2px; margin-right: 4px; }
+.channel-toast .auth-inline-link { margin-left: 4px; font-weight: 700; white-space: nowrap; }

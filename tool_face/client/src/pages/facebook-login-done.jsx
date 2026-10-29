@@ -16,7 +16,9 @@ export default function FacebookLoginDone() {
       token: params.get('token'),
       error: params.get('error'),
       reason: params.get('reason'),
-      missing: params.get('missing')
+      missing: params.get('missing'),
+      nick: params.get('nick'),
+      nickId: params.get('nickId')
     });
     const timer = setTimeout(() => setStillOpen(true), 700);
     window.close();

@@ -330,7 +330,8 @@ app.get('/api/auth/facebook/callback', async (req, res) => {
     const result = await tokenService.connectUserToken(req.user.sub, codeResponse.data.access_token, { appId: creds.appId });
     console.log(`[Facebook OAuth] Kết nối lại ${result.pages.length} Fanpage cho ${req.user.username} (FB: ${result.fbAccount.id}, app ${creds.appId}, token ${result.tokenType}).`);
     // Đăng nhập được nhưng chưa có Fanpage → tool hiện hướng dẫn tạo Fanpage; thiếu quyền một số tính năng → báo kèm
-    const query = new URLSearchParams({ connected: String(result.pages.length), token: result.tokenType });
+    // nick / nickId: nick Facebook vừa đăng nhập — tool hiện tên để người dùng biết Facebook có vào nhầm nick không
+    const query = new URLSearchParams({ connected: String(result.pages.length), token: result.tokenType, nick: String(result.fbAccount.name || '').slice(0, 80), nickId: result.fbAccount.id });
     if (!result.pages.length) query.set('reason', 'no_pages');
     if (result.missingScopes.length) query.set('missing', result.missingScopes.join(','));
     return res.redirect(facebookLoginReturn(popup, query.toString()));
@@ -339,6 +340,7 @@ app.get('/api/auth/facebook/callback', async (req, res) => {
       // Facebook không cấp quyền Fanpage (bỏ tích, hoặc app chưa được Meta duyệt quyền nâng cao) → tool hướng dẫn tự tạo token
       console.log(`[Facebook OAuth] ${req.user.username}: đăng nhập được nhưng thiếu quyền ${error.missingScopes.join(',')}.`);
       const query = new URLSearchParams({ connected: '0', reason: 'no_permission', missing: error.missingScopes.join(',') });
+      if (error.fbName) query.set('nick', String(error.fbName).slice(0, 80));
       return res.redirect(facebookLoginReturn(popup, query.toString()));
     }
     console.error('[Facebook OAuth Error]', error.response?.data?.error?.message || error.message);
