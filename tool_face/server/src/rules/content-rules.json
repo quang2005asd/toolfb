@@ -1,0 +1,285 @@
+{
+  "version": "1.0.0",
+  "updatedAt": "2026-10-27T08:45:00.000Z",
+  "description": "Bộ quy tắc xác thực nội dung (ContentValidator) phân định theo Nền tảng MXH và Nhóm ngành chuyên biệt.",
+  "platforms": {
+    "facebook": {
+      "name": "Facebook Post",
+      "maxLength": 5000,
+      "recommendedMinLength": 150,
+      "recommendedMaxLength": 1500,
+      "maxHashtags": 5,
+      "recommendedHashtags": 3,
+      "disallowMarkdownAsterisks": true,
+      "asteriskRegex": "\\*{1,3}[^*]+\\*{1,3}|\\*",
+      "linkInBodyWarning": "Hạn chế để link web trực tiếp trong thân bài Facebook vì thuật toán sẽ bóp tương tác. Nên gắn link dưới bình luận đầu tiên (First Comment).",
+      "ctaRules": {
+        "disallowedPatterns": [
+          "bạn nghĩ sao\\?",
+          "bạn đã sẵn sàng chưa\\?",
+          "cùng chia sẻ nhé\\?"
+        ],
+        "warningMessage": "Tránh dùng câu hỏi tu từ chung chung nhạt nhẽo làm CTA. Hãy dùng hành động cụ thể (nhắn tin, để lại bình luận)."
+      }
+    },
+    "instagram": {
+      "name": "Instagram Caption",
+      "maxLength": 2200,
+      "recommendedMinLength": 100,
+      "recommendedMaxLength": 1000,
+      "minHashtags": 2,
+      "maxHashtags": 15,
+      "disallowMarkdownAsterisks": true,
+      "linkInBodyWarning": "Instagram không hỗ trợ clickable link trong caption. Vui lòng hướng dẫn người xem: 'Xem link ở phần bio' (Link in bio).",
+      "ctaRules": {
+        "disallowedPatterns": [],
+        "warningMessage": ""
+      }
+    },
+    "tiktok": {
+      "name": "TikTok Caption",
+      "maxLength": 2200,
+      "recommendedMinLength": 50,
+      "recommendedMaxLength": 350,
+      "minHashtags": 2,
+      "maxHashtags": 6,
+      "disallowMarkdownAsterisks": true,
+      "linkInBodyWarning": "TikTok không hỗ trợ link ngoài trong caption.",
+      "ctaRules": {
+        "disallowedPatterns": [],
+        "warningMessage": ""
+      }
+    },
+    "threads": {
+      "name": "Threads Post",
+      "maxLength": 500,
+      "recommendedMinLength": 50,
+      "recommendedMaxLength": 450,
+      "maxHashtags": 1,
+      "disallowMarkdownAsterisks": true,
+      "linkInBodyWarning": "Threads hỗ trợ link ngoài nhưng ưu tiên chia sẻ quan điểm ngắn gọn.",
+      "ctaRules": {
+        "disallowedPatterns": [],
+        "warningMessage": ""
+      }
+    },
+    "linkedin": {
+      "name": "LinkedIn Article/Post",
+      "maxLength": 3000,
+      "recommendedMinLength": 300,
+      "recommendedMaxLength": 2000,
+      "maxHashtags": 5,
+      "disallowMarkdownAsterisks": false,
+      "linkInBodyWarning": "",
+      "ctaRules": {
+        "disallowedPatterns": [],
+        "warningMessage": ""
+      }
+    }
+  },
+  "industries": {
+    "health": {
+      "key": "health",
+      "name": "Sức khỏe, Y tế & Dược phẩm / TPCN",
+      "sensitivity": "HIGH",
+      "requiresManualReview": true,
+      "forbiddenClaims": [
+        "trị dứt điểm",
+        "khỏi hẳn sau",
+        "cam kết 100%",
+        "thần dược",
+        "thuốc tiên",
+        "chữa khỏi vĩnh viễn",
+        "lột xác cấp tốc",
+        "thay thế thuốc chữa bệnh",
+        "chữa khỏi ung thư",
+        "hồi phục tức thì",
+        "tiêu diệt hoàn toàn tế bào ác tính"
+      ],
+      "forbiddenSubstancesOrPrescriptions": [
+        "thuốc an thần kê đơn",
+        "kháng sinh liều cao",
+        "thuốc phá thai",
+        "morphine",
+        "botox lậu"
+      ],
+      "requiredDisclaimers": [
+        {
+          "condition": "has_tpcn_or_supplement",
+          "keywordsTrigger": [
+            "thực phẩm chức năng",
+            "tpcn",
+            "thực phẩm bảo vệ sức khỏe",
+            "thực phẩm bổ sung",
+            "viên uống",
+            "viên nang",
+            "viên nén",
+            "viên sủi",
+            "dạng viên uống",
+            "thuốc bổ sung"
+          ],
+          "textMustContain": "không phải là thuốc và không có tác dụng thay thế thuốc chữa bệnh",
+          "severity": "CRITICAL",
+          "errorMessage": "Bắt buộc có câu miễn trừ trách nhiệm theo Luật Dược & Luật Quảng cáo VN đối với Thực phẩm chức năng / TPBVSK: 'Sản phẩm này không phải là thuốc và không có tác dụng thay thế thuốc chữa bệnh'."
+        },
+        {
+          "condition": "has_treatment_advice",
+          "keywordsTrigger": ["chữa", "trị", "bệnh", "huyết áp", "tiểu đường", "xương khớp", "tim mạch", "suy thận", "men gan"],
+          "textMustContain": "tham khảo ý kiến",
+          "severity": "WARNING",
+          "errorMessage": "Nội dung đề cập phác đồ bệnh lý, nên khuyến cáo độc giả tham khảo ý kiến bác sĩ hoặc chuyên gia y tế trước khi áp dụng."
+        }
+      ]
+    },
+    "mom_and_baby": {
+      "key": "mom_and_baby",
+      "name": "Sữa dinh dưỡng & Mẹ và Bé",
+      "sensitivity": "HIGH",
+      "requiresManualReview": true,
+      "forbiddenClaims": [
+        "thay thế hoàn toàn sữa mẹ",
+        "trị biếng ăn 100%",
+        "tăng cân cấp tốc trong 3 ngày",
+        "phát triển trí não vượt trội tuyệt đối"
+      ],
+      "forbiddenSubstancesOrPrescriptions": [
+        "thuốc tăng cân không rõ nguồn gốc",
+        "men tiêu hóa tự chế"
+      ],
+      "requiredDisclaimers": [
+        {
+          "condition": "has_formula_or_infant_nutrition",
+          "keywordsTrigger": ["sữa công thức", "sữa non", "sữa dinh dưỡng", "sơ sinh", "dưới 24 tháng", "dưới 1 tuổi"],
+          "textMustContain": "sữa mẹ là thức ăn tốt nhất cho sự phát triển",
+          "severity": "CRITICAL",
+          "errorMessage": "Bắt buộc có thông điệp bảo vệ sữa mẹ theo Nghị định 100/2014/NĐ-CP: 'Sữa mẹ là thức ăn tốt nhất cho sự phát triển toàn diện của trẻ sơ sinh và trẻ nhỏ'."
+        }
+      ]
+    },
+    "finance": {
+      "key": "finance",
+      "name": "Tài chính, Ngân hàng & Bảo hiểm / Đầu tư",
+      "sensitivity": "HIGH",
+      "requiresManualReview": true,
+      "forbiddenClaims": [
+        "lãi suất 0% trọn đời",
+        "cam kết bao lời",
+        "cam kết lợi nhuận cố định",
+        "nhân đôi tài sản sau 1 tháng",
+        "kiếm 50 triệu/tháng không cần vốn",
+        "không có rủi ro",
+        "bao nợ xấu 100%",
+        "xóa nợ xấu cic không cần trả",
+        "chắc chắn trúng",
+        "kèo thơm bao ăn"
+      ],
+      "forbiddenSubstancesOrPrescriptions": [
+        "tín dụng đen",
+        "vay bốc bát họ",
+        "app vay nặng lãi",
+        "cờ bạc",
+        "tài xỉu",
+        "baccarat"
+      ],
+      "requiredDisclaimers": [
+        {
+          "condition": "has_investment_or_trading",
+          "keywordsTrigger": ["chứng khoán", "crypto", "tiền mã hóa", "đầu tư", "lợi nhuận", "quỹ"],
+          "textMustContain": "rủi ro",
+          "severity": "WARNING",
+          "errorMessage": "Bài viết về đầu tư tài chính bắt buộc phải có câu cảnh báo rủi ro biến động thị trường."
+        }
+      ]
+    },
+    "real_estate": {
+      "key": "real_estate",
+      "name": "Bất động sản & Nhà đất",
+      "sensitivity": "HIGH",
+      "requiresManualReview": true,
+      "forbiddenClaims": [
+        "cam kết sinh lời x2",
+        "cam kết sinh lời x3",
+        "quy hoạch chắc chắn",
+        "sổ đỏ trao tay sau 1 ngày",
+        "bao quy hoạch không dính giải tỏa"
+      ],
+      "forbiddenSubstancesOrPrescriptions": [
+        "phân lô bán nền trái phép",
+        "dự án ma"
+      ],
+      "requiredDisclaimers": [
+        {
+          "condition": "has_property_sale",
+          "keywordsTrigger": ["bán đất", "bán nhà", "dự án", "căn hộ", "đất nền", "đặt cọc"],
+          "textMustContain": "pháp lý",
+          "severity": "WARNING",
+          "errorMessage": "Bài viết chào bán bất động sản nên công khai rõ ràng tình trạng pháp lý dự án (sổ đỏ, giấy phép)."
+        }
+      ]
+    },
+    "legal": {
+      "key": "legal",
+      "name": "Pháp lý & Luật sư",
+      "sensitivity": "HIGH",
+      "requiresManualReview": true,
+      "forbiddenClaims": [
+        "cam kết thắng kiện 100%",
+        "chạy án",
+        "lo lót cơ quan chức năng",
+        "hối lộ"
+      ],
+      "forbiddenSubstancesOrPrescriptions": [],
+      "requiredDisclaimers": [
+        {
+          "condition": "has_legal_dispute",
+          "keywordsTrigger": ["kiện tụng", "tranh chấp", "thừa kế", "ly hôn", "hình sự", "khởi kiện"],
+          "textMustContain": "tư vấn",
+          "severity": "WARNING",
+          "errorMessage": "Bài viết phân tích vụ việc pháp lý nên hướng dẫn thân chủ liên hệ trực tiếp văn phòng luật sư để nhận tư vấn phù hợp với hồ sơ thực tế."
+        }
+      ]
+    },
+    "beauty": {
+      "key": "beauty",
+      "name": "Làm đẹp & Mỹ phẩm",
+      "sensitivity": "MEDIUM",
+      "requiresManualReview": false,
+      "forbiddenClaims": [
+        "trắng da sau 3 ngày",
+        "lột xác thần tốc",
+        "xóa sạch nám 100%",
+        "kem trộn tái tạo da",
+        "da trắng bóc không tì vết chỉ sau 1 lần"
+      ],
+      "forbiddenSubstancesOrPrescriptions": [
+        "corticoid",
+        "kem trộn không nhãn mác"
+      ],
+      "requiredDisclaimers": []
+    },
+    "general": {
+      "key": "general",
+      "name": "Đời thường, Đời sống, F&B & Bán lẻ thông thường",
+      "sensitivity": "LOW",
+      "requiresManualReview": false,
+      "forbiddenClaims": [
+        "hàng rep 1:1",
+        "super fake",
+        "auth tuồn"
+      ],
+      "forbiddenSubstancesOrPrescriptions": [],
+      "requiredDisclaimers": []
+    }
+  },
+  "globalForbiddenPhrases": [
+    "hàng rep 1:1",
+    "super fake",
+    "auth tuồn",
+    "bao lô đề",
+    "tài xỉu",
+    "kèo baccarat",
+    "thuốc kích dục",
+    "súng đạn",
+    "pháo hoa nổ trái phép"
+  ]
+}

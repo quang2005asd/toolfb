@@ -350,3 +350,96 @@ Quy trình đánh giá được nâng cấp toàn diện trên **30 chủ đề 
 2. **Ở nhóm bài tự do (không facts): GIỮ LẠI TOPIC PACK**:
    - Ở nhóm bài tự do, Pack phát huy trọn vẹn sức mạnh: Hook (+0.53 điểm), cấu trúc kể chuyện, và góc nhìn chuyên gia từng ngành (laptop +1.14, chứng khoán +1.71, làm đẹp +2.14). Không có rủi ro mâu thuẫn facts vì người dùng không cung cấp facts bắt buộc.
 
+---
+
+### 6.11. Cập Nhật Tiến Độ & Những Điểm Chưa Hợp Lệ (Pending Obligations)
+
+1. **ContentValidator (Xong)**:
+   - Đã xây dựng hoàn tất bộ xác thực JSON theo nền tảng MXH và nhóm ngành (`server/src/rules/content-rules.json` & `server/src/utils/ContentValidator.js`).
+   - Tích hợp kiểm tra tự động độ dài, hashtag, chặn định dạng Markdown asterisks (`*`, `**`), cấm từ ngữ cam kết và bắt buộc câu miễn trừ trách nhiệm theo luật.
+   - **Bộ test dương / test âm (Positive / Negative Tests)**: Đạt 17/17 PASSED trong `server/scripts/test-content-validator.js`. Mẹo ăn uống đời thường tuyệt đối không bị gắn câu miễn trừ dược phẩm nhầm.
+   - **Phân quyền report-missed-sensitive**: Chỉ admin, manager, reviewer mới được gửi; từ khóa mới mặc định vào `PENDING_CONFIRMATION`, không tự có hiệu lực.
+
+2. **Đánh Giá Mù 10 Bài (CHƯA HỢP LỆ)**:
+   - Bài đánh giá mù 10 bài tự động qua LLM Judge (`eval/blind-review-10.json`) hiện **chưa có giá trị pháp lý/thực tế** vì chỉ do AI tự chấm AI, chưa có sự tham gia của con người.
+   - **Còn nợ bắt buộc**:
+     - Cần **người thật đọc và chấm tay độc lập 10 bài mù** này để đối chiếu với điểm số của LLM Judge.
+     - Cần **người am hiểu pháp lý chuyên môn xác nhận các câu miễn trừ trách nhiệm** (TPCN, Nghị định 100 sữa mẹ, cảnh báo rủi ro tài chính) trước khi gắn vào Fanpage của khách thật.
+     - Cần **người đọc thật chấm điểm thực tế** trước khi làm KB Loại 2 (Dynamic Few-Shot).
+
+---
+
+### 6.12. Kiến Trúc Bảo Mật & Toàn Vẹn Dữ Liệu Knowledge Base (7 Điểm Cốt Lõi)
+
+Đã hoàn thiện và kiểm thử thành công 100% (19/19 Passed trong `test-kb-security-isolation.js`):
+
+1. **Chốt chặn xuất bản, Idempotency & State Machine (`executePublishPost`)**:
+   - **Lọc trạng thái ứng viên (Candidate Guard)**: Chỉ xử lý bài ở các trạng thái cho phép xuất bản (`APPROVED`, `SCHEDULED`, `PUBLISH_RETRY_OR_FAILED`). Tuyệt đối không can thiệp các bài đã `PUBLISHED`, `NEW`, `BLOCKED`, `REJECTED`, `PENDING_REVIEW`.
+   - **Kiểm soát Retry chuẩn mực**: Nếu bài ở `PUBLISH_RETRY_OR_FAILED`, chỉ retry khi thỏa mãn đồng thời: `is_permanent_failure = 0`, `retry_count < 5`, và `next_retry_at <= NOW()`. Tự động áp dụng Exponential Backoff ($2^{retry\_count + 1}$ phút).
+   - **Chốt chặn duyệt & Toàn vẹn Hash (`assertPublishable`)**: Bắt buộc bài viết phải có `approved_hash`, `approved_by` và `approved_hash === computePostHash(post)`. `currentContentHash` được tính mới trực tiếp từ nội dung, không đọc từ cột DB. Nếu bài bị sửa lén sau duyệt, lập tức bị tước quyền xuất bản và chuyển về `PENDING_REVIEW`.
+   - **Chống lặp vô hạn Poller (Infinite Loop Prevention Fallback)**: Khi `assertPublishable` vi phạm, hệ thống gọi `transition(post, PENDING_REVIEW)`. Nếu `transition()` gặp sự cố ném lỗi, khối catch lập tức thực hiện DB Fallback trực tiếp đưa status về `PENDING_REVIEW`, xóa `approved_hash = NULL`, `approved_by = NULL` để bài hoàn toàn rời khỏi hàng đợi candidate, triệt tiêu nguy cơ Poller 10s nhặt lại liên tục gây spam audit log.
+   - **Atomic Claim độc lập nền tảng**: Tách biệt câu lệnh SQL Server (`OUTPUT INSERTED.id`) và SQLite (UPDATE + SELECT riêng biệt, không dùng batch `;` tránh lỗi driver). Yêu cầu nguyên tử: `status IN (APPROVED, SCHEDULED, PUBLISH_RETRY_OR_FAILED) AND approved_hash = @currentHash`.
+   - **Kiểm tra facts hết hạn Post-Claim (Triệt tiêu TOCTOU)**: Chạy sau khi claim thành công. Nếu facts hết hạn, chuyển trạng thái qua `transition(post, POST_STATES.PENDING_REVIEW)` (chữ hoa), tự động xóa `approved_hash = NULL`, `approved_by = NULL` và ghi `PostAuditLog`.
+   - **Chống đăng trùng (Idempotency Check & Feed Protection)**: Nếu bài viết đã có `facebook_post_id` thật (do timeout mạng ở lượt gọi trước nhưng Facebook đã tạo bài thành công), hệ thống KHÔNG gọi API tạo mới và KHÔNG cần lấy token mới, mà chuyển thẳng sang `PUBLISHED` với mã post đã có.
+   - **Bảo vệ toàn diện nền tảng TikTok**: Nhánh TikTok nằm sau toàn bộ các cổng duyệt, claim và kiểm tra facts. Dịch vụ Puppeteer nhận `{ alreadyClaimed: true }` để không claim lặp, và sử dụng chuẩn `transition()` với trạng thái chữ hoa `PUBLISHED` và `PUBLISH_RETRY_OR_FAILED`.
+
+2. **Ma trận Chuyển đổi Trạng thái Hiện tại (`ALLOWED_TRANSITIONS`)**:
+   ```javascript
+   const ALLOWED_TRANSITIONS = {
+     [POST_STATES.NEW]: [POST_STATES.GENERATING, POST_STATES.VALIDATING, POST_STATES.SAFETY_CHECK, POST_STATES.APPROVED, POST_STATES.SCHEDULED],
+     [POST_STATES.GENERATING]: [POST_STATES.VALIDATING, POST_STATES.GENERATION_FAILED],
+     [POST_STATES.VALIDATING]: [POST_STATES.SAFETY_CHECK, POST_STATES.GENERATION_FAILED],
+     [POST_STATES.GENERATION_FAILED]: [POST_STATES.NEW, POST_STATES.GENERATING],
+     [POST_STATES.SAFETY_CHECK]: [POST_STATES.BLOCKED, POST_STATES.PENDING_REVIEW, POST_STATES.READY_FOR_APPROVAL],
+     [POST_STATES.BLOCKED]: [POST_STATES.NEW],
+     [POST_STATES.PENDING_REVIEW]: [POST_STATES.APPROVED, POST_STATES.SCHEDULED, POST_STATES.REJECTED, POST_STATES.NEW],
+     [POST_STATES.READY_FOR_APPROVAL]: [POST_STATES.APPROVED, POST_STATES.SCHEDULED, POST_STATES.REJECTED, POST_STATES.NEW],
+     [POST_STATES.REJECTED]: [POST_STATES.NEW],
+     [POST_STATES.APPROVED]: [POST_STATES.SCHEDULED, POST_STATES.PUBLISHING, POST_STATES.NEW, POST_STATES.SAFETY_CHECK, POST_STATES.REJECTED, POST_STATES.PENDING_REVIEW],
+     [POST_STATES.SCHEDULED]: [POST_STATES.PUBLISHING, POST_STATES.APPROVED, POST_STATES.NEW, POST_STATES.SAFETY_CHECK, POST_STATES.REJECTED, POST_STATES.PENDING_REVIEW],
+     [POST_STATES.PUBLISHING]: [POST_STATES.PUBLISHED, POST_STATES.PUBLISH_RETRY_OR_FAILED, POST_STATES.SCHEDULED, POST_STATES.PENDING_REVIEW],
+     [POST_STATES.PUBLISHED]: [],
+     [POST_STATES.PUBLISH_RETRY_OR_FAILED]: [POST_STATES.PUBLISHING, POST_STATES.SCHEDULED, POST_STATES.NEW, POST_STATES.REJECTED, POST_STATES.PENDING_REVIEW]
+   };
+   ```
+
+3. **Cách ly khách hàng đa tầng (Customer Isolation & Multi-Tenancy)**:
+   - Bảng `dbo.UserCustomers` phân quyền (`user_id`, `customer_id`, `role`).
+   - Quyền duyệt fact phụ thuộc vào vai trò **trong chính khách hàng đó** (`getUserCustomerRole`), không dùng vai trò toàn cục. Reviewer của Khách A hoàn toàn bị chặn (HTTP 403) khi thao tác trên Khách B.
+   - Khi tài khoản Admin truy cập chéo khách hàng mà không có phân quyền rõ ràng, hệ thống tự động ghi nhật ký `ADMIN_CROSS_TENANT_ACCESS` vào `KbFactsAuditLog`.
+
+4. **Chống người tạo & người sửa cuối tự phê duyệt (Anti-Self Approval)**:
+   - Trong `confirmFact`: Kiểm tra cả `created_by === confirmedBy` và `updated_by === confirmedBy`.
+   - Nếu Reviewer B chỉnh sửa nội dung fact của User A, `updated_by` được cập nhật là Reviewer B, do đó Reviewer B bị chặn không được tự duyệt bản sửa của mình. Bắt buộc Reviewer C độc lập duyệt.
+
+5. **Kiểm soát đồng thời & Race Condition (Optimistic Locking)**:
+   - Cập nhật và duyệt facts sử dụng Optimistic Locking (`WHERE id = @id AND status = 'DRAFT' AND updated_at = @expectedUpdatedAt`).
+   - Nếu xảy ra xung đột khi hai reviewer thao tác đồng thời, câu lệnh trả về HTTP **409 Conflict** yêu cầu tải lại trang.
+
+6. **Chống chèn lệnh Prompt Injection Đa Tầng**:
+   - Escape toàn bộ ký tự `<` và `>` thành `&lt;` và `&gt;` trong nội dung fact, vô hiệu hóa hoàn toàn mọi biến thể thẻ đóng.
+   - Sử dụng ranh giới ngẫu nhiên (Cryptographic Nonce): `<verified_facts_data_${nonce}>...` thay đổi theo từng lần gọi.
+   - Ngưỡng 5.000 ký tự: Ném lỗi rõ ràng (Throw Error) yêu cầu người dùng rút gọn, không cắt âm thầm làm mất dữ kiện.
+   - Định vị rõ: Prompt là lớp phòng thủ phụ (defense-in-depth); chốt chặn quyết định là `ContentValidator` và người duyệt.
+
+7. **Lọc UTC tức thời & Cảnh báo bài đã đăng**:
+   - Lọc trực tiếp `expires_at >= SYSUTCDATETIME()` trong truy vấn lấy facts.
+   - Job dọn định kỳ `autoRetireExpiredFacts` chuyển DRAFT và CONFIRMED quá hạn sang `RETIRED` kèm audit log `AUTO_EXPIRE_RETIRE`.
+   - Bổ sung hàm `checkPublishedPostsWithExpiredFacts()` để cảnh báo người vận hành nếu bài viết đã `PUBLISHED` trên Fanpage chứa fact vừa hết hạn.
+
+---
+
+### 6.13. Đánh Giá Hiệu Quả Giai Đoạn 2 (Facts Nhập Tay vs Facts KB) & Lộ Trình Giai Đoạn 3
+
+1. **Kết Luận Đo Lường Trung Thực (Giai Đoạn 2)**:
+   - Thử nghiệm trên 5 chủ đề cố định cho thấy: Khi cùng cung cấp số liệu đúng, cả 2 chế độ đều có 0 claim vi phạm và 0 lần rewriter can thiệp do bộ chuẩn hóa số liệu hoạt động tốt trên các cụm từ chuẩn.
+   - **Kết luận trung thực**: **KB giúp tiết kiệm công nhập liệu và giảm thiểu sai sót do con người gõ nhầm (sai số 0, sai thông số); chưa chứng minh được việc giảm số claim vi phạm so với nhập tay.** Giá trị cốt lõi hiện tại của KB Loại 3 nằm ở tính nhất quán dữ liệu doanh nghiệp, chống gian lận/sửa đổi nội dung sau duyệt và tự động hóa workflow.
+
+2. **Lộ Trình Giai Đoạn 3 (Cổng trước khi gắn Page khách thật)**:
+   - **Ca 7 (Token 190)**: Giám sát và tự động hồi phục token lỗi 190 qua `autoHealPageToken`.
+   - **Chạy thử nghiệm 1–2 ngày**: Vận hành ngầm với Fanpage nội bộ để kiểm tra tính ổn định của Scheduler và Worker.
+   - **Xác nhận pháp lý**: Người am hiểu pháp lý chuyên môn thẩm định các câu miễn trừ trách nhiệm theo luật (TPCN, sữa mẹ, tài chính).
+   - **Đánh giá mù 10 bài bởi Người thật**: Cần người đọc thật chấm điểm và đối chiếu độc lập với LLM Judge trước khi triển khai KB Loại 2 (Dynamic Few-Shot).
+
+
+

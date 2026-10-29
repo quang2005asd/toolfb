@@ -25,6 +25,7 @@ import {
   FileText,
   Plus,
   Stamp,
+  Database,
   Image as ImageIcon
 } from 'lucide-react';
 import MainLayout from '../../components/layout/MainLayout';
@@ -72,6 +73,8 @@ export default function AIGeneratePage() {
   const [tone, setTone] = useState('');
   const [includeEmoji, setIncludeEmoji] = useState(true);
   const [includeHashtags, setIncludeHashtags] = useState(true);
+  const [customerId, setCustomerId] = useState('');
+  const [customerList, setCustomerList] = useState([]);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
 
@@ -107,6 +110,11 @@ export default function AIGeneratePage() {
 
   useEffect(() => {
     loadChannels(true);
+    aiApi.getKbCustomers().then(res => {
+      if (res?.success && Array.isArray(res.customers)) {
+        setCustomerList(res.customers);
+      }
+    }).catch(err => console.warn('Lỗi tải danh sách khách KB:', err.message));
   }, []);
 
   // When channels become available, auto-assign to drafts that have no pages selected
@@ -135,7 +143,7 @@ export default function AIGeneratePage() {
     setGenerating(true);
     setError('');
     try {
-      const res = await aiApi.generatePosts({ prompt, tone, includeHashtags, includeEmoji });
+      const res = await aiApi.generatePosts({ prompt, tone, includeHashtags, includeEmoji, customerId });
       if (res.success && res.drafts?.length > 0) {
         // Initialize each draft with all connected channels by default
         const defaultPages = channels.length > 0 ? channels.map(c => c.id) : [];
@@ -603,6 +611,40 @@ export default function AIGeneratePage() {
           <div style={{
             display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 20, alignItems: 'center'
           }}>
+            {/* Customer KB Selector */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <label style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Database size={14} color="var(--blue)" /> Khách hàng (KB):
+              </label>
+              <select
+                value={customerId}
+                onChange={e => setCustomerId(e.target.value)}
+                style={{
+                  background: 'var(--apple-glass-bg)',
+                  border: 'var(--apple-glass-border)',
+                  borderTop: 'var(--apple-glass-border-top)',
+                  backdropFilter: 'var(--apple-glass-blur)',
+                  WebkitBackdropFilter: 'var(--apple-glass-blur)',
+                  borderRadius: 10, padding: '8px 14px', color: 'var(--ink)', fontSize: 13, cursor: 'pointer', outline: 'none',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
+                }}
+              >
+                <option value="">-- Viết tự do (Không dùng Facts KB) --</option>
+                {customerList.map(c => (
+                  <option key={c.customer_id} value={c.customer_id} style={{ background: 'var(--panel)', color: 'var(--ink)' }}>
+                    {c.customer_id} ({c.confirmed_facts || 0} facts chuẩn)
+                  </option>
+                ))}
+              </select>
+              <Link
+                href="/ai-studio/kb-facts"
+                style={{ fontSize: 12, color: 'var(--blue)', fontWeight: 600, textDecoration: 'none', marginLeft: 4 }}
+                title="Mở màn hình Quản trị Facts khách hàng"
+              >
+                Quản trị Facts ↗
+              </Link>
+            </div>
+
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <label style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 600 }}>Giọng văn:</label>
               <select
