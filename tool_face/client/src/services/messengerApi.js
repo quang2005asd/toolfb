@@ -53,6 +53,20 @@ export const messengerApi = {
   previewAutoReply: async (payload) => {
     const response = await api.post('/messenger/auto-reply/preview', payload);
     return response.data;
+  },
+
+  // Câu hỏi gợi ý trong Messenger (Ice Breakers)
+  iceBreakers: async () => {
+    const response = await api.get('/messenger/ice-breakers');
+    return response.data;
+  },
+  liveIceBreakers: async (pageId) => {
+    const response = await api.get(`/messenger/ice-breakers/${encodeURIComponent(pageId)}/live`);
+    return response.data;
+  },
+  saveIceBreakers: async (payload) => {
+    const response = await api.put('/messenger/ice-breakers', payload);
+    return response.data;
   }
 };
 

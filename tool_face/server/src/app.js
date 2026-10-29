@@ -38,6 +38,7 @@ const aiConversationService = require('./utils/AiConversationService');
 const channelGroupService = require('./utils/ChannelGroupService');
 const messengerService = require('./utils/MessengerService');
 const autoReplyService = require('./utils/MessengerAutoReplyService');
+const iceBreakerService = require('./utils/MessengerIceBreakerService');
 const instagramService = require('./utils/InstagramService');
 const tiktokService = require('./utils/TikTokService');
 const { cleanupTempUploads } = require('./utils/TikTokPuppeteerService');
@@ -1753,6 +1754,63 @@ app.post('/api/messenger/auto-reply/preview', requireAuth, async (req, res) => {
     return res.json({ success: true, ...preview });
   } catch (error) {
     return sendMessengerError(res, 'Auto Reply Preview Error', error);
+  }
+});
+
+// ═══ CÂU HỎI GỢI Ý MESSENGER (ICE BREAKERS) ═══
+app.get('/api/messenger/ice-breakers', requireAuth, async (req, res) => {
+  try {
+    const pages = await getMessengerPages(req.user.sub);
+    const [configs, described] = await Promise.all([
+      iceBreakerService.getConfigMap(pages.map((page) => String(page.id))),
+      describeMessengerPages(pages)
+    ]);
+    return res.json({
+      success: true,
+      pages: described.map((page) => ({ ...page, iceBreakers: configs.get(page.id) })),
+      presets: iceBreakerService.PRESETS,
+      limits: { items: iceBreakerService.MAX_ITEMS, question: iceBreakerService.MAX_QUESTION_LENGTH, answer: iceBreakerService.MAX_ANSWER_LENGTH }
+    });
+  } catch (error) {
+    return sendMessengerError(res, 'Ice Breakers Error', error);
+  }
+});
+
+// Câu hỏi gợi ý đang thật sự hiện trên Messenger của một Fanpage
+app.get('/api/messenger/ice-breakers/:pageId/live', requireAuth, async (req, res) => {
+  try {
+    const pages = await getMessengerPages(req.user.sub);
+    if (!pages.some((page) => String(page.id) === String(req.params.pageId))) {
+      return res.status(403).json({ success: false, message: 'Fanpage chưa kết nối với tài khoản của bạn.' });
+    }
+    return res.json({ success: true, ...(await iceBreakerService.fetchLive(String(req.params.pageId))) });
+  } catch (error) {
+    return sendMessengerError(res, 'Ice Breakers Live Error', error);
+  }
+});
+
+app.put('/api/messenger/ice-breakers', requireAuth, async (req, res) => {
+  try {
+    const pages = await getMessengerPages(req.user.sub);
+    const requestedIds = Array.isArray(req.body?.pageIds) ? req.body.pageIds.map(String) : [];
+    const targetPages = pickOwnedPages(pages, requestedIds);
+    if (!requestedIds.length || targetPages.length !== new Set(requestedIds).size) {
+      return res.status(403).json({ success: false, message: 'Chỉ cài đặt được cho Fanpage đã kết nối với tài khoản của bạn.' });
+    }
+    const { items, results } = await iceBreakerService.saveIceBreakers({ pageIds: targetPages.map((page) => String(page.id)), items: req.body?.items });
+    const ok = results.filter((item) => item.ok).length;
+    const failed = results.filter((item) => !item.ok);
+    let message;
+    if (!failed.length) {
+      message = items.length
+        ? `Đã áp dụng ${items.length} câu hỏi gợi ý lên Messenger của ${ok} Fanpage.`
+        : `Đã gỡ câu hỏi gợi ý khỏi Messenger của ${ok} Fanpage.`;
+    } else {
+      message = `${ok ? `Áp dụng được ${ok} Fanpage. ` : ''}${failed.length} Fanpage chưa áp dụng được: ${failed[0].message}`;
+    }
+    return res.status(ok ? 200 : 400).json({ success: ok > 0, message, results });
+  } catch (error) {
+    return sendMessengerError(res, 'Ice Breakers Save Error', error);
   }
 });
 

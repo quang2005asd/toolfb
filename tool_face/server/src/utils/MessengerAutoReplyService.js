@@ -11,6 +11,7 @@ const { sql, getPool } = require('../../config/db');
 const messenger = require('./MessengerService');
 const { getAiConfig } = require('./AiContentGenerator');
 const commentAiService = require('./CommentAiService');
+const iceBreakerService = require('./MessengerIceBreakerService');
 
 const AUTO_REPLY_SENDER = 'auto';
 const MODES = ['template', 'ai'];
@@ -257,18 +258,24 @@ async function processConversation(conversationId) {
     if (!conversation) return null;
     const platform = conversation.platform === 'instagram' ? 'instagram' : 'messenger';
     const settings = (await getSettingsMap([conversation.page_id])).get(String(conversation.page_id));
-    if (!settings.enabled || !settings.enabledAt || !settings.platforms.includes(platform)) return null;
+    const autoReplyOn = settings.enabled && settings.enabledAt && settings.platforms.includes(platform);
+    // Câu hỏi gợi ý (Ice Breakers) có câu trả lời riêng: trả lời cả khi chưa bật trả lời tự động cho mọi tin
+    const iceConfig = platform === 'messenger' ? await iceBreakerService.getPageConfig(conversation.page_id).catch(() => null) : null;
+    if (!autoReplyOn && !iceBreakerService.hasAnswers(iceConfig)) return null;
 
     const messages = await messenger.listMessages(conversation.id, 20);
     const last = messages[messages.length - 1];
     // Chỉ trả lời khi tin cuối cùng là của khách (nhân viên chưa trả lời) và gửi sau lúc bật
     if (!last || last.isFromPage || !last.createdTime) return null;
-    if (new Date(last.createdTime) < new Date(settings.enabledAt)) return null;
+    const iceAnswer = iceBreakerService.matchAnswer(iceConfig, last);
+    if (!iceAnswer && (!autoReplyOn || new Date(last.createdTime) < new Date(settings.enabledAt))) return null;
     if (!(await claimMessage(last.id, conversation))) return null;
 
     try {
       const pageName = await getPageName(conversation.page_id);
-      const reply = await buildReply({ settings, messages, pageId: conversation.page_id, pageName, customerName: conversation.participant_name });
+      const reply = iceAnswer
+        ? { text: renderTemplate(iceAnswer, { customerName: conversation.participant_name, pageName }), modeUsed: 'ice_breaker' }
+        : await buildReply({ settings, messages, pageId: conversation.page_id, pageName, customerName: conversation.participant_name });
       const result = await messenger.sendMessage({
         conversationId: conversation.id,
         text: reply.text,

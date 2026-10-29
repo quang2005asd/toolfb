@@ -9,6 +9,7 @@ import {
   FileText,
   ImagePlus,
   Inbox,
+  Lightbulb,
   Loader2,
   MessageCircle,
   RefreshCw,
@@ -19,6 +20,7 @@ import {
 import MainLayout from '../../components/layout/MainLayout';
 import PlatformIcon from '../../components/PlatformIcon';
 import AutoReplyModal from '../../components/inbox/AutoReplyModal';
+import IceBreakersModal from '../../components/inbox/IceBreakersModal';
 import messengerApi from '../../services/messengerApi';
 import { refreshMessengerUnread } from '../../hooks/useMessengerUnread';
 
@@ -144,6 +146,7 @@ export default function InboxPage() {
   const [readFilter, setReadFilter] = useState('all');
   const [autoSync, setAutoSync] = useState(null);
   const [autoReplyOpen, setAutoReplyOpen] = useState(false);
+  const [iceBreakersOpen, setIceBreakersOpen] = useState(false);
   const [autoReplySummary, setAutoReplySummary] = useState(null); // { enabled, total }
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
@@ -427,12 +430,28 @@ export default function InboxPage() {
             <span className="inbox-autoreply-label">Trả lời tự động</span>
             <span className="inbox-autoreply-state">{autoReplyOn ? `Bật${autoReplySummary.total > 1 ? ` ${autoReplySummary.enabled}/${autoReplySummary.total}` : ''}` : 'Tắt'}</span>
           </button>
+          <button
+            type="button"
+            className="button button-secondary inbox-autoreply-btn"
+            onClick={() => setIceBreakersOpen(true)}
+            disabled={pages.length === 0}
+            title="Câu hỏi gợi ý khách thấy sẵn khi mở đoạn chat Messenger với Fanpage"
+          >
+            <Lightbulb size={15} />
+            <span className="inbox-autoreply-label">Câu hỏi gợi ý</span>
+          </button>
           <button type="button" className="button button-primary" onClick={handleSyncNow} disabled={syncing || pages.length === 0}>
             <RefreshCw size={15} className={syncing ? 'spin' : ''} /> {syncing ? 'Đang đồng bộ…' : 'Đồng bộ ngay'}
           </button>
         </div>
       )}
     >
+      {iceBreakersOpen && (
+        <IceBreakersModal
+          onClose={() => setIceBreakersOpen(false)}
+          onSaved={(message) => setNotice({ tone: 'ok', text: message })}
+        />
+      )}
       {autoReplyOpen && (
         <AutoReplyModal
           onClose={() => { setAutoReplyOpen(false); loadAutoReplySummary(); }}

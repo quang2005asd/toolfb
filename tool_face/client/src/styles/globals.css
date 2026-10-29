@@ -8797,3 +8797,24 @@ body.dark-mode .token-menu-item:hover, body.dark-mode .token-menu-item:focus-vis
 /* Tên nick Facebook vừa đăng nhập + nút đổi nick trong thông báo */
 .fb-login-cause > strong svg { vertical-align: -2px; margin-right: 4px; }
 .channel-toast .auth-inline-link { margin-left: 4px; font-weight: 700; white-space: nowrap; }
+
+/* Câu hỏi gợi ý Messenger (Ice Breakers) */
+.ib-status { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-elevated); font-size: 13px; }
+.ib-status > span { flex: 1 1 240px; min-width: 0; }
+.ib-status > svg { flex: none; color: var(--muted); }
+.ib-status.is-on { border-color: #a7f3d0; background: #ecfdf5; color: #065f46; }
+.ib-status.is-on > svg { color: #059669; }
+.ib-status.is-error { border-color: #fecaca; background: #fef2f2; color: #b91c1c; }
+.ib-status.is-error > svg { color: #b91c1c; }
+[data-theme="dark"] .ib-status.is-on, body.dark-mode .ib-status.is-on { color: #6ee7b7; background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.35); }
+[data-theme="dark"] .ib-status.is-error, body.dark-mode .ib-status.is-error { color: #fca5a5; background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.35); }
+.ib-live-btn { min-height: 32px; padding: 0 10px; font-size: 12.5px; }
+.ib-live { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; }
+.ib-live-chip { padding: 3px 10px; border-radius: 99px; border: 1px solid var(--line); background: var(--field-bg); font-size: 12px; }
+.ib-live-warn { flex-basis: 100%; display: flex; align-items: flex-start; gap: 6px; color: var(--amber, #b45309); }
+.ib-items { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.ib-item { display: grid; gap: 6px; padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel-elevated); }
+.ib-item .ar-counter { margin-top: -2px; }
+.ib-item-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ib-item-head .field-label { margin: 0; }
+.ib-add { justify-self: start; }
