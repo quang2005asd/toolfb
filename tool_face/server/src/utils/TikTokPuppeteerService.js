@@ -75,8 +75,75 @@ function getUploadFilePath(fileName) {
   return process.env.APP_DATA_DIR ? path.join(process.env.APP_DATA_DIR, 'uploads', fileName) : p2;
 }
 
+const GOOGLE_DRIVE_HOSTS = new Set(['drive.google.com', 'drive.usercontent.google.com']);
+const MAX_VIDEO_BYTES = 200 * 1024 * 1024; // 200MB
+
 /**
- * Chuẩn bị file video từ đường dẫn (hỗ trợ local:// hoặc link mạng)
+ * Chuẩn hóa link Google Drive sang dạng download trực tiếp
+ */
+function normalizeGoogleDriveUrl(mediaLink) {
+  if (!mediaLink || typeof mediaLink !== 'string') return null;
+  let url;
+  try {
+    url = new URL(mediaLink);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'https:' || !GOOGLE_DRIVE_HOSTS.has(url.hostname)) return null;
+
+  const fileId = url.searchParams.get('id') || url.pathname.match(/\/file\/d\/([^/]+)/)?.[1];
+  if (!fileId) return null;
+
+  return `https://drive.google.com/uc?export=download&id=${encodeURIComponent(fileId)}`;
+}
+
+/**
+ * Tải video từ Google Drive về buffer (xử lý redirect + kiểm tra quyền)
+ */
+async function downloadGoogleDriveVideoToFile(mediaLink, tempFilePath) {
+  const directLink = normalizeGoogleDriveUrl(mediaLink);
+  if (!directLink) throw new Error('Không thể phân tích đường dẫn Google Drive.');
+  let currentUrl = new URL(directLink);
+
+  for (let redirectCount = 0; redirectCount <= 5; redirectCount++) {
+    if (currentUrl.protocol !== 'https:' || !GOOGLE_DRIVE_HOSTS.has(currentUrl.hostname)) {
+      throw new Error('Google Drive chuyển hướng đến máy chủ không hợp lệ.');
+    }
+
+    const response = await axios({
+      method: 'GET',
+      url: currentUrl.toString(),
+      responseType: redirectCount < 5 ? 'arraybuffer' : 'stream',
+      maxContentLength: MAX_VIDEO_BYTES,
+      maxRedirects: 0,
+      timeout: 180000,
+      validateStatus: (status) => status >= 200 && status < 400
+    });
+
+    if (response.status >= 300) {
+      if (!response.headers.location || redirectCount === 5) {
+        throw new Error('Không thể tải video từ Google Drive. Vui lòng bật quyền xem "Bất kỳ ai có đường liên kết".');
+      }
+      currentUrl = new URL(response.headers.location, currentUrl);
+      continue;
+    }
+
+    const contentType = String(response.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
+    if (!contentType.startsWith('video/') && contentType !== 'application/octet-stream') {
+      throw new Error('Tệp tải về từ Google Drive không phải là video. Kiểm tra quyền chia sẻ công khai của file.');
+    }
+
+    // Ghi buffer ra file
+    const buf = Buffer.isBuffer(response.data) ? response.data : Buffer.from(response.data);
+    fs.writeFileSync(tempFilePath, buf);
+    return;
+  }
+
+  throw new Error('Quá số lần chuyển hướng cho phép khi tải video từ Google Drive.');
+}
+
+/**
+ * Chuẩn bị file video từ đường dẫn (hỗ trợ local://, Google Drive, hoặc link mạng thông thường)
  */
 async function prepareVideoFile(mediaLink) {
   if (!mediaLink) throw new Error('Không tìm thấy đường dẫn video.');
@@ -91,9 +158,9 @@ async function prepareVideoFile(mediaLink) {
     return { filePath, isTemp: false };
   }
 
-  // Nếu là đường dẫn URL, tải về thư mục tạm
-  console.log(`📥 [TikTok Video] Đang tải video từ URL: ${mediaLink}`);
-  const tempDir = path.resolve(__dirname, '../../uploads/temp');
+  const tempDir = process.env.APP_DATA_DIR
+    ? path.join(process.env.APP_DATA_DIR, 'uploads', 'temp')
+    : path.resolve(__dirname, '../../uploads/temp');
   if (!fs.existsSync(tempDir)) {
     fs.mkdirSync(tempDir, { recursive: true });
   }
@@ -101,11 +168,22 @@ async function prepareVideoFile(mediaLink) {
   const tempFileName = `tiktok_${Date.now()}_${Math.random().toString(36).substring(7)}.mp4`;
   const tempFilePath = path.join(tempDir, tempFileName);
 
+  // Xử lý Google Drive riêng (phải convert link + follow redirect)
+  const isGoogleDrive = normalizeGoogleDriveUrl(mediaLink);
+  if (isGoogleDrive) {
+    console.log(`📥 [TikTok Video] Đang tải video từ Google Drive...`);
+    await downloadGoogleDriveVideoToFile(mediaLink, tempFilePath);
+    return { filePath: tempFilePath, isTemp: true };
+  }
+
+  // Link URL thông thường
+  console.log(`📥 [TikTok Video] Đang tải video từ URL: ${mediaLink}`);
   const response = await axios({
     method: 'GET',
     url: mediaLink,
     responseType: 'stream',
-    timeout: 120000
+    maxRedirects: 5,
+    timeout: 180000
   });
 
   const writer = fs.createWriteStream(tempFilePath);
