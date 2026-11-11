@@ -1,322 +1,198 @@
-# 🚀 Tool Face — Facebook & TikTok Automation Suite
+# Tool Social (Tool Face)
 
-Hệ thống quản lý, lập lịch bài đăng và tự động hoá Fanpage Facebook & **TikTok** chuyên nghiệp. Tích hợp AI Studio sáng tạo nội dung, tải lên hàng loạt từ file Excel, kịch bản seeding bình luận tự động, quản lý đa tài khoản và giao diện **Apple Frosted Glass** hiện đại hỗ trợ cả **Tone Trắng (Light Mode)** và **Giao diện Tối (Dark Mode)**.
+Quản lý Fanpage Facebook, Instagram và TikTok trên một giao diện: lên lịch đăng bài, đăng hàng loạt từ Excel, seeding bình luận, hộp thư Messenger / Instagram, trả lời tự động, AI Studio viết bài, AI Bình luận. Bản chạy thật: https://toolsocial.store.
 
----
-
-## 🌟 Tính Năng Nổi Bật
-
-- 📅 **Lập lịch đăng bài thông minh:** Hỗ trợ bài viết đơn lẻ hoặc hàng loạt với kiểm duyệt nội dung trước khi xuất bản — cả **Facebook lẫn TikTok**.
-- 📊 **Tải lên hàng loạt từ Excel (Bulk Upload):** Kiểm tra tính hợp lệ của từng dòng dữ liệu, xem trước nội dung và ảnh media trực quan.
-- 💬 **Seeding bình luận tự động:** Tự động trả lời, gắn thẻ và seeding tương tác theo chu kỳ định sẵn.
-- 🎨 **AI Studio & Sáng tạo ảnh:** Tích hợp mô hình AI tạo bài viết theo nhiều giọng văn, gắn hashtag và emoji tự động.
-- 👥 **Quản lý đa Fanpage, Nick Facebook & Tài khoản TikTok:** Phân quyền token riêng lẻ hoặc đồng bộ theo tài khoản cá nhân.
-- 🎵 **Đăng video lên TikTok tự động:** Kết nối tài khoản TikTok qua Puppeteer (không cần API chính thức), lên lịch đăng video với caption & hashtag.
-- 🌗 **Giao diện Apple Frosted Glass:** Tinh chỉnh chuẩn mực với hiệu ứng kính mờ cao cấp, mượt mà ở cả Tone Trắng kem và Dark Mode bóng đêm.
-- 🐳 **Đóng gói Docker Compose toàn diện:** Triển khai cả hệ thống (Frontend, Backend, Worker, Redis, SQLite) chỉ với **1 lệnh duy nhất**.
+> Quy tắc làm việc nhóm (cách push lên `main`, kiểm tra trước khi push, những thư mục không được di chuyển): xem [README ở thư mục gốc repo](../README.md).
 
 ---
 
-## 🎵 Tích Hợp TikTok
+## Tính năng (theo menu)
 
-Hệ thống hỗ trợ đăng video lên TikTok thông qua Puppeteer (tự động hoá trình duyệt), không phụ thuộc vào TikTok API chính thức.
-
-### Kiến Trúc TikTok
-
-```
-[Frontend Compose]
-    └─> Chọn nền tảng "TikTok" + tài khoản TikTok
-    └─> Upload video lên server (/api/upload)
-    └─> Tạo bài đăng (/api/posts) với platform="tiktok"
-            │
-[BullMQ Worker / Scheduler]
-    └─> Phát hiện bài đăng TikTok đến giờ đăng
-    └─> Gọi TikTokPuppeteerService.executePublishTikTokPost()
-            │
-[Puppeteer / Chromium]
-    └─> Mở trình duyệt ẩn → đăng nhập TikTok bằng cookie đã lưu
-    └─> Upload video → điền caption + hashtag → Xuất bản
-```
-
-### Cách Kết Nối Tài Khoản TikTok
-
-1. Vào trang **Kênh → Tab TikTok**.
-2. Bấm nút **"Kết nối TikTok"** — trình duyệt Chromium sẽ mở ra trang đăng nhập TikTok.
-3. Đăng nhập TikTok bằng tài khoản của bạn (hỗ trợ cả đăng nhập bằng điện thoại / email / QR Code).
-4. Sau khi đăng nhập thành công, hệ thống tự động lưu cookie phiên đăng nhập.
-5. Tài khoản sẽ xuất hiện trong danh sách với trạng thái **"Đã kết nối"**.
-
-> **Lưu ý:** Cookie TikTok được mã hóa và lưu trữ an toàn trong database. Tuy nhiên, TikTok có thể vô hiệu hóa phiên bất kỳ lúc nào — hãy kết nối lại nếu tài khoản báo "Mất kết nối".
-
-### Cách Đăng Bài Lên TikTok
-
-1. Vào trang **Lên Lịch → Soạn Bài**.
-2. Chọn **nền tảng "TikTok"** ở bộ chọn Platform.
-3. Chọn **tài khoản TikTok** từ danh sách tài khoản đã kết nối.
-4. Upload **file video** (định dạng MP4/MOV, tối đa theo giới hạn TikTok).
-5. Nhập **caption** và **hashtag** (không bắt buộc).
-6. Chọn thời gian đăng → Bấm **Lên Lịch**.
-
-Hệ thống sẽ tự động đăng video vào đúng giờ đã đặt thông qua BullMQ Worker.
-
-### Yêu Cầu Hệ Thống Cho TikTok (Puppeteer)
-
-| Thành phần | Yêu cầu |
+| Menu | Chức năng |
 |---|---|
-| **Chromium** | Tự động tải về khi `npm install` (gói `puppeteer`) |
-| **RAM** | Khuyến nghị tối thiểu **2 GB** (Chromium chạy ngầm) |
-| **VPS** | Cần cài thêm thư viện hệ thống cho Chromium headless trên Linux |
-| **Docker** | Dockerfile đã tích hợp sẵn các thư viện Chromium headless |
+| **Bảng tin** | Tổng quan bài đăng, kênh, tin nhắn |
+| **AI Studio** | Viết bài theo giọng văn, gắn hashtag / emoji, tạo ảnh AI, kiểm duyệt nội dung theo ngành, KB-facts (kho dữ kiện khách hàng / sản phẩm) |
+| **Viết bài / Lịch đăng / Bài đăng** | Facebook: chữ, ảnh, album, video, Reels, Tin (Story); TikTok: video. Hẹn giờ, đăng ngay, seeding bình luận theo độ trễ |
+| **Tải Excel** (biểu tượng trên thanh trên) | Đăng hàng loạt từ file Excel, kiểm tra từng dòng và xem trước trước khi xếp lịch |
+| **Tin nhắn** | Hộp thư Messenger + Instagram Direct, trả lời tự động (mẫu cố định hoặc AI), câu hỏi gợi ý (Ice Breakers) |
+| **Báo cáo** | Thống kê tương tác bài đăng |
+| **AI Bình luận** | Tự trả lời bình luận trên Fanpage bằng mẫu / AI, khách hàng, khách tiềm năng, nhật ký, chẩn đoán |
+| **Kênh** | Kết nối nick Facebook, Fanpage, **Meta App của tôi**, Instagram, TikTok, nhóm kênh |
+| **Thành viên** | Quản lý tài khoản (Admin / Quản lý) |
+| **Cài đặt** | Hồ sơ & mật khẩu; AI API Key, Telegram, lịch đăng (Admin) |
 
-> **Trên VPS Linux (không dùng Docker):** Chạy lệnh sau để cài thư viện hệ thống cần thiết:
-> ```bash
-> apt-get install -y libx11-xcb1 libxcomposite1 libxdamage1 libxrandr2 \
->   libgbm1 libpango-1.0-0 libcairo2 libasound2 libatk1.0-0 libnss3 \
->   libxss1 libgtk-3-0 fonts-liberation
-> ```
-
----
-
-## 📋 Yêu Cầu Hệ Thống
-
-| Phần mềm | Tùy chọn Docker (Khuyến nghị) | Tùy chọn Chạy Thủ Công (Local Dev) |
-|---|---|---|
-| **Hệ điều hành** | Windows / macOS / Linux | Windows 10/11 / macOS / Linux |
-| **Docker Desktop** | Khuyên dùng (có sẵn Docker Compose) | Không bắt buộc |
-| **Node.js** | Không cần cài | `>= 18.x` |
-| **Redis** | Tự động chạy trong Docker | `7.x` |
-| **Database** | Mặc định SQLite (Zero-config) | SQLite hoặc SQL Server 2019+ |
+Trang công khai: trang giới thiệu, đăng nhập / đăng ký, Chính sách quyền riêng tư, Điều khoản, Xóa dữ liệu (Meta bắt buộc).
 
 ---
 
-## 🚀 Cách 1: Triển Khai Nhanh Bằng Docker Compose (Khuyến nghị)
-
-> **Dành cho mọi thành viên trong team:** Không cần cài Node.js, không cần cấu hình SQL Server phức tạp. Chỉ cần mở Docker Desktop và chạy lệnh.
-
-### 1. Khởi động toàn bộ hệ sinh thái
-
-Mở Terminal tại thư mục `tool_face` và chạy:
-
-```bash
-docker compose up -d --build
-```
-
-*(Hoặc `docker-compose up -d --build` tùy phiên bản Docker)*
-
-Hệ thống sẽ tự động khởi tạo 4 dịch vụ:
-- 🌐 **Frontend (`tool-face-client`):** Truy cập tại **http://localhost:3000** (Phục vụ qua Nginx tối ưu siêu nhẹ).
-- ⚙️ **Backend API (`tool-face-server`):** Lắng nghe tại **http://localhost:5000**.
-- 📬 **Redis (`tool-face-redis`):** Queue engine port `6379`.
-- ⚡ **Worker (`tool-face-worker`):** Tiến trình ngầm xử lý hàng đợi đăng bài và bình luận tự động.
-
-### 2. Các lệnh quản lý Docker hữu ích
-
-| Nhu cầu | Lệnh |
-|---|---|
-| **Xem log trực tiếp** | `docker compose logs -f` |
-| **Xem log của riêng backend** | `docker compose logs -f server` |
-| **Xem log của worker đăng bài** | `docker compose logs -f worker` |
-| **Tạm dừng hệ thống** | `docker compose stop` |
-| **Khởi động lại** | `docker compose restart` |
-| **Tắt và dọn dẹp container** | `docker compose down` |
-| **Dọn dẹp sạch cả database volume** | `docker compose down -v` |
-
----
-
-## 🌍 Chạy Thật Cho Người Dùng (VPS + Tên Miền + HTTPS)
-
-Bản `docker-compose.yml` ở trên chỉ dành cho chạy thử trên máy. Khi đưa lên Internet dùng `docker-compose.prod.yml` (Caddy tự cấp HTTPS, bắt buộc đặt mật khẩu admin, khóa bí mật riêng, trang Chính sách / Điều khoản / Xóa dữ liệu cho Meta):
-
-- Hướng dẫn từng bước: [deploy/HUONG-DAN-VPS.md](deploy/HUONG-DAN-VPS.md)
-- Cấu hình Meta App, xác minh doanh nghiệp, App Review: [deploy/META-APP-REVIEW.md](deploy/META-APP-REVIEW.md)
-
----
-
-## 💻 Cách 2: Chạy Thủ Công Từng Phần (Local Development)
-
-Nếu bạn cần sửa code frontend hoặc backend liên tục (Hot Reload):
-
-### Bước 1 — Khởi chạy Redis
-
-```bash
-docker run -d --name redis-toolfb -p 6379:6379 redis:7-alpine
-```
-*(Nếu container đã tạo từ trước, chỉ cần: `docker start redis-toolfb`)*
-
-### Bước 2 — Cài đặt thư viện dependencies
-
-```bash
-# Terminal 1: Cài đặt Backend
-cd server
-npm install
-
-# Terminal 2: Cài đặt Frontend
-cd client
-npm install
-```
-
-### Bước 3 — Cấu hình môi trường (`server/.env`)
-
-Tạo file `server/.env` (tham khảo mẫu tại `server/.env.example`):
-
-```env
-CLIENT_ORIGIN=http://localhost:3000
-PORT=5000
-
-# Chế độ Database: Mặc định bật SQLite để chạy ngay lập tức không cần cài SQL Server
-USE_SQLITE=true
-DB_TYPE=sqlite
-
-# Kết nối Redis
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
-# Cấu hình Facebook App (nếu sử dụng tính năng Facebook Login OAuth)
-FACEBOOK_APP_ID=
-FACEBOOK_APP_SECRET=
-FACEBOOK_REDIRECT_URI=http://localhost:5000/api/auth/facebook/callback
-```
-
-> **Ghi chú về SQL Server:** Nếu muốn dùng Microsoft SQL Server thay vì SQLite, đặt `USE_SQLITE=false` và điền `DB_SERVER=localhost`, `DB_NAME=tool_face_db`.
-
-### Bước 4 — Khởi chạy ứng dụng
-
-Mở 3 cửa sổ Terminal riêng biệt:
-
-```bash
-# Terminal 1: Chạy Server Backend (Port 5000)
-cd server
-npm run dev
-
-# Terminal 2: Chạy Worker Queue xử lý đăng bài
-cd server
-npm run worker
-
-# Terminal 3: Chạy Client Frontend (Port 3000)
-cd client
-# npm run dev tự gọi API ở http://localhost:5000 (đổi địa chỉ khác: đặt NEXT_PUBLIC_API_ORIGIN)
-npm run dev
-```
-
-Truy cập: **http://localhost:3000**
-
----
-
-## 📁 Cấu Trúc Dự Án
+## Cấu trúc thư mục
 
 ```
 tool_face/
-├── docker-compose.yml          # Docker Compose toàn diện cho cả hệ thống
-├── README.md                   # Tài liệu hướng dẫn sử dụng
-├── ecosystem.config.js         # Cấu hình PM2 cho môi trường VPS
-│
-├── client/                     # FRONTEND (Next.js 16 + React 19)
-│   ├── Dockerfile              # Multi-stage Dockerfile (Nginx)
-│   ├── nginx.conf              # Cấu hình Web Server Nginx & Reverse Proxy
+├── server/                         BACKEND — Node.js 20, Express 4, BullMQ
 │   ├── src/
-│   │   ├── pages/              # Các trang giao diện (Dashboard, Compose, Channels...)
-│   │   ├── components/         # Layout & thành phần giao diện dùng chung
-│   │   ├── context/            # AuthContext, ThemeContext (Đồng bộ Dark/Light)
-│   │   ├── services/           # Axios API clients
-│   │   └── styles/             # globals.css (Hệ thống thiết kế Apple Frosted Glass)
-│   └── package.json
+│   │   ├── app.js                  Toàn bộ REST API + khởi động tác vụ nền (đồng bộ tin nhắn, gia hạn token, hẹn giờ đăng bài…)
+│   │   ├── middlewares/auth.js     Phiên đăng nhập (cookie ký HMAC), requireAuth / requirePermission
+│   │   ├── modules/
+│   │   │   ├── comment-ai/         AI Bình luận: /api/comment-ai/*, webhook /api/webhooks/facebook
+│   │   │   ├── kb/                 KB-facts của AI Studio: /api/kb/* (module tùy chọn, lỗi chỉ tắt phần này)
+│   │   │   └── excel-parser/       Đọc file Excel đăng hàng loạt
+│   │   ├── utils/                  Dịch vụ nghiệp vụ (bảng bên dưới)
+│   │   └── rules/                  Luật kiểm duyệt nội dung (content-rules.json)
+│   ├── config/                     db.js (SQLite hoặc SQL Server + Redis), sqliteAdapter.js (dịch T-SQL → SQLite, schema SQLite)
+│   ├── queues/                     Hàng đợi BullMQ: post, comment, tiktok, authlog — start.workers.js chạy tất cả
+│   ├── scripts/                    Vận hành: backup-db.js, init-db.sql (SQL Server), migrate-*, rotate-session-secret.js,
+│   │                               generate-sample-excel.js — còn test-* / benchmark-* / audit-* / run-*: đo chất lượng AI Studio
+│   ├── eval/                       Dữ liệu đánh giá AI Studio
+│   └── tests/                      Unit test (node --test)
 │
-├── server/                     # BACKEND (Node.js Express + BullMQ)
-│   ├── Dockerfile              # Dockerfile backend & worker
-│   ├── src/                    # API routes, controllers, middleware
-│   ├── config/
-│   │   ├── db.js               # Kết nối CSDL (SQLite / MSSQL) & Redis
-│   │   └── sqliteAdapter.js    # Trình tương thích SQLite không cần cài SQL Server
-│   ├── queues/                 # Hàng đợi BullMQ (post.worker.js, comment.worker.js, start.workers.js)
-│   ├── data/                   # Thư mục lưu database SQLite tự động
-│   ├── uploads/                # Thư mục lưu ảnh / video đính kèm
-│   └── package.json
+├── client/                         FRONTEND — Next.js 16 (Pages Router, xuất trang tĩnh), React 19, JavaScript
+│   ├── src/pages/                  Mỗi file là một trang (đường dẫn = tên file)
+│   ├── src/components/             layout/, channels/, inbox/, comment-ai/, charts/, legal/…
+│   ├── src/services/               Gọi API bằng axios; apiBase.js chọn địa chỉ API
+│   ├── src/context/, hooks/, utils/  AuthContext / ThemeContext, useAuth, phân quyền phía giao diện…
+│   ├── src/styles/globals.css      Hệ thống giao diện (class panel, button, field, status-pill, step-strip…)
+│   └── nginx.conf                  Phục vụ trang tĩnh, chuyển /api sang server
 │
-└── desktop/                    # DESKTOP APP (Electron wrapper)
-    ├── main.js
-    └── package.json
+├── deploy/                         Đưa lên VPS: HUONG-DAN-VPS.md, META-APP-REVIEW.md, nginx/, auto-deploy/, Caddyfile
+├── eval/                           Bản công khai của dữ liệu đánh giá AI Studio
+├── AI_DOCUMENTATION.md             Tài liệu kỹ thuật AI Studio (sinh bài, kiểm duyệt, KB-facts)
+├── Mau_Upload_Bai_Dang.xlsx        File mẫu đăng hàng loạt (tạo bằng server/scripts/generate-sample-excel.js)
+├── docker-compose.yml              Chạy thử trên máy
+├── docker-compose.shared.yml       VPS dùng chung với website khác — bản đang chạy thật
+├── docker-compose.prod.yml         VPS riêng, Caddy tự cấp HTTPS
+└── .env.production.example         Mẫu .env cho VPS
 ```
 
----
+### `server/src/utils/` theo nhóm
 
-## 🌐 Danh Sách Cổng Kết Nối (Ports)
-
-| Dịch vụ | Cổng (Port) | Chức năng |
-|---|---|---|
-| **Frontend Web** | `3000` | Giao diện người dùng Next.js |
-| **Backend API** | `5000` | REST API Express.js |
-| **Redis** | `6379` | Hàng đợi công việc BullMQ |
-| **SQL Server** | `1433` | Cơ sở dữ liệu (tùy chọn khi không dùng SQLite) |
-
----
-
-## ❓ Xử Lý Lỗi Thường Gặp (Troubleshooting)
-
-### 1. `docker compose up` báo lỗi port đã bị chiếm dụng (Port 3000 / 5000 / 6379 already in use)
-→ Do bạn đang chạy ứng dụng trực tiếp bằng `npm run dev` hoặc Redis đang chạy ở ngoài. Hãy tắt các tiến trình Terminal cũ hoặc đổi port ánh xạ trong `docker-compose.yml`.
-
-### 2. Không cần cài SQL Server có chạy được không?
-→ **Có!** Hệ thống đã tích hợp sẵn SQLite Adapter. Khi `USE_SQLITE=true` (mặc định trong Docker), database sẽ tự động khởi tạo trong thư mục `server/data/tool_face.db`.
-
-### 3. Giao diện bị mất màu ở Dark Mode?
-→ Toàn bộ hệ thống giao diện đã được chuẩn hoá với Apple Frosted Glass tokens trong `client/src/styles/globals.css`. Hãy xóa cache trình duyệt (`Ctrl + F5`) để nhận CSS mới nhất.
-
-### 4. Đăng nhập lần đầu bằng tài khoản nào?
-→ Hệ thống tự tạo sẵn tài khoản Quản trị viên **`admin` / `1`**. Hãy đổi mật khẩu tại **Cài đặt → Hồ sơ & bảo mật** sau lần đăng nhập đầu tiên. Người dùng mới có thể tự đăng ký (vai trò Thành viên) hoặc được Quản lý / Quản trị viên tạo tại trang **Thành viên**.
-
-### 5. Phân quyền hoạt động thế nào?
-| Vai trò | Quyền hạn |
+| Nhóm | File |
 |---|---|
-| **Quản trị viên (Admin)** | Toàn quyền: cấu hình AI / Telegram / lịch đăng, quản lý Quản lý & Thành viên, xem toàn bộ bài đăng, cấp quyền Admin cho tài khoản khác |
-| **Quản lý (Manager)** | Tạo / sửa / khóa / xóa Thành viên, xem & điều phối bài đăng của Thành viên |
-| **Thành viên (User)** | Các chức năng cơ bản: viết bài, lên lịch, AI Studio, quản lý Fanpage của mình |
+| Facebook & token | `FacebookPageConnections`, `FacebookTokenService` (gia hạn mỗi 30 phút), `FacebookPageAccessToken`, `FacebookLoginStatusService`, `FacebookScheduleService`, `TokenHealthCheckService` |
+| Đăng bài | `PostExecutionService` (đăng lên Facebook / chuyển TikTok vào hàng đợi), `StandaloneScheduler` (quét bài đến giờ mỗi 10 giây), `PostStateMachine`, `DateParsers` |
+| Tin nhắn | `MessengerService`, `MessengerAutoReplyService`, `MessengerIceBreakerService`, `InstagramService` |
+| TikTok | `TikTokService`, `TikTokPuppeteerService` (đăng bằng Chromium tự động) |
+| AI Studio | `AiContentGenerator`, `AiClientService`, `AiConversationService`, `AiImageService`, `TopicPackService`, `WebSearchService`, `ContentValidator`, `ClaimExtractor`, `KbFactsService` |
+| AI Bình luận | `CommentAiCore`, `CommentAiService`, `CommentAiLeadService`, `CommentAiSchema` |
+| Tài khoản & hệ thống | `AppUserService`, `Roles`, `SettingsService`, `ChannelGroupService`, `TelegramAlertService`, `ssrfValidator` |
 
-Mỗi vai trò chỉ quản lý được vai trò **thấp hơn** — Admin không thể sửa hay xóa tài khoản của Admin khác. Định nghĩa vai trò nằm trong `server/src/utils/Roles.js`.
+---
 
-### 6. Hộp thư Messenger + Instagram (trang **Tin nhắn**) hoạt động thế nào?
-- Xem và trả lời tin nhắn khách gửi vào các Fanpage (Messenger) và tài khoản Instagram liên kết với Fanpage (Instagram Direct); tin trả lời từ tool hiện trên Facebook / Instagram và ngược lại.
-- Token Fanpage cần quyền **`pages_messaging`** (và **`instagram_manage_messages`** cho Instagram). Riêng Instagram còn phải bật **"Cho phép truy cập tin nhắn"** trong ứng dụng Instagram (Cài đặt → Tin nhắn và lượt phản hồi tin → Công cụ đã kết nối). Trạng thái liên kết từng Fanpage / Instagram hiện ở đầu trang Tin nhắn và tab **Kênh → Instagram**.
-- **Tự động đồng bộ mỗi `MESSENGER_SYNC_INTERVAL_SECONDS` giây** (mặc định 5, đặt 0 để tắt) ngay trên server, không cần mở trang hay bấm nút. Khi Facebook báo giới hạn tần suất hoặc lỗi tạm thời, hệ thống tự giãn nhịp (30 giây → 5 phút) rồi quay lại nhịp cũ.
-- Khi deploy có domain HTTPS: khai báo webhook trong Meta App với Callback URL `https://<domain>/api/webhooks/messenger` và Verify Token = `MESSENGER_VERIFY_TOKEN` (cần `FACEBOOK_APP_SECRET`) để nhận tin gần như tức thì.
-- Facebook chỉ cho Page trả lời trong **24 giờ** kể từ tin nhắn cuối của khách; quá hạn, tool sẽ cảnh báo và hiển thị lỗi rõ ràng.
+## Chạy trên máy
 
-### 7. Trả lời tự động hoạt động thế nào?
-Bấm nút **Trả lời tự động** cạnh nút "Đồng bộ ngay" ở trang Tin nhắn để bật cho từng Fanpage (Messenger và/hoặc Instagram).
-- Trả lời **mọi** tin nhắn mới của khách — kể cả tin vô nghĩa như "shgagdwy"; khách nhắn liên tiếp nhiều tin thì nhận một câu trả lời cho cả cụm.
-- Chỉ trả lời tin gửi **sau** lúc bật (không trả lời tin cũ), mỗi tin một lần, và bỏ qua nếu nhân viên đã trả lời trước.
-- Hai cách trả lời: **mẫu cố định** (có biến `{ten_khach}`, `{ten_page}`) hoặc **AI tự soạn** theo hướng dẫn riêng (dùng AI API Key ở Cài đặt; AI lỗi thì tự dùng mẫu dự phòng nên luôn có câu trả lời).
-- Tin trả lời tự động hiện màu tím kèm nhãn "Trả lời tự động" trong hội thoại.
+> Không chạy bản trên máy cùng lúc với bản VPS bằng cùng Fanpage / token thật (hai nơi sẽ cùng tự trả lời và cùng đăng bài).
 
-### 8. Fanpage báo "Mất quyền" / token hết hạn?
-Token lấy từ Graph API Explorer là **token ngắn hạn, chỉ sống 1–2 giờ**; token Fanpage lấy từ nó cũng hết hạn theo. Facebook **không cho làm mới một token đã hết hạn**, nên cách bền vững là:
-1. Quản trị viên nhập **App ID & App Secret** của Meta App tại **Cài đặt → Hồ sơ & bảo mật → Meta App** (lấy ở Meta for Developers → Cài đặt ứng dụng → Thông tin cơ bản).
-2. Kết nối lại một lần (nút **Đăng nhập lại Facebook** hoặc dán token tạo từ *đúng app đó* trong Graph API Explorer).
+### Cách 1 — Docker (khuyến nghị)
 
-Từ đó tool tự đổi sang **token dài hạn (~60 ngày)**; token Fanpage lấy từ token dài hạn **không hết hạn**. Tool tự kiểm tra mỗi 30 phút, tự lấy lại token Fanpage khi bị lỗi (cả khi đăng bài, nhắn tin hay bấm "Kiểm tra Token"), và hiển thị hạn dùng từng nick ở trang **Kênh**. Để dùng "Đăng nhập lại Facebook 1 chạm", thêm `http://localhost:5000/api/auth/facebook/callback` vào *Valid OAuth Redirect URIs* của Meta App.
+1. Tạo file `.env` cạnh `docker-compose.yml`, tối thiểu:
+   ```env
+   SESSION_SECRET=<chuỗi ngẫu nhiên ≥ 32 ký tự, ví dụ từ: openssl rand -hex 32>
+   ```
+2. Chạy:
+   ```bash
+   docker compose up -d --build                    # redis + server + client
+   docker compose --profile queue up -d --build    # thêm worker (cần khi đăng TikTok)
+   ```
+3. Mở http://localhost:3000 (API ở http://localhost:5000, Redis ở cổng 6380). Đăng nhập `admin` / `1` rồi đổi mật khẩu.
 
-### 9. Đăng nhập Facebook báo lỗi App ID?
-→ Facebook không dùng để đăng nhập vào tool (tool dùng tài khoản riêng). Facebook Login chỉ dùng để kết nối / lấy lại token Fanpage và cần App ID & App Secret như mục 8.
+Lệnh hay dùng: `docker compose logs -f server`, `docker compose restart`, `docker compose down`. **Không** dùng `docker compose down -v` nếu muốn giữ dữ liệu (lệnh này xóa CSDL).
 
-### 10. TikTok báo "Mất kết nối" / cookie hết hạn?
-TikTok sử dụng cookie phiên đăng nhập. Cookie có thể hết hạn vì các lý do:
-- **TikTok đăng xuất từ xa** (bảo mật tài khoản, đổi mật khẩu, đăng nhập thiết bị khác).
-- **Cookie hết thời hạn sống** (thường sau vài tuần nếu không hoạt động).
+### Cách 2 — Chạy thủ công (sửa code, tự tải lại)
 
-→ Vào **Kênh → TikTok**, bấm **"Kết nối lại"** và đăng nhập lại để làm mới cookie.
-
-### 11. Chromium không khởi động được khi chạy TikTok trên VPS?
-Nguyên nhân thường gặp trên VPS Linux:
-- Thiếu thư viện hệ thống cho Chromium headless.
-- Không đủ RAM (Chromium cần ít nhất 512 MB mỗi phiên).
-- Môi trường không có màn hình ảo (`DISPLAY`).
-
-→ **Giải pháp:**
-1. Đảm bảo đã cài thư viện hệ thống (xem mục **Tích Hợp TikTok** bên trên).
-2. Nếu dùng Docker, kiểm tra trong Dockerfile đã có `--no-sandbox` và `--disable-dev-shm-usage`.
-3. Tăng RAM cho VPS hoặc thêm swap file:
 ```bash
-# Tạo 2 GB swap
-fallocate -l 2G /swapfile && chmod 600 /swapfile
-mkswap /swapfile && swapon /swapfile
-echo '/swapfile none swap sw 0 0' >> /etc/fstab
+docker run -d --name redis-toolfb -p 6379:6379 redis:7-alpine   # Redis
+
+cd server
+cp .env.example .env        # rồi thêm dòng USE_SQLITE=true (mẫu mặc định trỏ tới SQL Server)
+npm install
+npm run dev                 # API ở cổng 5000
+npm run workers             # (cửa sổ khác) worker đăng bài, bình luận, TikTok
+
+cd client
+npm install
+npm run dev                 # http://localhost:3000, tự gọi API ở http://localhost:5000
 ```
+
+- CSDL mặc định là SQLite, file `server/data/tool_face.sqlite`, tự tạo bảng khi khởi động. Muốn dùng SQL Server: bỏ `USE_SQLITE`, điền `DB_SERVER`, `DB_NAME` và chạy `server/scripts/init-db.sql`.
+- Không muốn chạy Redis: thêm `DISABLE_REDIS=true` vào `server/.env` — bài hẹn giờ và seeding bình luận do `StandaloneScheduler` trong server xử lý, TikTok dùng hàng đợi trong bộ nhớ.
+- Unit test: `cd server && node --test tests/scheduler-time.test.js` (đừng chạy `node --test` không kèm tên file: nó sẽ chạy cả các script `scripts/test-*.js` gọi AI thật).
+
+---
+
+## Đưa lên VPS
+
+| Trường hợp | File compose | Hướng dẫn |
+|---|---|---|
+| VPS dùng chung với website khác (nginx sẵn có) — **bản đang chạy thật**, tự deploy khi `main` có commit mới | `docker-compose.shared.yml` | [deploy/HUONG-DAN-VPS.md § 9b](deploy/HUONG-DAN-VPS.md), `deploy/nginx/`, `deploy/auto-deploy/` |
+| VPS riêng, Caddy tự cấp HTTPS | `docker-compose.prod.yml` | [deploy/HUONG-DAN-VPS.md](deploy/HUONG-DAN-VPS.md), `deploy/Caddyfile` |
+| Cấu hình Meta App, xác minh doanh nghiệp, App Review | — | [deploy/META-APP-REVIEW.md](deploy/META-APP-REVIEW.md) |
+
+File mẫu cấu hình:
+
+| File mẫu | Sao chép thành | Dùng khi |
+|---|---|---|
+| `server/.env.example` | `server/.env` | Chạy thủ công trên máy |
+| `.env.production.example` | `.env` cạnh file compose | VPS |
+| `deploy/auto-deploy/deploy.conf.example` | `/opt/toolsocial/.deploy.conf` | Tự động deploy trên VPS |
+
+`SESSION_SECRET` vừa ký phiên đăng nhập vừa mã hóa token Facebook trong CSDL: **không đổi** sau khi đã kết nối Fanpage. Cần đổi thì dùng `server/scripts/rotate-session-secret.js` (mã hóa lại toàn bộ token).
+
+---
+
+## Quy ước code (đọc trước khi sửa)
+
+**Server**
+- Truy cập CSDL theo kiểu `mssql`: `pool.request().input('x', sql.Int, x).query('... @x ...')`. Code chạy được trên cả SQL Server lẫn SQLite nhờ `config/sqliteAdapter.js`, nên chỉ dùng cú pháp T-SQL mà adapter dịch được: `TOP n`, `OFFSET … FETCH`, `OUTPUT INSERTED.id`, `UPDATE …; IF @@ROWCOUNT = 0 INSERT …`. Ghi thời gian bằng tham số (chuỗi ISO / `DateTime2`), đừng dựa vào `DEFAULT`.
+- **Bảng mới**: khai báo ở cả `sqliteAdapter.js` (`SCHEMA_DDL`) và `scripts/init-db.sql` (hoặc hàm `ensure…Schema`). **Cột mới cho bảng đã có**: thêm vào `COLUMN_MIGRATIONS` trong `sqliteAdapter.js` (`CREATE TABLE IF NOT EXISTS` không tự thêm cột cho CSDL cũ).
+- **Đăng bài / bình luận**: server (`StandaloneScheduler`) và worker (BullMQ) cùng có thể xử lý một bài. Mọi luồng đăng mới phải "giữ chỗ" trước khi gọi Facebook: `UPDATE … SET status = 'publishing' OUTPUT INSERTED.id WHERE id = @id AND status IN ('pending','scheduled')` — không giữ được chỗ thì bỏ qua. Làm vậy để bài không bị đăng hai lần.
+- **Phân quyền**: ba vai trò `admin` > `manager` > `user` khai báo trong `src/utils/Roles.js`; API kiểm tra bằng `requireAuth` / `requirePermission(PERMISSIONS.…)`. Mỗi vai trò chỉ quản lý được vai trò thấp hơn.
+- **Module tùy chọn**: phần riêng của từng người (ví dụ `modules/kb`) nạp trong `try/catch` hoặc `optionalModule()`, để thiếu file / lỗi chỉ tắt phần đó.
+- Không ghi bí mật vào code hay log; token Facebook luôn lưu dạng mã hóa (AES-GCM).
+
+**Client**
+- Next.js Pages Router, `output: 'export'` (không có API route, không có server-side rendering), JavaScript thuần. Đọc `client/AGENTS.md` trước khi dùng API Next.js lạ — bản 16 khác nhiều so với tài liệu cũ.
+- Gọi API qua `src/services/*Api.js` (dùng `API_BASE` trong `apiBase.js`), không viết cứng `http://localhost:5000`.
+- Dùng class sẵn có trong `globals.css` (`panel`, `button button-primary`, `field`, `status-pill`…) để giao diện đồng nhất ở cả chế độ sáng / tối.
+
+---
+
+## Câu hỏi thường gặp
+
+**Đăng nhập lần đầu bằng tài khoản nào?**
+Hệ thống tự tạo `admin`. Trên máy mật khẩu là `1`; trên VPS là `ADMIN_PASSWORD` trong `.env` (bắt buộc, ≥ 8 ký tự). Người dùng mới tự đăng ký (vai trò Thành viên) hoặc được Admin / Quản lý tạo ở trang **Thành viên**.
+
+**Phân quyền hoạt động thế nào?**
+
+| Vai trò | Quyền |
+|---|---|
+| Quản trị viên (admin) | Toàn quyền: cấu hình AI / Telegram / lịch đăng, quản lý Quản lý & Thành viên, xem toàn bộ bài đăng, cấp quyền Admin |
+| Quản lý (manager) | Tạo / sửa / khóa / xóa Thành viên, xem & điều phối bài đăng của Thành viên |
+| Thành viên (user) | Viết bài, lên lịch, AI Studio, quản lý Fanpage của mình |
+
+**Kết nối Facebook / Fanpage báo "Mất quyền", token hết hạn?**
+Tool không dùng app chung: mỗi tài khoản thêm **Meta App của riêng mình** (App ID + Khóa bí mật) ở **Kênh → Meta App của tôi**, rồi đăng nhập Facebook qua app đó. Trong Meta App cần thêm `https://<tên-miền>/api/auth/facebook/callback` vào *Valid OAuth Redirect URIs* (chạy trên máy: `http://localhost:5000/api/auth/facebook/callback`). Từ đó tool tự đổi sang token dài hạn (~60 ngày), token Fanpage lấy từ đó không hết hạn; tool tự kiểm tra mỗi 30 phút và tự lấy lại token Fanpage khi lỗi. Token ngắn hạn dán từ Graph API Explorer chỉ sống 1–2 giờ.
+
+**Hộp thư Messenger + Instagram hoạt động thế nào?**
+- Token Fanpage cần quyền `pages_messaging` (và `instagram_manage_messages` cho Instagram). Instagram còn phải bật *Cho phép truy cập tin nhắn* trong ứng dụng Instagram (Cài đặt → Tin nhắn và lượt phản hồi tin → Công cụ đã kết nối).
+- Server tự đồng bộ mỗi `MESSENGER_SYNC_INTERVAL_SECONDS` giây (mặc định 5, đặt 0 để tắt), tự giãn nhịp khi Facebook báo giới hạn. Có HTTPS thì khai báo webhook để nhận tin gần như tức thì: Callback URL `https://<tên-miền>/api/webhooks/messenger`, Verify Token = `MESSENGER_VERIFY_TOKEN` (chi tiết trong `deploy/META-APP-REVIEW.md`).
+- Facebook chỉ cho Page trả lời trong **24 giờ** kể từ tin cuối của khách.
+
+**Trả lời tự động hoạt động thế nào?**
+Bật cho từng Fanpage bằng nút **Trả lời tự động** ở trang Tin nhắn. Tool trả lời mọi tin mới gửi **sau** lúc bật (khách nhắn liên tiếp thì trả lời một lần cho cả cụm), bỏ qua nếu nhân viên đã trả lời trước. Hai kiểu: mẫu cố định (biến `{ten_khach}`, `{ten_page}`) hoặc AI soạn theo hướng dẫn riêng — AI lỗi thì dùng mẫu dự phòng.
+
+**TikTok báo "Mất kết nối"?**
+TikTok đăng bằng cookie phiên đăng nhập (Chromium tự động, không dùng API chính thức); cookie hết hạn khi TikTok đăng xuất từ xa, đổi mật khẩu hoặc lâu không dùng. Vào **Kênh → TikTok** → **Kết nối lại**. Mỗi trình duyệt tốn ~300–500 MB RAM; số trình duyệt chạy cùng lúc đặt bằng `TIKTOK_MAX_CONCURRENT_BROWSERS` (mặc định 2).
+
+**Chạy TikTok trên Linux không dùng Docker bị lỗi Chromium?**
+Image Docker đã có sẵn Chromium. Chạy thẳng trên Linux thì cài thêm thư viện:
+```bash
+apt-get install -y libx11-xcb1 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libpango-1.0-0 \
+  libcairo2 libasound2 libatk1.0-0 libnss3 libxss1 libgtk-3-0 fonts-liberation
+```
+Máy ít RAM thì thêm swap (≥ 2 GB).
+
+**`docker compose up` báo cổng đã bị chiếm (3000 / 5000 / 6380)?**
+Đang có `npm run dev` hoặc chương trình khác giữ cổng đó — tắt đi hoặc đổi cổng trong `docker-compose.yml`.
+
+**Giao diện hiển thị sai màu sau khi cập nhật?**
+Xóa cache trình duyệt (`Ctrl + F5`).

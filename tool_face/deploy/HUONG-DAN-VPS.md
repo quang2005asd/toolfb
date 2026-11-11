@@ -4,6 +4,8 @@ Kết quả: tool chạy 24/7 tại `https://ten-mien-cua-ban.com`, HTTPS tự �
 
 Chi phí tham khảo: tên miền ~250–300k/năm, VPS ~100–200k/tháng.
 
+> Hướng dẫn này (mục 1–10) dành cho **VPS riêng** với `docker-compose.prod.yml` (Caddy tự cấp HTTPS, code ở `/opt/tool_face`). Bản đang chạy thật dùng **VPS chung với website khác**: `docker-compose.shared.yml` + nginx sẵn có (`deploy/nginx/`), code ở `/opt/toolsocial`, tự deploy từ GitHub — xem [mục 9b](#9b-tự-động-deploy-khi-push-lên-github-vps-dùng-chung-docker-composesharedyml).
+
 ---
 
 ## 1. Mua tên miền và VPS
