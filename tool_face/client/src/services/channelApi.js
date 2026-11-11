@@ -81,7 +81,7 @@ export const channelApi = {
   },
   facebookLoginUrl: `${API_BASE}/auth/facebook`,
 
-  // Meta App riêng của người dùng (bắt buộc để đăng nhập Facebook; một người có thể thêm nhiều app cho nhiều nick)
+  // Meta App riêng của người dùng (mục Nâng cao — mặc định đăng nhập bằng app chung của tool)
   myMetaApps: async () => {
     const response = await api.get('/channels/my-meta-app');
     return response.data;
@@ -94,8 +94,23 @@ export const channelApi = {
     const response = await api.delete(`/channels/my-meta-app/${encodeURIComponent(appId)}`);
     return response.data;
   },
-  // Đường dẫn đăng nhập Facebook bằng một Meta App cụ thể (cửa sổ phụ)
-  facebookLoginUrlFor: (appId) => `${API_BASE}/auth/facebook?popup=1${appId ? `&app=${encodeURIComponent(appId)}` : ''}`,
+  // Đường dẫn đăng nhập Facebook (cửa sổ phụ): appId bỏ trống = app chung; level: 'full' | 'minimal'
+  facebookLoginUrlFor: (appId, level = 'full') => {
+    const params = new URLSearchParams({ popup: '1', level });
+    if (appId) params.set('app', appId);
+    return `${API_BASE}/auth/facebook?${params.toString()}`;
+  },
+
+  // Hộp "Chọn Fanpage": danh sách Fanpage của một nick (đọc từ Facebook) và lưu lựa chọn
+  accountPages: async (fbAccountId) => {
+    const response = await api.get(`/channels/accounts/${encodeURIComponent(fbAccountId)}/pages`);
+    return response.data;
+  },
+  saveAccountPages: async (fbAccountId, pageIds) => {
+    channelApi.invalidateCache();
+    const response = await api.put(`/channels/accounts/${encodeURIComponent(fbAccountId)}/pages`, { pageIds });
+    return response.data;
+  },
 
   // Mức độ sẵn sàng đăng nhập Facebook (setup / login / expired / partial / ready) + quyền từng tính năng
   facebookStatus: async (refresh = false) => {

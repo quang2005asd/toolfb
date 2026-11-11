@@ -35,7 +35,8 @@ import {
 const navigation = [
   { label: 'Bảng tin', href: '/dashboard', icon: LayoutDashboard },
   { label: 'AI Studio', href: '/ai-studio', icon: Sparkles },
-  { label: 'Viết bài', href: '/post-planner/compose', icon: PenLine },
+  // Viết bài: trang chọn chức năng; các trang con (Viết thường / hàng loạt / blog / Excel) vẫn sáng mục này
+  { label: 'Viết bài', href: '/post-planner/write', icon: PenLine, match: ['/post-planner/compose', '/post-planner/bulk', '/post-planner/bulk-upload', '/post-planner/blog'] },
   { label: 'Lịch đăng', href: '/post-planner/calendar', icon: CalendarDays },
   { label: 'Bài đăng', href: '/post-planner/list', icon: List },
   { label: 'Tin nhắn', href: '/inbox', icon: MessageCircle, badge: 'messenger' },
@@ -171,10 +172,10 @@ export default function MainLayout({ children, title = 'Không gian làm việc'
           <Image src="/brand-logo.png" alt="Logo" width={43} height={43} priority />
         </Link>
         <nav className="sidebar-nav">
-          {visibleNavigation.map(({ label, href, icon: Icon, badge }) => {
+          {visibleNavigation.map(({ label, href, icon: Icon, badge, match = [] }) => {
             const active = href === '/'
               ? router.pathname === '/'
-              : router.pathname === href || router.pathname.startsWith(`${href}/`);
+              : router.pathname === href || router.pathname.startsWith(`${href}/`) || match.includes(router.pathname);
             const count = badge ? badges[badge] : 0;
             return (
               <Link

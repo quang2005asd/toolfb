@@ -229,7 +229,9 @@ async function syncFacebookPages(userId, accessToken, fbAccountInfo = null) {
   }
   if (nextUrl) throw new Error('Too many Facebook Pages to synchronize in one request.');
 
-  const usablePages = pages.filter((page) => page.id && page.access_token);
+  // Fanpage người dùng đã bỏ chọn (hộp "Chọn Fanpage") không được thêm lại khi đồng bộ / gia hạn token
+  const excluded = new Set(fbUser.id && fbUser.id !== 'unknown' ? await getExcludedPageIds(userId, fbUser.id) : []);
+  const usablePages = pages.filter((page) => page.id && page.access_token && !excluded.has(String(page.id)));
   const transaction = new sql.Transaction(pool);
   await transaction.begin();
   try {
@@ -429,9 +431,38 @@ async function saveManualFacebookPage(userId, pageId, pageToken) {
   };
 }
 
+// ═══ FANPAGE ĐÃ BỎ CHỌN (theo từng tài khoản tool + nick Facebook) ═══
+function excludedKey(userId, fbAccountId) {
+  return `fb_excluded_pages:${userId}:${fbAccountId}`;
+}
+
+async function getExcludedPageIds(userId, fbAccountId) {
+  const { getSettings } = require('./SettingsService');
+  const settings = await getSettings().catch(() => ({}));
+  const value = settings[excludedKey(userId, fbAccountId)];
+  return Array.isArray(value) ? value.map(String) : [];
+}
+
+async function setExcludedPageIds(userId, fbAccountId, pageIds) {
+  const { saveSetting } = require('./SettingsService');
+  const unique = [...new Set((pageIds || []).map(String).filter((id) => /^\d+$/.test(id)))].slice(0, 2000);
+  await saveSetting(excludedKey(userId, fbAccountId), unique);
+  return unique;
+}
+
 async function disconnectFacebookPage(userId, pageId) {
   await ensureSchema();
   const pool = await getPool();
+  // Ghi nhớ Fanpage đã gỡ để lần gia hạn token sau không tự thêm lại
+  const owner = await pool.request()
+    .input('userId', sql.VarChar(64), String(userId))
+    .input('pageId', sql.VarChar(64), String(pageId))
+    .query('SELECT fb_account_id FROM dbo.FacebookPages WHERE facebook_user_id=@userId AND page_id=@pageId');
+  const fbAccountId = owner.recordset[0]?.fb_account_id;
+  if (fbAccountId) {
+    const current = await getExcludedPageIds(userId, fbAccountId);
+    await setExcludedPageIds(userId, fbAccountId, [...current, String(pageId)]).catch(() => {});
+  }
   await pool.request()
     .input('userId', sql.VarChar(64), String(userId))
     .input('pageId', sql.VarChar(64), String(pageId))
@@ -447,6 +478,8 @@ module.exports = {
   ensureSchema,
   getConnectedFbAccounts,
   getConnectedPages,
+  getExcludedPageIds,
+  setExcludedPageIds,
   getStoredPageAccessToken,
   getStoredUserAccessToken,
   getStoredUserAvatar,

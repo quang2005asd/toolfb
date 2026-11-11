@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
+import MetaAppSettings from '../../components/settings/MetaAppSettings';
 import {
   Activity,
   AlertCircle,
@@ -44,8 +46,11 @@ const tabs = [
   { id: 'ai', label: 'Cấu hình AI Studio', icon: Sparkles, permission: PERMISSIONS.SETTINGS_SYSTEM },
   { id: 'telegram', label: 'Giám sát & Bot Telegram', icon: Bell, permission: PERMISSIONS.SETTINGS_SYSTEM },
   { id: 'publishing', label: 'Đăng bài & Lịch trình', icon: Clock, permission: PERMISSIONS.SETTINGS_SYSTEM },
+  { id: 'meta-app', label: 'Meta App chung', icon: KeyRound, permission: PERMISSIONS.SETTINGS_SYSTEM },
   { id: 'system', label: 'Hệ thống & Giao diện', icon: Cpu }
 ];
+// Tab có nút lưu riêng (không dùng nút "Lưu cài đặt" chung)
+const SELF_SAVING_TABS = ['account', 'meta-app'];
 
 function InlineNotice({ notice }) {
   const isError = notice.type === 'error';
@@ -88,7 +93,14 @@ export default function SettingsPage() {
   const { user, logout, can, refreshUser } = useAuth();
   const canManageSystem = can(PERMISSIONS.SETTINGS_SYSTEM);
   const visibleTabs = tabs.filter((tab) => !tab.permission || can(tab.permission));
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('account');
+  // Mở thẳng một tab từ đường dẫn, vd. /settings?tab=meta-app (nút "Cấu hình Meta App chung" ở trang Kênh)
+  useEffect(() => {
+    if (!router.isReady) return;
+    const requested = typeof router.query.tab === 'string' ? router.query.tab : '';
+    if (requested && visibleTabs.some((tab) => tab.id === requested)) setActiveTab(requested);
+  }, [router.isReady, router.query.tab, visibleTabs.length]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState({ type: '', text: '' });
@@ -336,7 +348,7 @@ export default function SettingsPage() {
           >
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} /> Làm mới
           </button>
-          {canManageSystem && activeTab !== 'account' && (
+          {canManageSystem && !SELF_SAVING_TABS.includes(activeTab) && (
             <button
               type="button"
               className="button button-primary"
@@ -499,15 +511,15 @@ export default function SettingsPage() {
               </div>
             </section>
 
-            {/* Meta App: mỗi tài khoản tự thêm Meta App riêng ở trang Kênh (tool không dùng app chung) */}
+            {/* Kết nối Facebook: mặc định qua app chung của tool; Meta App riêng ở mục Nâng cao của trang Kênh */}
             <section className="panel">
               <div className="panel-heading">
-                <h2><KeyRound size={16} style={{ verticalAlign: 'middle', marginRight: 8, color: 'var(--blue)' }} />Meta App · Đăng nhập Facebook</h2>
+                <h2><KeyRound size={16} style={{ verticalAlign: 'middle', marginRight: 8, color: 'var(--blue)' }} />Kết nối Facebook</h2>
               </div>
               <div className="panel-body">
                 <p className="muted" style={{ marginTop: 0, fontSize: 12.5, lineHeight: 1.6 }}>
-                  Mỗi tài khoản dùng <strong>Meta App của riêng mình</strong> để đăng nhập Facebook và kết nối Fanpage (có thể thêm nhiều app cho nhiều nick).
-                  Thêm, sửa hoặc gỡ app ở trang <strong>Kênh → Meta App của tôi</strong>.
+                  Vào trang <strong>Kênh</strong> và bấm <strong>Kết nối Facebook</strong> — tool dùng app chung, bạn chỉ cần đăng nhập Facebook và chọn Fanpage.
+                  Muốn dùng Meta App của riêng mình: <strong>Kênh → Nâng cao: Meta App riêng</strong>.
                 </p>
                 <Link href="/channels" className="button button-secondary">Mở trang Kênh <ExternalLink size={13} /></Link>
               </div>
@@ -940,6 +952,8 @@ export default function SettingsPage() {
       )}
 
       {/* ═══ TAB 4: ĐĂNG BÀI & LỊCH TRÌNH ═══ */}
+      {activeTab === 'meta-app' && canManageSystem && <MetaAppSettings />}
+
       {activeTab === 'publishing' && (
         <form onSubmit={handleSave} style={{ maxWidth: 840 }}>
           <section className="panel">

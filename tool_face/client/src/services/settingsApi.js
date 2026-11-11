@@ -23,6 +23,19 @@ export const settingsApi = {
     const response = await api.post('/settings/telegram/test', params);
     return response.data;
   },
+  // Meta App chung của tool (Admin): mọi người dùng đăng nhập Facebook qua app này
+  getMetaApp: async () => {
+    const response = await api.get('/settings/meta-app');
+    return response.data;
+  },
+  saveMetaApp: async (payload) => {
+    const response = await api.put('/settings/meta-app', payload);
+    return response.data;
+  },
+  removeMetaApp: async () => {
+    const response = await api.delete('/settings/meta-app');
+    return response.data;
+  },
   runTokenHealthCheck: async () => {
     const response = await api.post('/channels/health-check');
     return response.data;

@@ -62,6 +62,12 @@ export const aiApi = {
     return response.data;
   },
 
+  // Viết blog: mode 'outline' (tiêu đề + các mục) | 'full' (cả bài, theo dàn ý nếu có)
+  writeBlog: async ({ mode, topic, audience, tone, length, title, outline }) => {
+    const response = await api.post('/ai/blog', { mode, topic, audience, tone, length, title, outline }, { timeout: 120000 });
+    return response.data;
+  },
+
   generateSeedingComments: async ({ postContent, count = 3, tone }) => {
     const response = await api.post('/ai/generate-seeding-comments', {
       postContent,

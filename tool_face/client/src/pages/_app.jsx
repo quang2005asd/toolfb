@@ -1,4 +1,5 @@
 import '../styles/globals.css';
+import '../styles/features.css';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import axios from 'axios';
@@ -17,6 +18,7 @@ export default function App({ Component, pageProps }) {
       '/dashboard',
       '/ai-studio',
       '/ai-studio/generate',
+      '/post-planner/write',
       '/post-planner/compose',
       '/post-planner/list',
       '/post-planner/calendar',

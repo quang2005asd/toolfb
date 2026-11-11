@@ -28,6 +28,14 @@ export const postApi = {
     return response.data;
   },
 
+  // Báo cáo kênh: lượt xem tách nguồn, người xem, tương tác, người theo dõi (so với kỳ trước); refresh = bỏ qua bộ nhớ tạm 30 phút
+  getOverview: async (days = 14, pageId = 'all', refresh = false) => {
+    const params = { days, pageId };
+    if (refresh) params.refresh = 1;
+    const response = await api.get('/reports/overview', { params, timeout: 120000 });
+    return response.data;
+  },
+
   getInsights: async (days = 14, pageId = '') => {
     const params = { days };
     if (pageId) params.pageId = pageId;
@@ -47,7 +55,8 @@ export const postApi = {
   },
 
   uploadMedia: async (formData) => {
-    const response = await api.post('/media', formData);
+    // Video tới 100 MB: cho phép tải lâu hơn giới hạn 30 giây mặc định
+    const response = await api.post('/media', formData, { timeout: 10 * 60 * 1000 });
     return response.data;
   },
 

@@ -12,14 +12,14 @@ Quản lý Fanpage Facebook, Instagram và TikTok trên một giao diện: lên 
 |---|---|
 | **Bảng tin** | Tổng quan bài đăng, kênh, tin nhắn |
 | **AI Studio** | Viết bài theo giọng văn, gắn hashtag / emoji, tạo ảnh AI, kiểm duyệt nội dung theo ngành, KB-facts (kho dữ kiện khách hàng / sản phẩm) |
-| **Viết bài / Lịch đăng / Bài đăng** | Facebook: chữ, ảnh, album, video, Reels, Tin (Story); TikTok: video. Hẹn giờ, đăng ngay, seeding bình luận theo độ trễ |
-| **Tải Excel** (biểu tượng trên thanh trên) | Đăng hàng loạt từ file Excel, kiểm tra từng dòng và xem trước trước khi xếp lịch |
+| **Viết bài** (`/post-planner/write`) | Chọn chức năng từ lớn đến nhỏ: **Viết thường** (một bài: chữ, ảnh, album, video, Reels, Tin; Facebook & TikTok; bình luận mồi) · **Viết hàng loạt** — *TikTok · Reels · Shorts*, *Ảnh & video thường*, *Tin (Story)*: tải nhiều file, mỗi file một bài, tự giãn giờ đăng; hoặc *Nhập từ file Excel* · **Viết blog** (bài dài có tiêu đề / các mục / ảnh bìa, AI lập dàn ý & viết, tự lưu nháp) |
+| **Lịch đăng / Bài đăng** | Xem lịch, danh sách, trạng thái từng bài |
 | **Tin nhắn** | Hộp thư Messenger + Instagram Direct, trả lời tự động (mẫu cố định hoặc AI), câu hỏi gợi ý (Ice Breakers) |
-| **Báo cáo** | Thống kê tương tác bài đăng |
+| **Báo cáo** | Báo cáo kênh: lượt xem (tách trả phí / tự nhiên, người theo dõi / người lạ), người xem, tương tác, người theo dõi mới, bài đã đăng — so với kỳ trước, 7 / 14 / 30 ngày, bài viết nổi bật |
 | **AI Bình luận** | Tự trả lời bình luận trên Fanpage bằng mẫu / AI, khách hàng, khách tiềm năng, nhật ký, chẩn đoán |
-| **Kênh** | Kết nối nick Facebook, Fanpage, **Meta App của tôi**, Instagram, TikTok, nhóm kênh |
+| **Kênh** | **Kết nối Facebook** (app chung, chọn mức quyền, chọn Fanpage), Instagram, TikTok, nhóm kênh; Meta App riêng ở mục Nâng cao |
 | **Thành viên** | Quản lý tài khoản (Admin / Quản lý) |
-| **Cài đặt** | Hồ sơ & mật khẩu; AI API Key, Telegram, lịch đăng (Admin) |
+| **Cài đặt** | Hồ sơ & mật khẩu; AI API Key, Telegram, lịch đăng, **Meta App chung** (Admin) |
 
 Trang công khai: trang giới thiệu, đăng nhập / đăng ký, Chính sách quyền riêng tư, Điều khoản, Xóa dữ liệu (Meta bắt buộc).
 
@@ -48,7 +48,8 @@ tool_face/
 │
 ├── client/                         FRONTEND — Next.js 16 (Pages Router, xuất trang tĩnh), React 19, JavaScript
 │   ├── src/pages/                  Mỗi file là một trang (đường dẫn = tên file)
-│   ├── src/components/             layout/, channels/, inbox/, comment-ai/, charts/, legal/…
+│   ├── src/components/             layout/, channels/, write/ (thanh Viết bài), charts/ (biểu đồ Báo cáo), settings/, inbox/, comment-ai/…
+│   ├── src/styles/features.css     CSS của các tính năng mới (kết nối Facebook, Báo cáo, Viết bài) — tách khỏi globals.css cho ít xung đột
 │   ├── src/services/               Gọi API bằng axios; apiBase.js chọn địa chỉ API
 │   ├── src/context/, hooks/, utils/  AuthContext / ThemeContext, useAuth, phân quyền phía giao diện…
 │   ├── src/styles/globals.css      Hệ thống giao diện (class panel, button, field, status-pill, step-strip…)
@@ -70,6 +71,7 @@ tool_face/
 |---|---|
 | Facebook & token | `FacebookPageConnections`, `FacebookTokenService` (gia hạn mỗi 30 phút), `FacebookPageAccessToken`, `FacebookLoginStatusService`, `FacebookScheduleService`, `TokenHealthCheckService` |
 | Đăng bài | `PostExecutionService` (đăng lên Facebook / chuyển TikTok vào hàng đợi), `StandaloneScheduler` (quét bài đến giờ mỗi 10 giây), `PostStateMachine`, `DateParsers` |
+| Báo cáo | `ReportService` (chỉ số Lượt xem / Người xem của Meta, so kỳ trước, nhớ tạm 30 phút) |
 | Tin nhắn | `MessengerService`, `MessengerAutoReplyService`, `MessengerIceBreakerService`, `InstagramService` |
 | TikTok | `TikTokService`, `TikTokPuppeteerService` (đăng bằng Chromium tự động) |
 | AI Studio | `AiContentGenerator`, `AiClientService`, `AiConversationService`, `AiImageService`, `TopicPackService`, `WebSearchService`, `ContentValidator`, `ClaimExtractor`, `KbFactsService` |
@@ -169,8 +171,15 @@ Hệ thống tự tạo `admin`. Trên máy mật khẩu là `1`; trên VPS là 
 | Quản lý (manager) | Tạo / sửa / khóa / xóa Thành viên, xem & điều phối bài đăng của Thành viên |
 | Thành viên (user) | Viết bài, lên lịch, AI Studio, quản lý Fanpage của mình |
 
-**Kết nối Facebook / Fanpage báo "Mất quyền", token hết hạn?**
-Tool không dùng app chung: mỗi tài khoản thêm **Meta App của riêng mình** (App ID + Khóa bí mật) ở **Kênh → Meta App của tôi**, rồi đăng nhập Facebook qua app đó. Trong Meta App cần thêm `https://<tên-miền>/api/auth/facebook/callback` vào *Valid OAuth Redirect URIs* (chạy trên máy: `http://localhost:5000/api/auth/facebook/callback`). Từ đó tool tự đổi sang token dài hạn (~60 ngày), token Fanpage lấy từ đó không hết hạn; tool tự kiểm tra mỗi 30 phút và tự lấy lại token Fanpage khi lỗi. Token ngắn hạn dán từ Graph API Explorer chỉ sống 1–2 giờ.
+**Kết nối Facebook hoạt động thế nào?**
+- Admin nhập **Meta App chung** của tool (App ID + Khóa bí mật, ví dụ app “Tool Social”) ở **Cài đặt → Meta App chung**; không nhập thì tool dùng `FACEBOOK_APP_ID` / `FACEBOOK_APP_SECRET` trong `.env`. Trang đó liệt kê sẵn các địa chỉ cần khai báo trong Meta App (miền, URI chuyển hướng, webhook, URL xóa dữ liệu…).
+- Người dùng chỉ cần bấm **Kênh → Kết nối Facebook** → chọn **Quyền đầy đủ** (đăng bài, báo cáo, tin nhắn, bình luận) hoặc **Quyền tối giản** (chỉ đăng bài + báo cáo) → đăng nhập Facebook → chọn Fanpage muốn dùng. Fanpage bỏ chọn không bị tự thêm lại khi gia hạn token; chọn lại ở tab Tài khoản Facebook → **Chọn Fanpage**.
+- Có **Configuration ID** (app loại Doanh nghiệp → Facebook Login for Business) thì nhập ở Cài đặt → Meta App chung để hộp cấp quyền của Facebook gọn hơn; không có thì tool xin quyền theo danh sách mặc định.
+- **Quan trọng:** khi app chung chưa được Meta duyệt **App Review** (Advanced Access, cần Xác minh doanh nghiệp), Facebook chỉ cấp quyền Fanpage cho nick có vai trò trong app (Admin / Developer / Người thử nghiệm). Trong thời gian chờ: thêm khách làm *Người thử nghiệm*, hoặc khách dùng **Meta App riêng** (Kênh → Nâng cao). Xem [deploy/META-APP-REVIEW.md](deploy/META-APP-REVIEW.md).
+- Tool tự đổi sang token dài hạn (~60 ngày), token Fanpage lấy từ đó không hết hạn; tool tự kiểm tra mỗi 30 phút và tự lấy lại token Fanpage khi lỗi. Token ngắn hạn dán từ Graph API Explorer chỉ sống 1–2 giờ.
+
+**Trang Báo cáo không có số liệu?**
+Báo cáo dùng chỉ số “Lượt xem / Người xem” mới của Meta (`page_media_view`, `page_total_media_view_unique`…), cần token Fanpage có quyền `read_insights`. Nick kết nối trước khi có quyền này: bấm **Cấp thêm quyền** ở trang Kênh. Số liệu mỗi Fanpage được nhớ tạm 30 phút (nút **Làm mới** để lấy ngay); Facebook có thể trễ tới 48 giờ.
 
 **Hộp thư Messenger + Instagram hoạt động thế nào?**
 - Token Fanpage cần quyền `pages_messaging` (và `instagram_manage_messages` cho Instagram). Instagram còn phải bật *Cho phép truy cập tin nhắn* trong ứng dụng Instagram (Cài đặt → Tin nhắn và lượt phản hồi tin → Công cụ đã kết nối).

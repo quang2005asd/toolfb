@@ -10,7 +10,7 @@ const ERRORS = {
   },
   oauth_failed: {
     title: 'Facebook không hoàn tất đăng nhập',
-    text: 'Tool không đổi được mã đăng nhập sang token. Thường do Khóa bí mật của Meta App đã bị đặt lại, hoặc URI chuyển hướng trong app chưa đúng. Kiểm tra app ở “Meta App của tôi”, rồi thử lại.'
+    text: 'Tool không đổi được mã đăng nhập sang token. Thường do Khóa bí mật của Meta App đã bị đặt lại, hoặc URI chuyển hướng trong app chưa đúng (app chung: báo Quản trị viên kiểm tra ở Cài đặt → Meta App chung). Thử lại sau khi kiểm tra.'
   },
   oauth_state_invalid: {
     title: 'Phiên đăng nhập Facebook đã hết hạn',
@@ -167,6 +167,31 @@ function SwitchNickBody({ state, onRemoveNick }) {
 
 // Facebook chặn đăng nhập ("Ứng dụng không hoạt động") hoặc người dùng đóng cửa sổ trước khi xong
 function IncompleteBody({ state, apps, onOwnApp, onLoginWith, onSwitchNick }) {
+  if (state.system) {
+    // Đăng nhập bằng app chung của tool
+    return (
+      <>
+        <p className="fb-login-lead">Tool chưa nhận được kết quả đăng nhập từ Facebook. Nếu bạn vẫn đang đăng nhập ở cửa sổ Facebook, cứ hoàn tất — tool sẽ tự cập nhật.</p>
+        <div className="fb-login-cause is-main">
+          <strong>Facebook báo “Ứng dụng không hoạt động” / “Tính năng không khả dụng”?</strong>
+          <span>App chung của tool đang chờ Meta duyệt (App Review). Trong thời gian này Facebook chỉ cho những nick có vai trò trong app kết nối. Chọn một cách:</span>
+          <ol className="fb-guide-substeps">
+            <li>Gửi tên (hoặc link trang cá nhân) nick Facebook của bạn cho Quản trị viên tool để được thêm làm <em>Người thử nghiệm</em> của app; chấp nhận lời mời tại <Ext href="https://developers.facebook.com/requests/">developers.facebook.com/requests</Ext> rồi bấm Thử lại.</li>
+            <li>Facebook đang vào nhầm nick? Bấm <em>Đổi nick Facebook</em>, chọn đúng trang cá nhân rồi thử lại.</li>
+            <li>Dùng Meta App của riêng bạn (Nâng cao) — nick tạo app là quản trị viên nên kết nối được ngay.</li>
+          </ol>
+          <div className="fb-own-app-actions">
+            <button type="button" className="button button-secondary fb-guide-action" onClick={() => onSwitchNick()}><RefreshCw size={15} /> Đổi nick Facebook</button>
+            <button type="button" className="button button-secondary fb-guide-action" onClick={() => onOwnApp('own-app')}><AppWindow size={15} /> Dùng Meta App riêng</button>
+          </div>
+        </div>
+        <div className="fb-login-cause">
+          <strong>Bạn đã đóng cửa sổ hoặc bấm Hủy</strong>
+          <span>Bấm “Thử lại”, hoặc xem bảng xử lý lỗi theo đúng câu Facebook hiện.</span>
+        </div>
+      </>
+    );
+  }
   const used = apps.find((app) => app.appId === state.appId) || apps[0];
   return (
     <>
@@ -214,11 +239,18 @@ function NoPermissionBody({ state, status, onSwitchNick }) {
           <span>Bấm “Đăng nhập lại” → ở hộp thoại Facebook chọn <em>Chỉnh sửa quyền truy cập</em> → bật hết các quyền và Fanpage → <em>Tiếp tục</em>.</span>
         </div>
       )}
-      <div className="fb-login-cause is-main">
-        <strong>Facebook không hỏi quyền đó?</strong>
-        <span>Quyền chưa được thêm vào đúng trường hợp sử dụng trong Meta App. Thêm theo từng khối dưới đây (quyền đang thiếu được tô đỏ), rồi {fromToken ? 'tạo lại token' : 'đăng nhập lại'}:</span>
-        <UseCasePermissionBlocks missing={state.missing} compact />
-      </div>
+      {state.system && !fromToken ? (
+        <div className="fb-login-cause is-main">
+          <strong>Facebook không hỏi quyền Fanpage?</strong>
+          <span>App chung của tool đang chờ Meta duyệt quyền nâng cao (App Review), nên Facebook chỉ cấp quyền Fanpage cho nick có vai trò trong app. Gửi nick của bạn cho Quản trị viên tool để được thêm làm Người thử nghiệm, hoặc dùng Meta App riêng (Nâng cao).</span>
+        </div>
+      ) : (
+        <div className="fb-login-cause is-main">
+          <strong>Facebook không hỏi quyền đó?</strong>
+          <span>Quyền chưa được thêm vào đúng trường hợp sử dụng trong Meta App. Thêm theo từng khối dưới đây (quyền đang thiếu được tô đỏ), rồi {fromToken ? 'tạo lại token' : 'đăng nhập lại'}:</span>
+          <UseCasePermissionBlocks missing={state.missing} compact />
+        </div>
+      )}
       {fromToken && (
         <div className="fb-login-cause">
           <strong>Tạo lại token có đủ quyền</strong>
@@ -245,7 +277,8 @@ function NoPagesBody({ state, onSwitchNick }) {
 }
 
 /**
- * Hộp thoại đăng nhập Facebook trong tool (tool không có app chung — mỗi người dùng Meta App riêng, có thể nhiều app).
+ * Hộp thoại đăng nhập Facebook trong tool (mặc định app chung; Meta App riêng ở mục Nâng cao, có thể nhiều app).
+ * state.system = true: lần đăng nhập đang dùng app chung của tool.
  * state.phase: 'waiting' | 'incomplete' | 'switch-nick' | 'choose-app' | 'own-app' | 'own-app-enter' | 'own-app-create' | 'no-permission' | 'no-pages' | 'error'
  * state: { appId? (app vừa dùng), code?, missing?, source? ('login' | 'token'), nick? ({ id, name, saved, removed } — nick Facebook vừa đăng nhập), popupBlocked? }
  */
@@ -282,10 +315,10 @@ export default function FacebookLoginDialog({ state, status, onRetry, onLoginWit
     Icon = Loader2;
     tone = 'info';
     title = 'Đang chờ đăng nhập Facebook…';
-    const used = apps.find((app) => app.appId === state.appId);
+    const used = state.system ? null : apps.find((app) => app.appId === state.appId);
     body = (
       <>
-        <p className="fb-login-lead">Hoàn tất đăng nhập trong cửa sổ Facebook vừa mở{used ? <> (Meta App <strong>{appName(used)}</strong>)</> : null}. Ở bước hỏi quyền, chọn <em>Chỉnh sửa quyền truy cập</em> và tích đủ Fanpage.</p>
+        <p className="fb-login-lead">Hoàn tất đăng nhập trong cửa sổ Facebook vừa mở{used ? <> (Meta App <strong>{appName(used)}</strong>)</> : null}. Ở bước hỏi quyền, chọn Fanpage muốn kết nối rồi bấm <em>Tiếp tục</em> — sau đó tool cho bạn chọn lại Fanpage muốn dùng.</p>
         <div className="fb-login-cause">
           <strong>Cửa sổ Facebook đang vào nhầm nick?</strong>
           <span>Facebook dùng nick (trang cá nhân) đang đăng nhập trong trình duyệt — nhập đúng mật khẩu mà tài khoản có nhiều trang cá nhân thì Facebook vẫn mở trang cá nhân dùng gần nhất. Bấm để đổi nick ngay trong cửa sổ Facebook.</span>
@@ -346,13 +379,11 @@ export default function FacebookLoginDialog({ state, status, onRetry, onLoginWit
   } else if (phase === 'own-app') {
     Icon = AppWindow;
     tone = 'info';
-    title = apps.length ? 'Thêm Meta App khác' : 'Cần Meta App để đăng nhập Facebook';
+    title = apps.length ? 'Meta App riêng (Nâng cao)' : 'Nâng cao: dùng Meta App của riêng bạn';
     body = (
       <>
         <p className="fb-login-lead">
-          {apps.length
-            ? 'Mỗi nick Facebook đăng nhập qua một Meta App mà nick đó là quản trị viên. Thêm app của nick khác để quản lý thêm Fanpage.'
-            : <>Tool không dùng app chung: mỗi tài khoản dùng <em>Meta App của riêng mình</em> (miễn phí). Nick tạo app là quản trị viên nên đăng nhập được ngay, không cần ai mời.</>}
+          Bình thường bạn chỉ cần bấm <em>Kết nối Facebook</em> (dùng app chung của tool). Dùng <em>Meta App của riêng bạn</em> khi app chung chưa được Meta duyệt cho nick của bạn, hoặc bạn muốn tự quản lý app. Nick tạo app là quản trị viên nên kết nối được ngay.
           {' '}Bạn đã có Meta App trên developers.facebook.com chưa?
         </p>
         <OwnAppChooser onOwnApp={onOwnApp} />

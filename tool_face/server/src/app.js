@@ -46,6 +46,7 @@ const commentAiService = require('./utils/CommentAiService');
 const { commentAiRouter, facebookWebhookRouter } = require('./modules/comment-ai/comment-ai.routes');
 
 const tokenService = require('./utils/FacebookTokenService');
+const reportService = require('./utils/ReportService');
 const facebookLoginStatus = require('./utils/FacebookLoginStatusService');
 
 // Sau mỗi lần đồng bộ tin của một hội thoại: kiểm tra và gửi trả lời tự động nếu đang bật
@@ -277,22 +278,31 @@ app.get('/api/auth/facebook', async (req, res) => {
     return res.redirect(302, `${clientOrigin()}/login?error=session_required`);
   }
   const popup = req.query.popup === '1';
-  // Chỉ dùng Meta App riêng của người dùng (tool không có app chung); có nhiều app thì đăng nhập bằng app được chọn
+  // Mặc định dùng app chung của tool; ?app=<App ID> để đăng nhập bằng Meta App riêng (mục Nâng cao)
   const requestedApp = typeof req.query.app === 'string' && /^\d{5,20}$/.test(req.query.app) ? req.query.app : null;
+  // Mức quyền: full (đầy đủ) | minimal (tối giản: chỉ đăng bài + báo cáo)
+  const level = tokenService.normalizeLevel(req.query.level);
   const creds = await tokenService.getMetaAppCredentials(req.user.sub, { appId: requestedApp });
   if (!creds.configured) {
     return res.redirect(302, facebookLoginReturn(popup, 'error=app_not_configured'));
   }
 
-  // state = chuỗi ngẫu nhiên ~ App ID (+ .popup): callback đổi mã đăng nhập bằng đúng app đã mở hộp thoại
-  const state = `${crypto.randomBytes(32).toString('base64url')}~${creds.appId}${popup ? FB_POPUP_STATE_SUFFIX : ''}`;
+  // state = chuỗi ngẫu nhiên ~ App ID ~ mức quyền (+ .popup): callback đổi mã đăng nhập bằng đúng app đã mở hộp thoại
+  const state = `${crypto.randomBytes(32).toString('base64url')}~${creds.appId}~${level}${popup ? FB_POPUP_STATE_SUFFIX : ''}`;
   setCookie(req, res, OAUTH_STATE_COOKIE, state, 10 * 60);
   const graphVersion = process.env.FB_GRAPH_VERSION || 'v19.0';
   const authorizationUrl = new URL(`https://www.facebook.com/${graphVersion}/dialog/oauth`);
   authorizationUrl.searchParams.set('client_id', creds.appId);
   authorizationUrl.searchParams.set('redirect_uri', facebookRedirectUri());
   authorizationUrl.searchParams.set('response_type', 'code');
-  authorizationUrl.searchParams.set('scope', tokenService.loginScopes());
+  // App chung có Configuration ID (Facebook Login for Business): Facebook hiện hộp cấp quyền gọn theo cấu hình đã duyệt
+  const configId = creds.source === 'system' ? (level === 'minimal' ? creds.configMinimal || creds.configFull : creds.configFull) : '';
+  if (configId) {
+    authorizationUrl.searchParams.set('config_id', configId);
+    authorizationUrl.searchParams.set('override_default_response_type', 'true');
+  } else {
+    authorizationUrl.searchParams.set('scope', tokenService.loginScopes(level));
+  }
   authorizationUrl.searchParams.set('auth_type', 'rerequest');
   authorizationUrl.searchParams.set('state', state);
   return res.redirect(302, authorizationUrl.toString());
@@ -318,7 +328,9 @@ app.get('/api/auth/facebook/callback', async (req, res) => {
     return res.redirect(facebookLoginReturn(popup, 'error=oauth_state_invalid'));
   }
 
-  const stateAppId = String(req.query.state).replace(FB_POPUP_STATE_SUFFIX, '').split('~')[1] || null;
+  const stateParts = String(req.query.state).replace(FB_POPUP_STATE_SUFFIX, '').split('~');
+  const stateAppId = stateParts[1] || null;
+  const stateLevel = tokenService.normalizeLevel(stateParts[2]);
   const creds = await tokenService.getMetaAppCredentials(req.user.sub, { appId: stateAppId });
   if (!creds.configured) {
     return res.redirect(facebookLoginReturn(popup, 'error=app_not_configured'));
@@ -336,7 +348,7 @@ app.get('/api/auth/facebook/callback', async (req, res) => {
       timeout: 15000
     });
     // Đổi sang token dài hạn, lưu nick Facebook và lấy lại toàn bộ token Fanpage
-    const result = await tokenService.connectUserToken(req.user.sub, codeResponse.data.access_token, { appId: creds.appId });
+    const result = await tokenService.connectUserToken(req.user.sub, codeResponse.data.access_token, { appId: creds.appId, level: stateLevel });
     console.log(`[Facebook OAuth] Kết nối lại ${result.pages.length} Fanpage cho ${req.user.username} (FB: ${result.fbAccount.id}, app ${creds.appId}, token ${result.tokenType}).`);
     // Đăng nhập được nhưng chưa có Fanpage → tool hiện hướng dẫn tạo Fanpage; thiếu quyền một số tính năng → báo kèm
     // nick / nickId: nick Facebook vừa đăng nhập — tool hiện tên để người dùng biết Facebook có vào nhầm nick không
@@ -675,6 +687,82 @@ app.post('/api/ai/chat', requireAuth, async (req, res) => {
       success: false,
       message: errMsg || 'Không thể nhận phản hồi từ AI provider. Kiểm tra AI API Key hoặc endpoint trong Cài đặt.'
     });
+  }
+});
+
+// ═══ AI VIẾT BLOG (bài dài đăng Fanpage) ═══
+// mode: 'outline' (chỉ dàn ý: tiêu đề + các mục) | 'full' (viết cả bài, có thể theo dàn ý người dùng đã sửa)
+function parseAiJson(text) {
+  const raw = String(text || '').replace(/```(?:json)?/gi, '').trim();
+  const start = raw.indexOf('{');
+  const end = raw.lastIndexOf('}');
+  if (start < 0 || end <= start) throw new Error('AI không trả về đúng định dạng — hãy thử lại.');
+  return JSON.parse(raw.slice(start, end + 1));
+}
+
+app.post('/api/ai/blog', requireAuth, async (req, res) => {
+  const body = req.body || {};
+  const topic = String(body.topic || '').trim().slice(0, 500);
+  const mode = body.mode === 'outline' ? 'outline' : 'full';
+  if (!topic) return res.status(400).json({ success: false, message: 'Hãy nhập chủ đề bài blog.' });
+  const audience = String(body.audience || '').trim().slice(0, 200);
+  const tone = String(body.tone || 'Chuyên nghiệp, gần gũi').trim().slice(0, 80);
+  const length = ['short', 'medium', 'long'].includes(body.length) ? body.length : 'medium';
+  const sectionCount = { short: 3, medium: 4, long: 6 }[length];
+  const wordsPerSection = { short: 70, medium: 110, long: 150 }[length];
+  const outline = Array.isArray(body.outline)
+    ? body.outline.map((item) => String(item || '').trim().slice(0, 160)).filter(Boolean).slice(0, 10)
+    : [];
+  const title = String(body.title || '').trim().slice(0, 200);
+
+  const rules = [
+    'Viết bằng tiếng Việt, đăng lên Fanpage Facebook dạng bài dài (blog).',
+    'TUYỆT ĐỐI KHÔNG dùng Markdown (**, *, #, gạch đầu dòng bằng *). Facebook không hiển thị định dạng này.',
+    'Không bịa số liệu, giá, tên người, sự kiện cụ thể nếu người dùng không cung cấp.',
+    'Chỉ trả về MỘT đối tượng JSON hợp lệ, không thêm chữ nào ngoài JSON.'
+  ].join('\n');
+  const request = mode === 'outline'
+    ? `Lập dàn ý cho bài blog về: "${topic}".${audience ? ` Đối tượng đọc: ${audience}.` : ''} Giọng văn: ${tone}.
+Trả về JSON: {"title": "tiêu đề hấp dẫn (dưới 100 ký tự)", "sections": [{"heading": "tên mục"}]} với đúng ${sectionCount} mục.`
+    : `Viết bài blog về: "${topic}".${audience ? ` Đối tượng đọc: ${audience}.` : ''} Giọng văn: ${tone}.
+${title ? `Tiêu đề đã chọn: "${title}".` : 'Tự đặt tiêu đề hấp dẫn (dưới 100 ký tự).'}
+${outline.length ? `Viết đúng theo các mục sau, giữ nguyên thứ tự và tên mục:\n${outline.map((item, index) => `${index + 1}. ${item}`).join('\n')}` : `Chia thành ${sectionCount} mục.`}
+Mỗi mục khoảng ${wordsPerSection} chữ, có thể xuống dòng; được dùng emoji vừa phải.
+Trả về JSON: {"title": "...", "intro": "đoạn mở bài 2-3 câu", "sections": [{"heading": "...", "body": "..."}], "outro": "kết bài + lời kêu gọi hành động", "hashtags": ["#..."]}`;
+
+  try {
+    const { content } = await callAiChat({
+      messages: [
+        { role: 'system', content: rules },
+        { role: 'user', content: request }
+      ],
+      temperature: 0.7,
+      max_tokens: mode === 'outline' ? 800 : 3500
+    });
+    const data = parseAiJson(content);
+    const clean = (value, max = 4000) => cleanFacebookContent(String(value || '')).trim().slice(0, max);
+    const sections = (Array.isArray(data.sections) ? data.sections : [])
+      .map((section) => ({ heading: clean(section?.heading, 160), body: mode === 'full' ? clean(section?.body) : '' }))
+      .filter((section) => section.heading)
+      .slice(0, 10);
+    if (!sections.length) throw new Error('AI không trả về mục nào — hãy thử lại.');
+    return res.json({
+      success: true,
+      mode,
+      blog: {
+        title: clean(data.title, 200),
+        intro: mode === 'full' ? clean(data.intro, 2000) : '',
+        sections,
+        outro: mode === 'full' ? clean(data.outro, 2000) : '',
+        hashtags: mode === 'full' && Array.isArray(data.hashtags)
+          ? data.hashtags.map((tag) => `#${String(tag || '').replace(/^#+/, '').replace(/\s+/g, '')}`).filter((tag) => tag.length > 1).slice(0, 10)
+          : []
+      }
+    });
+  } catch (error) {
+    const message = error.response?.data?.error?.message || error.message;
+    console.error('[AI Blog Error]', message);
+    return res.status(502).json({ success: false, message: message || 'AI chưa viết được bài — kiểm tra AI API Key ở Cài đặt.' });
   }
 });
 
@@ -1082,6 +1170,55 @@ app.all('/api/channels/health-check', requirePermission(PERMISSIONS.SETTINGS_SYS
   }
 });
 
+// ═══ APP CHUNG CỦA TOOL (Meta App mọi người dùng đăng nhập Facebook qua) — chỉ Admin ═══
+function metaAppSetupInfo() {
+  const origin = clientOrigin();
+  let domain = origin;
+  try { domain = new URL(origin).hostname; } catch {}
+  return {
+    domain,
+    redirectUri: facebookRedirectUri(),
+    webhookUrl: `${origin}/api/webhooks/messenger`,
+    verifyToken: process.env.MESSENGER_VERIFY_TOKEN || null,
+    dataDeletionUrl: `${origin}/api/meta/data-deletion`,
+    privacyUrl: `${origin}/privacy/`,
+    termsUrl: `${origin}/terms/`
+  };
+}
+
+app.get('/api/settings/meta-app', requirePermission(PERMISSIONS.SETTINGS_SYSTEM), async (_req, res) => {
+  try {
+    return res.json({ success: true, app: await tokenService.getSystemAppInfo(), setup: metaAppSetupInfo() });
+  } catch (error) {
+    return sendApiError(res, 'System Meta App Error', error, 'Không đọc được Meta App chung.');
+  }
+});
+
+app.put('/api/settings/meta-app', requirePermission(PERMISSIONS.SETTINGS_SYSTEM), async (req, res) => {
+  try {
+    const { appId, appSecret, configFull, configMinimal } = req.body || {};
+    const saved = await tokenService.saveSystemApp({ appId, appSecret, configFull, configMinimal });
+    return res.json({ success: true, app: saved, setup: metaAppSetupInfo(), message: 'Đã lưu Meta App chung. Mọi người dùng giờ chỉ cần bấm "Kết nối Facebook".' });
+  } catch (error) {
+    const status = error instanceof tokenService.TokenError ? error.status : 500;
+    return res.status(status).json({ success: false, code: error.code || null, message: error.message });
+  }
+});
+
+app.delete('/api/settings/meta-app', requirePermission(PERMISSIONS.SETTINGS_SYSTEM), async (_req, res) => {
+  try {
+    const info = await tokenService.clearSystemApp();
+    return res.json({
+      success: true,
+      app: info,
+      setup: metaAppSetupInfo(),
+      message: info.configured ? 'Đã xóa app lưu trong Cài đặt — tool đang dùng app khai báo trong file .env.' : 'Đã gỡ Meta App chung.'
+    });
+  } catch (error) {
+    return sendApiError(res, 'System Meta App Error', error, 'Không gỡ được Meta App chung.');
+  }
+});
+
 app.post('/api/settings/test-ai', requirePermission(PERMISSIONS.SETTINGS_SYSTEM), async (req, res) => {
   try {
     const settings = await getSettings().catch(() => ({}));
@@ -1405,6 +1542,28 @@ app.post('/api/channels/token-renew', requireAuth, async (req, res) => {
     });
   } catch (error) {
     return sendApiError(res, 'Token Renew Error', error, 'Không thể làm mới token.');
+  }
+});
+
+// Hộp "Chọn Fanpage": mọi Fanpage nick đang quản lý trên Facebook + trạng thái đã thêm vào tool
+app.get('/api/channels/accounts/:fbAccountId/pages', requireAuth, async (req, res) => {
+  try {
+    return res.json({ success: true, ...(await tokenService.listAccountPages(req.user.sub, req.params.fbAccountId)) });
+  } catch (error) {
+    if (error instanceof tokenService.TokenError) return res.status(error.status).json({ success: false, code: error.code, message: error.message });
+    return sendApiError(res, 'Account Pages Error', error, 'Không đọc được danh sách Fanpage từ Facebook.');
+  }
+});
+
+app.put('/api/channels/accounts/:fbAccountId/pages', requireAuth, async (req, res) => {
+  try {
+    const pageIds = Array.isArray(req.body?.pageIds) ? req.body.pageIds : [];
+    const result = await tokenService.saveAccountPageSelection(req.user.sub, req.params.fbAccountId, pageIds);
+    await messengerService.purgeDisconnectedPageData().catch((error) => console.warn('[Purge Page Data]', error.message));
+    return res.json({ success: true, ...result, message: `Đã lưu: ${result.connected} Fanpage đang dùng trong tool.` });
+  } catch (error) {
+    if (error instanceof tokenService.TokenError) return res.status(error.status).json({ success: false, code: error.code, message: error.message });
+    return sendApiError(res, 'Account Pages Save Error', error, 'Không lưu được lựa chọn Fanpage.');
   }
 });
 
@@ -2036,6 +2195,11 @@ async function handleMetaWebhook(req, res) {
   try {
     const pool = await getPool();
     const pageIds = [];
+    if (matched.all) {
+      // App chung: Facebook chỉ gửi sự kiện của Fanpage đã cấp quyền qua app này → nhận cho mọi Fanpage trong tool
+      const result = await pool.request().query('SELECT DISTINCT page_id FROM dbo.FacebookPages');
+      pageIds.push(...result.recordset.map((row) => String(row.page_id)));
+    }
     for (const appUserId of matched.appUserIds) {
       const result = await pool.request()
         .input('appUserId', sql.VarChar(64), String(appUserId))
@@ -2120,13 +2284,14 @@ app.get('/api/posts/template', (_req, res) => {
 
 app.post('/api/posts', requireAuth, async (req, res) => {
   console.log('[POST /api/posts] Nhận request từ user:', req.user?.sub);
-  const content = typeof req.body.content === 'string' ? req.body.content.trim() : '';
   const rawPageIds = Array.isArray(req.body.pageIds) && req.body.pageIds.length > 0
     ? req.body.pageIds
     : [req.body.pageId || process.env.FACEBOOK_PAGE_ID || ''];
   const targetPageIds = [...new Set(rawPageIds.map((id) => String(id || '').trim()))].filter((id) => /^\d+$/.test(id));
 
   const mediaType = String(req.body.mediaType || 'text').toLowerCase();
+  // Tin (Story) không hiển thị chữ trên Facebook: cho phép bỏ trống, lưu nhãn để danh sách bài dễ nhận biết
+  const content = (typeof req.body.content === 'string' ? req.body.content.trim() : '') || (mediaType === 'story' ? 'Tin (Story)' : '');
   const mediaLinks = Array.isArray(req.body.mediaLinks) ? req.body.mediaLinks : [];
   const scheduledAt = new Date(req.body.scheduledAt || Date.now());
   const platform = String(req.body.platform || 'facebook').toLowerCase();
@@ -2414,6 +2579,31 @@ app.get('/api/posts/stats', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('[Posts Stats Error]', error.message);
     return res.status(500).json({ success: false, message: 'Không thể tải thống kê bài đăng.' });
+  }
+});
+
+// Báo cáo kênh (trang Báo cáo): lượt xem tách nguồn, người xem, tương tác, người theo dõi — so với kỳ trước
+app.get('/api/reports/overview', requireAuth, async (req, res) => {
+  try {
+    const pages = await getConnectedPages(req.user.sub);
+    const requested = req.query.pageId ? String(req.query.pageId) : 'all';
+    let targetPages = pages;
+    if (requested !== 'all') {
+      targetPages = pages.filter((page) => String(page.id) === requested);
+      if (!targetPages.length) return res.status(403).json({ success: false, message: 'Không có quyền xem Fanpage này.' });
+    }
+    const list = [...new Map(pages.map((page) => [String(page.id), { id: String(page.id), name: page.name }])).values()];
+    if (!targetPages.length) {
+      return res.json({ success: true, available: false, pagesList: [], message: 'Tài khoản chưa có Fanpage nào được kết nối.' });
+    }
+    const overview = await reportService.getOverview(
+      targetPages.map((page) => ({ id: String(page.id), name: page.name })),
+      Number.parseInt(req.query.days, 10),
+      { force: req.query.refresh === '1' }
+    );
+    return res.json({ success: true, available: true, pagesList: list, ...overview });
+  } catch (error) {
+    return sendApiError(res, 'Report Overview Error', error, 'Không tải được báo cáo kênh.');
   }
 });
 

@@ -36,6 +36,7 @@ import {
   Users
 } from 'lucide-react';
 import MainLayout from '../../components/layout/MainLayout';
+import WriteNav from '../../components/write/WriteNav';
 import postApi from '../../services/postApi';
 import channelApi from '../../services/channelApi';
 import aiApi from '../../services/aiApi';
@@ -1330,6 +1331,7 @@ export default function ComposePage() {
   return (
     <MainLayout title="Viết bài">
       <Toast toast={toast} onClose={() => setToast(null)} />
+      <WriteNav active="single" />
       <div className="step-strip" role="tablist" aria-label="Các bước tạo bài">
         {steps.map((label, index) => (
           <button

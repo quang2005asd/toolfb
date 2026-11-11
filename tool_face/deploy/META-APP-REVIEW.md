@@ -32,7 +32,8 @@ Thay `ten-mien-cua-ban.com` bằng tên miền thật. Mở app tại [developer
 - Đăng ký trường (subscribe fields):
   - **Page**: `messages`, `message_echoes`
   - **Instagram**: `messages`
-- Tool xác thực chữ ký webhook bằng App Secret: thêm app ở **tool → Kênh → Meta App của tôi** (sự kiện chỉ được giao cho Fanpage của những tài khoản đã thêm app đó).
+- Tool xác thực chữ ký webhook bằng App Secret: app chung của tool nhập ở **tool → Cài đặt → Meta App chung** (trang này cũng liệt kê sẵn mọi địa chỉ cần khai báo). Meta App riêng của người dùng (Kênh → Nâng cao) cũng được nhận — sự kiện ký bằng app riêng chỉ giao cho Fanpage của những tài khoản đã thêm app đó.
+- Quyền cần xin trong App Review (mức đầy đủ): `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`, `pages_read_user_content`, `pages_manage_engagement`, `pages_manage_metadata`, `pages_messaging`, `read_insights` (trang Báo cáo), `business_management`, `instagram_basic`, `instagram_manage_messages`. Mức tối giản chỉ cần `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`, `read_insights`.
 
 ### A4. Trong lúc chờ xác minh: thêm người thử nghiệm
 

@@ -14,6 +14,7 @@ const {
   encryptToken,
   ensureSchema,
   saveFacebookUser,
+  setExcludedPageIds,
   syncFacebookPages
 } = require('./FacebookPageConnections');
 
@@ -21,18 +22,29 @@ const GRAPH = `https://graph.facebook.com/${process.env.FB_GRAPH_VERSION || 'v19
 const RENEW_INTERVAL_MS = 30 * 60 * 1000;
 const RENEW_THROTTLE_MS = 2 * 60 * 1000;
 const LONG_LIVED_MIN_SECONDS = 7 * 24 * 60 * 60;
-// Quyền cần cho đăng bài, đọc số liệu, hộp thư Messenger và Instagram
+// Hai mức quyền khi kết nối Facebook (giống "Quyền tiêu chuẩn / Quyền tối giản"):
+//   full    → đăng bài, báo cáo, hộp thư Messenger / Instagram, bình luận
+//   minimal → chỉ đăng bài + báo cáo (không đọc tin nhắn / bình luận)
+const LOGIN_LEVELS = ['full', 'minimal'];
 const DEFAULT_LOGIN_SCOPES = [
   'public_profile', 'pages_show_list', 'pages_read_engagement', 'pages_read_user_content', 'pages_manage_posts',
-  'pages_manage_metadata', 'pages_manage_engagement', 'pages_messaging', 'business_management',
+  'pages_manage_metadata', 'pages_manage_engagement', 'pages_messaging', 'read_insights', 'business_management',
   'instagram_basic', 'instagram_manage_messages', 'instagram_manage_comments', 'instagram_content_publish'
 ].join(',');
+const MINIMAL_LOGIN_SCOPES = [
+  'public_profile', 'pages_show_list', 'pages_read_engagement', 'pages_manage_posts', 'read_insights', 'business_management'
+].join(',');
 
-// Quyền Fanpage mà các tính năng đăng bài / hộp thư / bình luận cần (Instagram & Business là tùy chọn)
+// Quyền Fanpage mà các tính năng của từng mức quyền cần (Instagram & Business là tùy chọn)
 const REQUIRED_PAGE_SCOPES = [
   'pages_show_list', 'pages_read_engagement', 'pages_manage_posts', 'pages_messaging',
   'pages_manage_metadata', 'pages_read_user_content', 'pages_manage_engagement'
 ];
+const REQUIRED_MINIMAL_SCOPES = ['pages_show_list', 'pages_read_engagement', 'pages_manage_posts'];
+
+function normalizeLevel(level) {
+  return LOGIN_LEVELS.includes(level) ? level : 'full';
+}
 
 class TokenError extends Error {
   constructor(message, status = 400, code = 'token_error', details = {}) {
@@ -66,6 +78,8 @@ async function ensureTokenSchema() {
           ALTER TABLE dbo.ConnectedFbAccounts ADD token_error nvarchar(500) NULL;
         IF COL_LENGTH('dbo.ConnectedFbAccounts', 'meta_app_id') IS NULL
           ALTER TABLE dbo.ConnectedFbAccounts ADD meta_app_id varchar(32) NULL;
+        IF COL_LENGTH('dbo.ConnectedFbAccounts', 'login_level') IS NULL
+          ALTER TABLE dbo.ConnectedFbAccounts ADD login_level varchar(10) NULL;
       `);
     })().catch((error) => {
       schemaPromise = null;
@@ -85,9 +99,103 @@ function graphMessage(error) {
   return error.response?.data?.error?.message || error.message;
 }
 
-// ═══ META APP RIÊNG CỦA TỪNG NGƯỜI DÙNG (APP ID / APP SECRET) ═══
-// Tool không dùng app chung: mỗi tài khoản tool tự thêm một hoặc nhiều Meta App mà nick Facebook của họ là quản trị viên.
+// ═══ META APP ═══
+// 1. App chung của tool (mặc định cho mọi người dùng): Admin nhập ở Cài đặt (khóa fb_system_app), không có thì lấy
+//    FACEBOOK_APP_ID / FACEBOOK_APP_SECRET trong .env. Người dùng chỉ cần bấm "Kết nối Facebook".
+//    Lưu ý: khi app chưa được Meta duyệt App Review (Advanced Access), chỉ nick có vai trò trong app mới cấp quyền được.
+// 2. Meta App riêng (mục Nâng cao): người dùng tự thêm một hoặc nhiều app mà nick Facebook của họ là quản trị viên.
 // Mỗi nick Facebook nhớ app đã cấp token (ConnectedFbAccounts.meta_app_id) để đổi / gia hạn token bằng đúng app đó.
+const SYSTEM_APP_KEY = 'fb_system_app';
+const SYSTEM_APP_LABEL = 'App chung của tool';
+
+function cleanConfigId(value) {
+  const text = String(value || '').trim();
+  return /^\d{5,25}$/.test(text) ? text : '';
+}
+
+// App chung: Cài đặt (Admin nhập) được ưu tiên hơn .env
+function systemAppFrom(settings) {
+  const saved = settings?.[SYSTEM_APP_KEY];
+  if (saved && typeof saved === 'object' && saved.appId && saved.secret) {
+    const appSecret = decryptToken(saved.secret);
+    if (appSecret) {
+      return {
+        appId: String(saved.appId),
+        appSecret,
+        label: SYSTEM_APP_LABEL,
+        configured: true,
+        source: 'system',
+        origin: 'settings',
+        configFull: cleanConfigId(saved.configFull),
+        configMinimal: cleanConfigId(saved.configMinimal),
+        savedAt: saved.savedAt || null
+      };
+    }
+  }
+  const envId = String(process.env.FACEBOOK_APP_ID || '').trim();
+  const envSecret = String(process.env.FACEBOOK_APP_SECRET || '').trim();
+  if (/^\d{5,20}$/.test(envId) && envSecret) {
+    return {
+      appId: envId,
+      appSecret: envSecret,
+      label: SYSTEM_APP_LABEL,
+      configured: true,
+      source: 'system',
+      origin: 'env',
+      configFull: cleanConfigId(process.env.FACEBOOK_LOGIN_CONFIG_FULL),
+      configMinimal: cleanConfigId(process.env.FACEBOOK_LOGIN_CONFIG_MINIMAL),
+      savedAt: null
+    };
+  }
+  return { appId: '', appSecret: '', label: SYSTEM_APP_LABEL, configured: false, source: 'system', origin: null, configFull: '', configMinimal: '' };
+}
+
+async function getSystemApp() {
+  const settings = await getSettings().catch(() => ({}));
+  return systemAppFrom(settings);
+}
+
+// Thông tin app chung cho trang Cài đặt (không trả Khóa bí mật)
+async function getSystemAppInfo() {
+  const app = await getSystemApp();
+  return {
+    configured: app.configured,
+    appId: app.appId || null,
+    origin: app.origin,
+    configFull: app.configFull || '',
+    configMinimal: app.configMinimal || '',
+    savedAt: app.savedAt || null
+  };
+}
+
+// Admin lưu app chung (bỏ trống Khóa bí mật = giữ khóa cũ); kiểm tra với Facebook trước khi lưu
+async function saveSystemApp({ appId, appSecret, configFull, configMinimal }) {
+  const cleanId = String(appId || '').trim();
+  const settings = await getSettings().catch(() => ({}));
+  const current = systemAppFrom(settings);
+  const keepSecret = current.configured && current.origin === 'settings' && current.appId === cleanId ? current.appSecret : '';
+  const cleanSecret = String(appSecret || '').trim() || keepSecret;
+  if (!/^\d{5,20}$/.test(cleanId)) throw new TokenError('App ID chỉ gồm chữ số (Cài đặt ứng dụng → Thông tin cơ bản → ID ứng dụng).', 400, 'invalid_app_id');
+  if (!cleanSecret) throw new TokenError('Vui lòng nhập Khóa bí mật của ứng dụng (App Secret).', 400, 'missing_app_secret');
+  for (const [label, value] of [['đầy đủ', configFull], ['tối giản', configMinimal]]) {
+    if (String(value || '').trim() && !cleanConfigId(value)) throw new TokenError(`Configuration ID (quyền ${label}) chỉ gồm chữ số.`, 400, 'invalid_config_id');
+  }
+  await validateAppCredentials(cleanId, cleanSecret);
+  await saveSetting(SYSTEM_APP_KEY, {
+    appId: cleanId,
+    secret: encryptToken(cleanSecret),
+    configFull: cleanConfigId(configFull),
+    configMinimal: cleanConfigId(configMinimal),
+    savedAt: new Date().toISOString()
+  });
+  return getSystemAppInfo();
+}
+
+async function clearSystemApp() {
+  await saveSetting(SYSTEM_APP_KEY, '');
+  return getSystemAppInfo();
+}
+
 const USER_APPS_PREFIX = 'fb_user_apps:';
 const LEGACY_USER_APP_PREFIX = 'fb_user_app:';
 const MAX_APPS_PER_USER = 10;
@@ -120,17 +228,27 @@ function toCreds(app) {
     : { appId: '', appSecret: '', label: '', configured: false, source: 'user' };
 }
 
-// appId: chọn đúng một app của người dùng; không truyền thì lấy app đầu tiên
+// appId: chọn đúng một app (app riêng của người dùng hoặc app chung); không truyền thì ưu tiên app chung,
+// chưa có app chung thì dùng app riêng đầu tiên
 async function getMetaAppCredentials(appUserId = null, { appId = null } = {}) {
-  const apps = await listUserApps(appUserId);
-  if (appId) return toCreds(apps.find((app) => app.appId === String(appId)));
-  return toCreds(apps[0]);
+  const [apps, system] = await Promise.all([listUserApps(appUserId), getSystemApp()]);
+  if (appId) {
+    const own = apps.find((app) => app.appId === String(appId));
+    if (own) return toCreds(own);
+    return system.configured && system.appId === String(appId) ? system : toCreds(null);
+  }
+  return system.configured ? system : toCreds(apps[0]);
 }
 
-// App đã cấp token cho một nick Facebook; app đó bị gỡ khỏi tool thì dùng app đầu tiên của người dùng
+// App đã cấp token cho một nick Facebook; app đó bị gỡ khỏi tool (hoặc nick cũ chưa ghi app) thì dùng app chung,
+// chưa có app chung thì app riêng đầu tiên của người dùng
 async function getAccountCredentials(row) {
-  const apps = await listUserApps(row.app_user_id);
-  return toCreds(apps.find((app) => app.appId === String(row.meta_app_id || '')) || apps[0]);
+  const [apps, system] = await Promise.all([listUserApps(row.app_user_id), getSystemApp()]);
+  const metaAppId = String(row.meta_app_id || '');
+  const own = apps.find((app) => app.appId === metaAppId);
+  if (own) return toCreds(own);
+  if (system.configured) return system;
+  return toCreds(apps[0]);
 }
 
 // App của nick sở hữu Fanpage (dùng để kiểm tra token Page / chẩn đoán)
@@ -226,13 +344,26 @@ async function allUserApps() {
       byApp.set(app.appId, entry);
     }
   }
-  return [...byApp.values()].map((entry) => ({ ...entry, secrets: [...entry.secrets] }));
+  const result = [...byApp.values()].map((entry) => ({ ...entry, secrets: [...entry.secrets], system: false }));
+  // App chung: sự kiện của mọi Fanpage trong tool (Fanpage nào cấp quyền qua app chung thì Facebook mới gửi sự kiện)
+  const system = systemAppFrom(settings);
+  if (system.configured) {
+    const same = result.find((entry) => entry.appId === system.appId);
+    if (same) {
+      same.system = true;
+      if (!same.secrets.includes(system.appSecret)) same.secrets.push(system.appSecret);
+    } else {
+      result.unshift({ appId: system.appId, secrets: [system.appSecret], appUserIds: new Set(), system: true });
+    }
+  }
+  return result;
 }
 
-// Webhook: tìm app đã ký sự kiện (verify(secret) → true/false); trả về app và mọi người dùng đã thêm app đó
+// Webhook: tìm app đã ký sự kiện (verify(secret) → true/false); trả về app và mọi người dùng đã thêm app đó.
+// all = true: app chung → giao sự kiện cho Fanpage của mọi tài khoản
 async function matchWebhookApp(verify) {
   for (const app of await allUserApps()) {
-    if (app.secrets.some((secret) => verify(secret))) return { appId: app.appId, appUserIds: [...app.appUserIds] };
+    if (app.secrets.some((secret) => verify(secret))) return { appId: app.appId, appUserIds: [...app.appUserIds], all: Boolean(app.system) };
   }
   return null;
 }
@@ -247,10 +378,30 @@ async function saveAccountApp(appUserId, fbUserId, metaAppId) {
     .query('UPDATE dbo.ConnectedFbAccounts SET meta_app_id=@metaAppId WHERE app_user_id=@appUserId AND fb_user_id=@fbUserId');
 }
 
-function loginScopes() {
-  return process.env.FACEBOOK_LOGIN_SCOPES && process.env.FACEBOOK_LOGIN_SCOPES !== 'public_profile'
+async function saveAccountLevel(appUserId, fbUserId, level) {
+  if (!level) return;
+  const pool = await getPool();
+  await pool.request()
+    .input('appUserId', sql.VarChar(64), String(appUserId))
+    .input('fbUserId', sql.VarChar(64), String(fbUserId))
+    .input('level', sql.VarChar(10), normalizeLevel(level))
+    .query('UPDATE dbo.ConnectedFbAccounts SET login_level=@level WHERE app_user_id=@appUserId AND fb_user_id=@fbUserId');
+}
+
+// Danh sách quyền xin khi đăng nhập theo mức quyền. FACEBOOK_LOGIN_SCOPES (nếu đặt) thay cho mức đầy đủ;
+// read_insights luôn được thêm vì trang Báo cáo cần quyền này
+function loginScopes(level = 'full') {
+  if (normalizeLevel(level) === 'minimal') return MINIMAL_LOGIN_SCOPES;
+  const custom = process.env.FACEBOOK_LOGIN_SCOPES && process.env.FACEBOOK_LOGIN_SCOPES !== 'public_profile'
     ? process.env.FACEBOOK_LOGIN_SCOPES
     : DEFAULT_LOGIN_SCOPES;
+  const list = custom.split(',').map((item) => item.trim()).filter(Boolean);
+  if (!list.includes('read_insights')) list.push('read_insights');
+  return list.join(',');
+}
+
+function requiredScopes(level) {
+  return normalizeLevel(level) === 'minimal' ? REQUIRED_MINIMAL_SCOPES : REQUIRED_PAGE_SCOPES;
 }
 
 // ═══ KIỂM TRA / ĐỔI TOKEN ═══
@@ -371,20 +522,27 @@ async function grantedPermissions(token) {
 
 // ═══ KẾT NỐI TOKEN MỚI (dán token hoặc Facebook Login) ═══
 // appId: Meta App vừa dùng để đăng nhập (OAuth). Dán token thì tool tự nhận app đã cấp token qua debug_token.
-async function connectUserToken(appUserId, rawToken, { appId = null } = {}) {
+// level: mức quyền đã chọn khi đăng nhập ('full' | 'minimal'); dán token thì không truyền (tính như đầy đủ)
+async function connectUserToken(appUserId, rawToken, { appId = null, level = null } = {}) {
   await ensureTokenSchema();
-  const apps = await listUserApps(appUserId);
-  const preferred = appId ? apps.find((app) => app.appId === String(appId)) : null;
-  let creds = toCreds(preferred);
+  const [apps, system] = await Promise.all([listUserApps(appUserId), getSystemApp()]);
+  const findApp = (id) => {
+    if (!id) return null;
+    const own = apps.find((app) => app.appId === String(id));
+    if (own) return toCreds(own);
+    return system.configured && system.appId === String(id) ? system : null;
+  };
+  const preferred = findApp(appId);
+  let creds = preferred || toCreds(null);
   const first = await inspectUserToken(rawToken, creds);
   if (!first.valid) throw new TokenError(first.error || 'Facebook Access Token không hợp lệ.', 400, 'invalid_token');
-  // Token do app nào cấp: trùng một app của người dùng thì dùng app đó để đổi / gia hạn token
+  // Token do app nào cấp: trùng app riêng của người dùng hoặc app chung thì dùng app đó để đổi / gia hạn token
   const tokenAppId = first.appId || preferred?.appId || null;
-  if (!preferred && tokenAppId) creds = toCreds(apps.find((app) => app.appId === tokenAppId));
+  if (!preferred && tokenAppId) creds = findApp(tokenAppId) || toCreds(null);
 
   // Chưa có quyền xem Fanpage thì dừng trước khi đồng bộ (không xóa Fanpage đã lưu của nick này)
   const permissions = await grantedPermissions(rawToken);
-  const missingScopes = permissions ? REQUIRED_PAGE_SCOPES.filter((scope) => !permissions.granted.includes(scope)) : [];
+  const missingScopes = permissions ? requiredScopes(level).filter((scope) => !permissions.granted.includes(scope)) : [];
   if (permissions && missingScopes.includes('pages_show_list')) {
     throw new TokenError(
       'Facebook chưa cấp quyền quản lý Fanpage cho nick này (thiếu pages_show_list).',
@@ -417,6 +575,7 @@ async function connectUserToken(appUserId, rawToken, { appId = null } = {}) {
   const pages = await syncFacebookPages(appUserId, token, fbAccount);
   await saveTokenMeta(appUserId, fbAccount.id, { status: 'valid', type: info.type, expiresAt: info.expiresAt, error: exchangeError });
   await saveAccountApp(appUserId, fbAccount.id, tokenAppId);
+  await saveAccountLevel(appUserId, fbAccount.id, level);
   lastRenewByAccount.set(`${appUserId}:${fbAccount.id}`, Date.now());
   await notifyRenewed(appUserId);
   return {
@@ -561,11 +720,66 @@ async function requestRenewForPage(pageId) {
   return results;
 }
 
-async function getTokenStatus(appUserId) {
-  const [accounts, apps] = await Promise.all([listAccounts(appUserId), listUserApps(appUserId)]);
+// ═══ CHỌN FANPAGE CỦA MỘT NICK (hộp "Bạn muốn thêm những Fanpage nào?") ═══
+async function findAccountRow(appUserId, fbUserId) {
+  const rows = await listAccounts(appUserId);
+  const row = rows.find((item) => String(item.fb_user_id) === String(fbUserId));
+  if (!row) throw new TokenError('Không tìm thấy nick Facebook này trong tài khoản của bạn.', 404, 'account_not_found');
+  const token = decryptToken(row.access_token_encrypted);
+  if (!token) throw new TokenError('Không đọc được token của nick này — hãy kết nối lại Facebook.', 400, 'token_unreadable');
+  return { row, token };
+}
+
+// Mọi Fanpage nick đang quản lý (đọc trực tiếp từ Facebook) kèm trạng thái đã thêm vào tool hay chưa
+async function listAccountPages(appUserId, fbUserId) {
+  const { row, token } = await findAccountRow(appUserId, fbUserId);
+  const live = [];
+  let nextUrl = `${GRAPH}/me/accounts`;
+  let firstPage = true;
+  while (nextUrl && live.length < 1000) {
+    const response = await axios.get(nextUrl, firstPage
+      ? { params: { fields: 'id,name,category,picture.width(80).height(80)', limit: 100, access_token: token }, timeout: 20000 }
+      : { timeout: 20000 });
+    firstPage = false;
+    live.push(...(response.data?.data || []));
+    nextUrl = response.data?.paging?.next || null;
+  }
+  const pool = await getPool();
+  const saved = await pool.request()
+    .input('appUserId', sql.VarChar(64), String(appUserId))
+    .input('fbUserId', sql.VarChar(64), String(fbUserId))
+    .query('SELECT page_id FROM dbo.FacebookPages WHERE facebook_user_id=@appUserId AND fb_account_id=@fbUserId');
+  const connected = new Set(saved.recordset.map((item) => String(item.page_id)));
   return {
-    appConfigured: apps.length > 0,
-    oauthAvailable: apps.length > 0 && Boolean(process.env.SESSION_SECRET),
+    account: { id: String(row.fb_user_id), name: row.fb_name, avatar: row.fb_avatar || null },
+    pages: live.map((page) => ({
+      id: String(page.id),
+      name: page.name,
+      category: page.category || '',
+      picture: page.picture?.data?.url || null,
+      connected: connected.has(String(page.id))
+    }))
+  };
+}
+
+// Lưu lựa chọn: Fanpage không được chọn bị gỡ và ghi nhớ để không tự thêm lại; Fanpage được chọn được thêm / giữ
+async function saveAccountPageSelection(appUserId, fbUserId, selectedIds) {
+  const { row, token } = await findAccountRow(appUserId, fbUserId);
+  const { pages } = await listAccountPages(appUserId, fbUserId);
+  const selected = new Set((selectedIds || []).map(String));
+  const excluded = pages.filter((page) => !selected.has(page.id)).map((page) => page.id);
+  await setExcludedPageIds(appUserId, fbUserId, excluded);
+  const synced = await syncFacebookPages(appUserId, token, { id: String(row.fb_user_id), name: row.fb_name, avatar: row.fb_avatar });
+  await notifyRenewed(appUserId);
+  return { connected: synced.length, removed: excluded.length };
+}
+
+async function getTokenStatus(appUserId) {
+  const [accounts, apps, system] = await Promise.all([listAccounts(appUserId), listUserApps(appUserId), getSystemApp()]);
+  const hasApp = system.configured || apps.length > 0;
+  return {
+    appConfigured: hasApp,
+    oauthAvailable: hasApp && Boolean(process.env.SESSION_SECRET),
     accounts: accounts.map((row) => ({
       id: String(row.fb_user_id),
       name: row.fb_name,
@@ -575,7 +789,8 @@ async function getTokenStatus(appUserId) {
       expiresAt: toIso(row.token_expires_at),
       checkedAt: toIso(row.token_checked_at),
       error: row.token_error || null,
-      metaAppId: row.meta_app_id ? String(row.meta_app_id) : null
+      metaAppId: row.meta_app_id ? String(row.meta_app_id) : null,
+      loginLevel: row.login_level || null
     }))
   };
 }
@@ -598,24 +813,32 @@ function startTokenAutoRenew() {
 }
 
 module.exports = {
+  LOGIN_LEVELS,
   TokenError,
   allUserApps,
+  clearSystemApp,
   connectUserToken,
   ensureTokenSchema,
   getAccountCredentials,
   getMetaAppCredentials,
   getPageAppCredentials,
+  getSystemApp,
+  getSystemAppInfo,
   getTokenStatus,
   getUserMetaApps,
   inspectUserToken,
+  listAccountPages,
   listAccounts,
   listUserApps,
   loginScopes,
   matchWebhookApp,
+  normalizeLevel,
   onTokensRenewed,
   renewAll,
   requestRenewForPage,
   removeUserMetaApp,
+  saveAccountPageSelection,
+  saveSystemApp,
   saveUserMetaApp,
   startTokenAutoRenew
 };

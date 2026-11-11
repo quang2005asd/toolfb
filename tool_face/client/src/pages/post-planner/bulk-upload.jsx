@@ -21,6 +21,7 @@ import {
   Trash2
 } from 'lucide-react';
 import MainLayout from '../../components/layout/MainLayout';
+import WriteNav from '../../components/write/WriteNav';
 import postApi from '../../services/postApi';
 import channelApi from '../../services/channelApi';
 
@@ -210,6 +211,7 @@ export default function BulkUpload() {
 
   return (
     <MainLayout title="Tải bài đăng hàng loạt">
+      <WriteNav active="bulk" bulkType="excel" />
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         {/* Quay lại trang chủ */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>

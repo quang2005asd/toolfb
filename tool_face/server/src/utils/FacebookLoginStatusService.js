@@ -17,13 +17,15 @@ const GRAPH = `https://graph.facebook.com/${process.env.FB_GRAPH_VERSION || 'v19
 const APP_CACHE_MS = 10 * 60 * 1000;
 const ACCOUNT_CACHE_MS = 5 * 60 * 1000;
 
-// Quyền Facebook cần cho từng tính năng của tool
+// Quyền Facebook cần cho từng tính năng của tool. levels: mức quyền có xin tính năng này
+// (nick kết nối bằng "Quyền tối giản" không bị báo thiếu quyền tin nhắn / bình luận)
 const FEATURES = [
-  { key: 'posting', label: 'Đăng bài & lên lịch lên Fanpage', scopes: ['pages_show_list', 'pages_manage_posts', 'pages_read_engagement'] },
-  { key: 'inbox', label: 'Hộp thư Messenger & trả lời tự động', scopes: ['pages_messaging', 'pages_manage_metadata'] },
-  { key: 'instagram', label: 'Tin nhắn Instagram', scopes: ['instagram_basic', 'instagram_manage_messages'] },
-  { key: 'comments', label: 'Bình luận mồi & AI Bình luận', scopes: ['pages_read_user_content', 'pages_manage_engagement'] },
-  { key: 'business', label: 'Fanpage thuộc Meta Business', scopes: ['business_management'], optional: true }
+  { key: 'posting', label: 'Đăng bài & lên lịch lên Fanpage', scopes: ['pages_show_list', 'pages_manage_posts', 'pages_read_engagement'], levels: ['full', 'minimal'] },
+  { key: 'insights', label: 'Báo cáo lượt xem, người xem', scopes: ['read_insights'], levels: ['full', 'minimal'] },
+  { key: 'inbox', label: 'Hộp thư Messenger & trả lời tự động', scopes: ['pages_messaging', 'pages_manage_metadata'], levels: ['full'] },
+  { key: 'instagram', label: 'Tin nhắn Instagram', scopes: ['instagram_basic', 'instagram_manage_messages'], levels: ['full'] },
+  { key: 'comments', label: 'Bình luận mồi & AI Bình luận', scopes: ['pages_read_user_content', 'pages_manage_engagement'], levels: ['full'] },
+  { key: 'business', label: 'Fanpage thuộc Meta Business', scopes: ['business_management'], optional: true, levels: ['full', 'minimal'] }
 ];
 
 const appCache = new Map(); // khóa app -> { at, value }
@@ -119,14 +121,25 @@ async function inspectAccount(row, creds, force) {
     }
   }
 
+  const level = tokenService.normalizeLevel(row.login_level);
   const features = FEATURES.map((feature) => {
     const missing = scopes ? feature.scopes.filter((scope) => !scopes.includes(scope)) : [];
-    return { key: feature.key, label: feature.label, optional: Boolean(feature.optional), ok: valid && scopes ? missing.length === 0 : null, missing };
+    // Tính năng không thuộc mức quyền đã chọn: không tính là thiếu (hiện "không xin")
+    const notRequested = !feature.levels.includes(level);
+    return {
+      key: feature.key,
+      label: feature.label,
+      optional: Boolean(feature.optional) || notRequested,
+      notRequested,
+      ok: valid && scopes ? missing.length === 0 : null,
+      missing
+    };
   });
   const value = {
     id: String(row.fb_user_id),
     name: row.fb_name,
     avatar: row.fb_avatar || null,
+    level,
     valid,
     error,
     scopes,
@@ -137,15 +150,28 @@ async function inspectAccount(row, creds, force) {
 }
 
 async function getLoginStatus(appUserId, { force = false } = {}) {
-  // Tool không có app chung: chỉ Meta App người dùng tự thêm (có thể nhiều app, mỗi nick Facebook dùng một app)
-  const userApps = await tokenService.listUserApps(appUserId);
+  // App chung của tool (mặc định) + Meta App riêng người dùng tự thêm ở mục Nâng cao (có thể nhiều app)
+  const [userApps, systemCreds] = await Promise.all([tokenService.listUserApps(appUserId), tokenService.getSystemApp()]);
+  const system = systemCreds.configured
+    ? {
+        configured: true,
+        appId: systemCreds.appId,
+        // Configuration ID (Facebook Login for Business) có hay không — không trả giá trị cho người dùng thường
+        loginForBusiness: Boolean(systemCreds.configFull || systemCreds.configMinimal),
+        ...(await inspectApp(systemCreds, force))
+      }
+    : { configured: false, appId: null, loginForBusiness: false, credentialsValid: false, credentialsError: null, domainOk: null, domainMessage: null, roles: null };
   const apps = [];
   for (const userApp of userApps) {
     const appCreds = { appId: userApp.appId, appSecret: userApp.appSecret, configured: true };
     apps.push({ appId: userApp.appId, label: userApp.label || '', ...(await inspectApp(appCreds, force)) });
   }
-  const primary = apps.find((item) => item.credentialsValid) || apps[0] || null;
-  const creds = primary ? { ...userApps.find((item) => item.appId === primary.appId), configured: true } : { appId: '', appSecret: '', configured: false };
+  const systemUsable = system.configured && system.credentialsValid;
+  const primaryOwn = apps.find((item) => item.credentialsValid) || apps[0] || null;
+  const primary = systemUsable ? { ...system, label: 'App chung của tool' } : primaryOwn;
+  const creds = systemUsable
+    ? { appId: system.appId, configured: true }
+    : primaryOwn ? { ...userApps.find((item) => item.appId === primaryOwn.appId), configured: true } : { appId: '', appSecret: '', configured: false };
   const origin = clientOrigin();
   let domain = origin;
   try { domain = new URL(origin).hostname; } catch {}
@@ -154,7 +180,7 @@ async function getLoginStatus(appUserId, { force = false } = {}) {
     configured: creds.configured,
     appId: creds.appId || null,
     label: primary?.label || '',
-    source: 'user',
+    source: systemUsable ? 'system' : 'user',
     redirectUri: facebookRedirectUri(),
     siteOrigin: origin,
     domain,
@@ -180,6 +206,7 @@ async function getLoginStatus(appUserId, { force = false } = {}) {
     level,
     app,
     apps,
+    system,
     accounts,
     features: FEATURES,
     loginScopes: tokenService.loginScopes().split(',').map((item) => item.trim()).filter(Boolean),

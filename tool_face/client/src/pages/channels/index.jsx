@@ -33,6 +33,8 @@ import TokenHealthBanner from '../../components/channels/TokenHealthBanner';
 import FacebookConnectPanel from '../../components/channels/FacebookConnectPanel';
 import FacebookGuideModal from '../../components/channels/FacebookGuideModal';
 import FacebookLoginDialog from '../../components/channels/FacebookLoginDialog';
+import FacebookConnectChooser from '../../components/channels/FacebookConnectChooser';
+import FacebookPagePicker from '../../components/channels/FacebookPagePicker';
 import useAuth from '../../hooks/useAuth';
 import { PERMISSIONS } from '../../utils/permissions';
 import channelApi from '../../services/channelApi';
@@ -65,9 +67,12 @@ export default function ChannelsPage() {
   const [guideTab, setGuideTab] = useState(null);
 
   // Đăng nhập Facebook trong cửa sổ phụ: tab này luôn ở lại tool để báo kết quả / hướng dẫn khi Facebook chặn
-  const [fbLogin, setFbLogin] = useState(null); // { phase: 'waiting' | 'incomplete' | 'no-pages' | 'error', code }
+  const [fbLogin, setFbLogin] = useState(null); // { phase: 'waiting' | 'incomplete' | 'no-pages' | 'error', code, system }
+  // Bấm "Kết nối Facebook" (app chung): hỏi mức quyền trước; kết nối xong: hỏi chọn Fanpage của nick vừa kết nối
+  const [chooserOpen, setChooserOpen] = useState(false);
+  const [pagePicker, setPagePicker] = useState(null); // { id, name } nick Facebook
   const popupRef = useRef(null);
-  const loginAttemptRef = useRef({ active: false, openedAt: 0, incompleteTimer: null, appId: null });
+  const loginAttemptRef = useRef({ active: false, openedAt: 0, incompleteTimer: null, appId: null, level: 'full', system: false });
   const loginResultHandlerRef = useRef(null);
 
   const loadFbStatus = async (refresh = false) => {
@@ -174,20 +179,21 @@ export default function ChannelsPage() {
     try { popupRef.current?.close(); } catch {}
     popupRef.current = null;
     if (code === 'app_not_configured') {
-      // Tool không có app chung: chưa có Meta App (hoặc app đã bị gỡ) → hướng dẫn thêm Meta App của riêng mình
-      setFbLogin({ phase: 'own-app' });
+      // Chưa có app chung dùng được (và không có app riêng) → hộp kết nối báo lỗi cấu hình + lối vào Meta App riêng
+      setFbLogin(null);
+      setChooserOpen(true);
       loadFbStatus(true);
       return;
     }
     if (code) {
-      setFbLogin({ phase: 'error', code: String(code) });
+      setFbLogin({ phase: 'error', code: String(code), system: attempt.system });
       return;
     }
     const missingScopes = String(missing || '').split(',').filter(Boolean);
     const loginNick = nick ? { id: nickId ? String(nickId) : null, name: String(nick) } : null;
     if (reason === 'no_permission') {
       // Thiếu quyền Fanpage: tool chưa lưu nick này
-      setFbLogin({ phase: 'no-permission', missing: missingScopes, source: 'login', nick: loginNick && { ...loginNick, saved: false } });
+      setFbLogin({ phase: 'no-permission', missing: missingScopes, source: 'login', system: attempt.system, nick: loginNick && { ...loginNick, saved: false } });
       return;
     }
     loadData();
@@ -197,9 +203,11 @@ export default function ChannelsPage() {
       const longLived = token === 'long' || token === 'never';
       setFbLogin(null);
       setNotice({
-        text: `✅ Đã ${loginNick ? `kết nối nick ${loginNick.name}` : 'đăng nhập Facebook'} và liên kết ${connected} Fanpage.${longLived ? ' Token dài hạn — token Fanpage sẽ không hết hạn.' : ''}${missingScopes.length ? ' Một số tính năng còn thiếu quyền — xem bảng trạng thái phía trên.' : ''}`,
+        text: `✅ Đã ${loginNick ? `kết nối nick ${loginNick.name}` : 'đăng nhập Facebook'} (${connected} Fanpage).${longLived ? ' Token dài hạn — token Fanpage sẽ không hết hạn.' : ''}${missingScopes.length ? ' Một số tính năng còn thiếu quyền — xem bảng trạng thái phía trên.' : ''}`,
         nick: loginNick && { ...loginNick, saved: true }
       });
+      // Như SO9: kết nối xong hỏi ngay "Bạn muốn thêm những Fanpage nào?"
+      if (loginNick?.id) setPagePicker({ id: loginNick.id, name: loginNick.name });
     } else {
       setFbLogin({ phase: 'no-pages', source: 'login', nick: loginNick && { ...loginNick, saved: true } });
     }
@@ -258,7 +266,7 @@ export default function ChannelsPage() {
       // Chờ thêm chút để kết quả gửi về (nếu có) tới trước
       attempt.incompleteTimer = setTimeout(() => {
         attempt.incompleteTimer = null;
-        if (attempt.active) setFbLogin((current) => (current?.phase === 'waiting' ? { phase: 'incomplete', appId: attempt.appId } : current));
+        if (attempt.active) setFbLogin((current) => (current?.phase === 'waiting' ? { phase: 'incomplete', appId: attempt.appId, system: attempt.system } : current));
       }, 900);
     };
     const timer = setInterval(check, 500);
@@ -271,37 +279,70 @@ export default function ChannelsPage() {
     };
   }, [fbLogin?.phase]);
 
-  const reconnectFacebook = (appId) => {
-    window.location.href = appId ? `${channelApi.facebookLoginUrl}?app=${encodeURIComponent(appId)}` : channelApi.facebookLoginUrl;
-  };
-
-  // Tool không có app chung: chưa có Meta App → hướng dẫn thêm; nhiều app → hỏi đăng nhập bằng app nào.
-  // Đăng nhập trong cửa sổ phụ để tab này ở lại tool. appIdArg là chuỗi App ID (bấm nút thì nhận sự kiện → bỏ qua).
-  const startFacebookLogin = (appIdArg) => {
-    const apps = fbStatus?.apps || [];
-    const requested = typeof appIdArg === 'string' ? appIdArg : null;
-    if (!apps.length) return setFbLogin({ phase: 'own-app' });
-    if (!requested && apps.length > 1) return setFbLogin({ phase: 'choose-app' });
-    const target = apps.find((item) => item.appId === requested) || apps[0];
-    if (target.credentialsValid === false || target.domainOk === false) return setFbLogin({ phase: 'own-app' });
+  // Mở cửa sổ đăng nhập Facebook: appId = null → app chung của tool; level: 'full' | 'minimal'.
+  // Đăng nhập trong cửa sổ phụ để tab này ở lại tool; trình duyệt chặn cửa sổ phụ thì chuyển cả trang.
+  const openFacebookLogin = (appId, level = 'full') => {
     const attempt = loginAttemptRef.current;
     clearTimeout(attempt.incompleteTimer);
     attempt.incompleteTimer = null;
-    attempt.appId = target.appId;
-    const popup = openLoginPopup(channelApi.facebookLoginUrlFor(target.appId));
+    attempt.appId = appId || null;
+    attempt.level = level;
+    attempt.system = !appId;
+    setChooserOpen(false);
+    const url = channelApi.facebookLoginUrlFor(appId, level);
+    const popup = openLoginPopup(url);
     if (!popup) {
       markRedirectLogin();
-      return reconnectFacebook(target.appId);
+      window.location.href = url.replace('popup=1', 'popup=0');
+      return;
     }
     popupRef.current = popup;
     attempt.active = true;
     attempt.openedAt = Date.now();
     setGuideTab(null);
-    setFbLogin({ phase: 'waiting', appId: target.appId });
+    setFbLogin({ phase: 'waiting', appId: appId || null, system: !appId });
+  };
+
+  // Nút "Kết nối Facebook": mặc định app chung (hỏi mức quyền trước). appIdArg là chuỗi App ID khi chọn Meta App riêng
+  // (bấm nút thì nhận sự kiện → bỏ qua). Chưa có app chung nhưng có app riêng thì đăng nhập bằng app riêng như trước.
+  const startFacebookLogin = (appIdArg) => {
+    const apps = fbStatus?.apps || [];
+    const requested = typeof appIdArg === 'string' ? appIdArg : null;
+    if (requested) {
+      const target = apps.find((item) => item.appId === requested);
+      if (!target || target.credentialsValid === false || target.domainOk === false) return setFbLogin({ phase: 'own-app' });
+      return openFacebookLogin(target.appId, 'full');
+    }
+    if (fbStatus?.system?.configured || !apps.length) {
+      setFbLogin(null);
+      return setChooserOpen(true);
+    }
+    if (apps.length > 1) return setFbLogin({ phase: 'choose-app' });
+    if (apps[0].credentialsValid === false || apps[0].domainOk === false) return setFbLogin({ phase: 'own-app' });
+    return openFacebookLogin(apps[0].appId, 'full');
+  };
+
+  const retryFacebookLogin = () => {
+    const attempt = loginAttemptRef.current;
+    if (attempt.system) return openFacebookLogin(null, attempt.level || 'full');
+    return startFacebookLogin(attempt.appId || undefined);
+  };
+
+  // Nút "Chọn Fanpage": một nick → mở hộp chọn; nhiều nick → sang tab Tài khoản Facebook để chọn từng nick
+  const openPagePicker = (account) => {
+    if (account?.id) return setPagePicker({ id: String(account.id), name: account.name });
+    setActiveTab('accounts');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     return undefined;
   };
 
-  const retryFacebookLogin = () => startFacebookLogin(loginAttemptRef.current.appId || undefined);
+  const handlePagesSaved = async (res) => {
+    setPagePicker(null);
+    setNotice(res?.message || 'Đã lưu lựa chọn Fanpage.');
+    await loadData();
+    handleCheckTokens({ quiet: true });
+    loadFbStatus(true);
+  };
 
   const focusLoginPopup = () => {
     const popup = popupRef.current;
@@ -315,7 +356,7 @@ export default function ChannelsPage() {
     clearTimeout(attempt.incompleteTimer);
     attempt.incompleteTimer = null;
     try { popupRef.current?.close(); } catch {}
-    setFbLogin({ phase: 'incomplete', appId: attempt.appId });
+    setFbLogin({ phase: 'incomplete', appId: attempt.appId, system: attempt.system });
   };
 
   // Facebook vào nhầm nick: tool không chọn được nick và không xóa được phiên Facebook trong trình duyệt,
@@ -328,7 +369,7 @@ export default function ChannelsPage() {
     const popup = openLoginPopup(FACEBOOK_HOME);
     popupRef.current = popup;
     setNotice('');
-    setFbLogin({ phase: 'switch-nick', appId: attempt.appId, nick, popupBlocked: !popup });
+    setFbLogin({ phase: 'switch-nick', appId: attempt.appId, system: attempt.system, nick, popupBlocked: !popup });
   };
 
   // Gỡ nick Facebook trả về nhầm (cùng toàn bộ Fanpage của nick đó) ngay trong hộp thoại đổi nick
@@ -718,9 +759,9 @@ export default function ChannelsPage() {
             className="button button-primary"
             type="button"
             onClick={startFacebookLogin}
-            title={(fbStatus?.apps || []).length ? 'Đăng nhập Facebook bằng Meta App của bạn để kết nối / lấy lại token Fanpage' : 'Chưa có Meta App — thêm Meta App của bạn để đăng nhập Facebook'}
+            title="Kết nối nick Facebook để thêm Fanpage / lấy lại token Fanpage"
           >
-            <LogIn size={15} /> Đăng nhập Facebook
+            <LogIn size={15} /> Kết nối Facebook
           </button>
 
           <div className="token-menu" ref={tokenMenuRef}>
@@ -830,8 +871,18 @@ export default function ChannelsPage() {
         onOpenGuide={setGuideTab}
         onOwnApp={() => setFbLogin({ phase: 'own-app' })}
         onPasteToken={openPasteToken}
+        onPickPages={openPagePicker}
         onRefresh={() => loadFbStatus(true)}
       />
+      <FacebookConnectChooser
+        open={chooserOpen}
+        system={fbStatus?.system}
+        canConfigure={can(PERMISSIONS.SETTINGS_SYSTEM)}
+        onConnect={(level) => openFacebookLogin(null, level)}
+        onOwnApp={() => { setChooserOpen(false); setFbLogin({ phase: 'own-app' }); }}
+        onClose={() => setChooserOpen(false)}
+      />
+      <FacebookPagePicker account={pagePicker} onSaved={handlePagesSaved} onClose={() => setPagePicker(null)} />
       {/* Banner token chỉ hiện khi có việc cần làm (hết hạn, ngắn hạn, Fanpage mất quyền); bình thường đã gói trong dòng trạng thái */}
       {((tokenInfo?.accounts || []).some((item) => item.status === 'expired' || item.status === 'invalid' || (item.status === 'valid' && item.type === 'short'))
         || Object.values(tokenStatuses).some((item) => !item.isValid)) && (
@@ -1465,7 +1516,7 @@ export default function ChannelsPage() {
             <button
               className="button button-primary"
               type="button"
-              onClick={() => setShowFbAccountModal(true)}
+              onClick={startFacebookLogin}
               style={{ minHeight: 34, fontSize: 12.5 }}
             >
               <Plus size={14} /> Thêm nick Facebook
@@ -1498,10 +1549,13 @@ export default function ChannelsPage() {
                   {(() => {
                     const metaAppId = tokenInfo?.accounts?.find((item) => String(item.id) === String(acc.id))?.metaAppId;
                     if (isManual || !metaAppId) return null;
+                    const isSystemApp = fbStatus?.system?.appId && String(fbStatus.system.appId) === String(metaAppId);
                     const appInfo = (fbStatus?.apps || []).find((item) => item.appId === metaAppId);
                     return (
                       <div className="muted" style={{ fontSize: 11.5, marginBottom: 10 }}>
-                        Meta App: {appInfo?.label ? `${appInfo.label} · ` : ''}ID {metaAppId}{appInfo ? '' : ' (đã gỡ khỏi Meta App của tôi)'}
+                        {isSystemApp
+                          ? 'Kết nối qua app chung của tool'
+                          : <>Meta App riêng: {appInfo?.label ? `${appInfo.label} · ` : ''}ID {metaAppId}{appInfo ? '' : ' (đã gỡ khỏi tool)'}</>}
                       </div>
                     );
                   })()}
@@ -1532,6 +1586,17 @@ export default function ChannelsPage() {
                     >
                       <Globe2 size={12} /> Xem {pagesCount} Fanpage
                     </button>
+                    {!isManual && (
+                      <button
+                        className="button button-secondary"
+                        type="button"
+                        style={{ minHeight: 32, padding: '0 10px', fontSize: 11.5, borderRadius: 10 }}
+                        onClick={() => setPagePicker({ id: String(acc.id), name: acc.name })}
+                        title="Chọn Fanpage của nick này muốn quản lý trong tool"
+                      >
+                        <Layers size={13} /> Chọn Fanpage
+                      </button>
+                    )}
                     {!isManual && (
                       <button
                         className="button button-danger"

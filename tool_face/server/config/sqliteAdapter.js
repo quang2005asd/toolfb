@@ -354,7 +354,9 @@ const COLUMN_MIGRATIONS = {
     token_status: 'TEXT',
     token_checked_at: 'TEXT',
     token_error: 'TEXT',
-    meta_app_id: 'TEXT'
+    meta_app_id: 'TEXT',
+    // Mức quyền người dùng chọn khi kết nối: 'full' (đầy đủ) | 'minimal' (tối giản: chỉ đăng bài + báo cáo)
+    login_level: 'TEXT'
   }
 };
 
