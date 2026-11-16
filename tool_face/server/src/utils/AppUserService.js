@@ -10,25 +10,27 @@ const {
 } = require('./Roles');
 
 let authLogQueue = null;
-try {
-  const { Queue } = require('bullmq');
-  authLogQueue = new Queue('auth-log', {
-    connection: redisConfig,
-    defaultJobOptions: {
-      attempts: 3,
-      backoff: {
-        type: 'exponential',
-        delay: 1000
-      },
-      removeOnComplete: true,
-      removeOnFail: false
-    }
-  });
-  authLogQueue.on('error', (err) => {
-    console.error('[AuthLog Queue Error]', err.message);
-  });
-} catch (e) {
-  console.warn('[AuthLog Queue] BullMQ not initialized:', e.message);
+if (process.env.DISABLE_REDIS !== 'true') {
+  try {
+    const { Queue } = require('bullmq');
+    authLogQueue = new Queue('auth-log', {
+      connection: redisConfig,
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 1000
+        },
+        removeOnComplete: true,
+        removeOnFail: false
+      }
+    });
+    authLogQueue.on('error', (err) => {
+      console.error('[AuthLog Queue Error]', err.message);
+    });
+  } catch (e) {
+    console.warn('[AuthLog Queue] BullMQ not initialized:', e.message);
+  }
 }
 
 function enqueueAuthLog(payload) {

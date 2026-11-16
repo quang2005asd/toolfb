@@ -14,7 +14,7 @@ const core = require('../../utils/CommentAiCore');
 const service = require('../../utils/CommentAiService');
 const leads = require('../../utils/CommentAiLeadService');
 
-const { PAGE, errorText, exec, getPageSettings, savePageSettings } = core;
+const { PAGE, VAR_KEYS, errorText, exec, getPageSettings, savePageSettings } = core;
 
 const router = express.Router();
 const leadUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
@@ -79,13 +79,26 @@ router.put('/settings', handle('Settings Save', async (req, res) => {
   const previous = await getPageSettings(req.pageId);
   const wasEnabled = previous.aiEnabled || previous.onlyTemplates;
   const canManageApproval = req.user.role === 'admin' || req.user.role === 'manager';
+  const facebookSources = {
+    ...(previous.facebookSources || {}),
+    vars: { ...((previous.facebookSources || {}).vars || {}) }
+  };
+  if (b.vars && typeof b.vars === 'object') {
+    for (const key of VAR_KEYS) {
+      if (String(b.vars[key] || '').trim() !== String(previous.vars[key] || '').trim()) facebookSources.vars[key] = 'manual';
+    }
+  }
+  if (b.shop !== undefined && String(b.shop || '').trim() !== String(previous.shop || '').trim()) {
+    facebookSources.shop = 'manual';
+  }
   const s = await savePageSettings(req.pageId, {
     aiEnabled: b.aiEnabled,
     requireApproval: canManageApproval ? b.requireApproval : undefined,
     onlyTemplates: b.onlyTemplates,
     tone: b.tone,
     shop: b.shop,
-    vars: b.vars
+    vars: b.vars,
+    facebookSources
   }, actor(req).name);
   let webhookNote = null;
   if ((s.aiEnabled || s.onlyTemplates) && !wasEnabled) {
@@ -100,15 +113,53 @@ router.put('/settings', handle('Settings Save', async (req, res) => {
   res.json({ success: true, settings, message: webhookNote ? `Đã lưu. ${webhookNote}` : 'Đã lưu cấu hình AI.' });
 }));
 
+router.post('/settings/facebook-refresh', handle('Facebook Info Refresh', async (req, res) => {
+  const result = await service.refreshFacebookPageInfo(req.pageId);
+  const missing = ['sdt_shop'].filter((key) => !result.settings.vars[key]);
+  res.json({
+    success: true,
+    settings: result.settings,
+    availableFields: result.availableFields,
+    warning: missing.length ? 'Chưa có SĐT, AI sẽ mời khách nhắn tin thay vì đưa số' : null,
+    message: 'Đã lấy lại thông tin Facebook. Dữ liệu người dùng đã nhập không bị ghi đè.'
+  });
+}));
+
 router.post('/subscribe', handle('Subscribe', async (req, res) => {
   await service.subscribePage(req.pageId);
   res.json({ success: true, message: 'Đã đăng ký webhook cho Fanpage.' });
+}));
+
+router.post('/scan', handle('Scan', async (req, res) => {
+  const result = await service.pollPage(req.pageId);
+  res.json({ success: true, count: result?.count || 0, skipped: Boolean(result?.skipped), reason: result?.reason || null });
 }));
 
 router.post('/preview', handle('Preview', async (req, res) => {
   const comment = String(req.body?.comment ?? '').trim();
   if (!comment) return res.status(400).json({ success: false, message: 'Hãy nhập bình luận mẫu.' });
   const result = await service.previewReply(req.pageId, comment, req.body);
+  res.json({ success: true, ...result });
+}));
+
+// ═══ ĐỀ XUẤT CÁCH TRẢ LỜI (QUÉT 24 GIỜ) ═══
+router.get('/suggestions', handle('Suggestions List', async (req, res) => {
+  const data = await service.listSuggestions(req.pageId);
+  res.json({ success: true, ...data });
+}));
+
+router.post('/suggestions/scan', handle('Suggestions Scan', async (req, res) => {
+  const data = await service.runSuggestions(req.pageId);
+  res.json({ success: true, ...data });
+}));
+
+router.put('/suggestions/:id', handle('Suggestions Update', async (req, res) => {
+  const id = Number(req.params.id);
+  const status = String(req.body?.trangThai || '').trim();
+  if (!['moi', 'da_dung', 'bo_qua'].includes(status)) {
+    return res.status(400).json({ success: false, message: 'Trạng thái không hợp lệ.' });
+  }
+  const result = await service.updateSuggestionStatus(req.pageId, id, status);
   res.json({ success: true, ...result });
 }));
 
@@ -250,7 +301,30 @@ router.get('/logs', handle('Logs', async (req, res) => {
 }));
 
 router.delete('/logs/:id', handle('Logs Delete', async (req, res) => {
-  res.json({ success: await service.deleteLog(req.pageId, Number(req.params.id)) });
+  const action = String(req.body?.action || 'reply');
+  if (action === 'hide_comment' && !['admin', 'manager'].includes(req.user.role)) {
+    return res.status(403).json({ success: false, message: 'Ẩn bình luận của khách trên Facebook chỉ dành cho admin hoặc manager.' });
+  }
+  res.json({ success: await service.deleteLog(req.pageId, Number(req.params.id), action, req.user.role) });
+}));
+
+router.post('/logs/delete-bulk', handle('Logs Bulk Delete', async (req, res) => {
+  const ids = req.body?.ids;
+  const action = String(req.body?.action || 'reply');
+  if (!Array.isArray(ids) || !ids.length || ids.length > 100 || ids.some((id) => !Number.isInteger(Number(id)) || Number(id) < 1)) {
+    return res.status(400).json({ success: false, message: 'Chọn từ 1 đến 100 dòng hoạt động để xóa.' });
+  }
+  if (action === 'hide_comment' && !['admin', 'manager'].includes(req.user.role)) {
+    return res.status(403).json({ success: false, message: 'Ẩn bình luận của khách trên Facebook chỉ dành cho admin hoặc manager.' });
+  }
+  const result = await service.deleteLogs(req.pageId, ids, action, req.user.role);
+  res.status(result.failed.length ? 207 : 200).json({
+    success: result.failed.length === 0,
+    ...result,
+    message: result.failed.length
+      ? `Đã xóa ${result.deleted.length} dòng; ${result.failed.length} dòng còn giữ lại do lỗi Facebook.`
+      : `Đã xóa ${result.deleted.length} dòng hoạt động.`
+  });
 }));
 
 router.get('/diagnostics', handle('Diagnostics', async (req, res) => {

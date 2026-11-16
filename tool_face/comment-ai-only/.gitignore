@@ -1,0 +1,7 @@
+**/node_modules/
+**/.next/
+**/out/
+server/.env
+server/data/
+server/uploads/
+npm-debug.log*

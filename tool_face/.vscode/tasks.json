@@ -1,0 +1,53 @@
+{
+  "version": "2.0.0",
+  "options": {
+    "env": {
+      "PATH": "C:\\Program Files\\nodejs;C:\\Users\\OSC\\AppData\\Roaming\\npm;${env:PATH}"
+    }
+  },
+  "tasks": [
+    {
+      "label": "Server",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": {
+        "cwd": "${workspaceFolder}/server",
+        "env": {
+          "PATH": "C:\\Program Files\\nodejs;C:\\Users\\OSC\\AppData\\Roaming\\npm;${env:PATH}"
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "group": "dev",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Client",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": {
+        "cwd": "${workspaceFolder}/client",
+        "env": {
+          "PATH": "C:\\Program Files\\nodejs;C:\\Users\\OSC\\AppData\\Roaming\\npm;${env:PATH}"
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "group": "dev",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Chạy cả app",
+      "dependsOn": [
+        "Server",
+        "Client"
+      ],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    }
+  ]
+}

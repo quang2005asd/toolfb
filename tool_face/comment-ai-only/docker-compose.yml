@@ -1,0 +1,23 @@
+services:
+  server:
+    build:
+      context: ./server
+    env_file:
+      - ./server/.env
+    volumes:
+      - comment_ai_data:/app/data
+    environment:
+      APP_DATA_DIR: /app/data
+    restart: unless-stopped
+
+  client:
+    build:
+      context: ./client
+    depends_on:
+      - server
+    ports:
+      - "${CLIENT_PORT:-3000}:3000"
+    restart: unless-stopped
+
+volumes:
+  comment_ai_data:

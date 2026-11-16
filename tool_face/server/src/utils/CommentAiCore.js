@@ -73,11 +73,28 @@ const VAR_KEYS = ['ten_page', 'sdt_shop', 'dia_chi_shop', 'website', 'gio_mo_cua
 const ALLOWED_VARS = ['ten', ...VAR_KEYS];
 const cleanVars = (v) => Object.fromEntries(VAR_KEYS.map((k) => [k, String((v && v[k]) ?? '').trim().slice(0, 200)]));
 
+function resolveTemplateVars(templateVars, pageVars, fallbackPageName = '') {
+  const tVars = templateVars || {};
+  const pVars = pageVars || {};
+  const resolved = {};
+  for (const k of VAR_KEYS) {
+    const fromTemplate = tVars[k] !== undefined && tVars[k] !== null ? String(tVars[k]).trim() : '';
+    const fromPage = pVars[k] !== undefined && pVars[k] !== null ? String(pVars[k]).trim() : '';
+    let val = fromTemplate || fromPage;
+    if (k === 'ten_page' && !val && fallbackPageName) {
+      val = String(fallbackPageName).trim();
+    }
+    resolved[k] = val;
+  }
+  return resolved;
+}
+
 const fillTemplate = (content, name, vars = {}) =>
   String(content || '').replace(/\{(\w+)\}/g, (match, key) => {
     const k = key.toLowerCase();
     if (k === 'ten') return name || 'bạn';
-    return vars[k] ? vars[k] : match; // chưa nhập thì giữ nguyên để phát hiện
+    const val = vars && vars[k] !== undefined && vars[k] !== null ? String(vars[k]).trim() : '';
+    return val ? val : match; // chưa nhập thì giữ nguyên để phát hiện
   });
 const unresolvedVars = (text) => [...new Set(String(text || '').match(/\{\w+\}/g) || [])];
 
@@ -107,8 +124,10 @@ function mapSettings(pageId, row) {
     toneConfigured: Boolean(String(row?.tone || '').trim()),
     shop: row?.shop_info || '',
     vars: cleanVars(parseJson(row?.vars_json, {})),
+    facebookSources: parseJson(row?.facebook_sources_json, {}),
     leadRules: normalizeRules(parseJson(row?.lead_rules_json, null)),
-    pollSince: row?.poll_since || null
+    pollSince: row?.poll_since || null,
+    lastSuggestAt: row?.last_suggest_at || null
   };
 }
 
@@ -126,17 +145,19 @@ async function savePageSettings(pageId, patch, by) {
     tone: patch.tone === undefined ? current.tone : String(patch.tone).slice(0, 2000),
     shop: patch.shop === undefined ? current.shop : String(patch.shop).slice(0, 3000),
     vars: patch.vars === undefined ? current.vars : cleanVars(patch.vars),
+    facebookSources: patch.facebookSources === undefined ? current.facebookSources : patch.facebookSources,
     leadRules: patch.leadRules === undefined ? current.leadRules : patch.leadRules
   };
   const now = new Date();
   await exec(`
     UPDATE dbo.CommentAiPageSettings
        SET ai_enabled=@ai, require_approval=@ra, only_templates=@ot, tone=@tone, shop_info=@shop,
-           vars_json=@vars, lead_rules_json=@rules, updated_by=@by, updated_at=@now
+           vars_json=@vars, lead_rules_json=@rules, facebook_sources_json=@facebookSources,
+           updated_by=@by, updated_at=@now
      WHERE page_id=@pageId;
     IF @@ROWCOUNT = 0
-      INSERT INTO dbo.CommentAiPageSettings (page_id, ai_enabled, require_approval, only_templates, tone, shop_info, vars_json, lead_rules_json, updated_by, updated_at)
-      VALUES (@pageId, @ai, @ra, @ot, @tone, @shop, @vars, @rules, @by, @now)
+      INSERT INTO dbo.CommentAiPageSettings (page_id, ai_enabled, require_approval, only_templates, tone, shop_info, vars_json, lead_rules_json, facebook_sources_json, updated_by, updated_at)
+      VALUES (@pageId, @ai, @ra, @ot, @tone, @shop, @vars, @rules, @facebookSources, @by, @now)
   `, [
     PAGE(pageId),
     ['ai', sql.Bit, next.aiEnabled],
@@ -146,6 +167,7 @@ async function savePageSettings(pageId, patch, by) {
     ['shop', MAXT(), next.shop],
     ['vars', MAXT(), JSON.stringify(next.vars)],
     ['rules', MAXT(), JSON.stringify(next.leadRules)],
+    ['facebookSources', MAXT(), JSON.stringify(next.facebookSources || {})],
     ['by', sql.NVarChar(120), String(by || '')],
     ['now', sql.DateTime2, now]
   ]);
@@ -201,6 +223,7 @@ module.exports = {
   normalizeRules,
   parseAiJson,
   parseJson,
+  resolveTemplateVars,
   savePageSettings,
   trunc,
   unresolvedVars
