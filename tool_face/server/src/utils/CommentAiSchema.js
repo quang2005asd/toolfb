@@ -18,8 +18,10 @@ const STATEMENTS = [
        tone nvarchar(max) NULL,
        shop_info nvarchar(max) NULL,
        vars_json nvarchar(max) NULL,
+       facebook_sources_json nvarchar(max) NULL,
        lead_rules_json nvarchar(max) NULL,
        poll_since datetime2 NULL,
+       last_suggest_at datetime2 NULL,
        updated_by nvarchar(120) NULL,
        updated_at datetime2 NULL
      );
@@ -54,6 +56,7 @@ const STATEMENTS = [
        kind varchar(30) NOT NULL,
        post_id varchar(100) NULL,
        comment_id varchar(100) NULL,
+       reply_comment_id varchar(100) NULL,
        actor_id varchar(100) NULL,
        actor_name nvarchar(255) NULL,
        message nvarchar(max) NULL,
@@ -174,6 +177,30 @@ const STATEMENTS = [
        fetched_at datetime2 NOT NULL,
        CONSTRAINT PK_CommentAiPostCache PRIMARY KEY (page_id, post_id)
      );
+   END`,
+  `IF COL_LENGTH(N'dbo.CommentAiPageSettings', N'last_suggest_at') IS NULL
+     ALTER TABLE dbo.CommentAiPageSettings ADD last_suggest_at datetime2 NULL;`,
+  `IF COL_LENGTH(N'dbo.CommentAiPageSettings', N'facebook_sources_json') IS NULL
+     ALTER TABLE dbo.CommentAiPageSettings ADD facebook_sources_json nvarchar(max) NULL;`,
+  `IF COL_LENGTH(N'dbo.CommentAiLogs', N'reply_comment_id') IS NULL
+     ALTER TABLE dbo.CommentAiLogs ADD reply_comment_id varchar(100) NULL;`,
+  `IF OBJECT_ID(N'dbo.CommentAiSuggestions', N'U') IS NULL
+   BEGIN
+     CREATE TABLE dbo.CommentAiSuggestions (
+       id int IDENTITY(1,1) PRIMARY KEY,
+       page_id varchar(64) NOT NULL,
+       nhom varchar(50) NOT NULL,
+       ten_ngan nvarchar(120) NOT NULL,
+       so_luong int NOT NULL DEFAULT 0,
+       vi_du_json nvarchar(max) NULL,
+       tu_khoa nvarchar(500) NULL,
+       cach_tra_loi nvarchar(max) NULL,
+       kieu_goi_y varchar(20) NOT NULL DEFAULT 'guided',
+       da_co_mau_phu bit NOT NULL DEFAULT 0,
+       trang_thai varchar(20) NOT NULL DEFAULT 'moi',
+       created_at datetime2 NULL
+     );
+     CREATE INDEX IX_CommentAiSuggestions_page_status ON dbo.CommentAiSuggestions(page_id, trang_thai, created_at DESC);
    END`
 ];
 
@@ -187,8 +214,10 @@ const SQLITE_STATEMENTS = [
     tone TEXT,
     shop_info TEXT,
     vars_json TEXT,
+    facebook_sources_json TEXT,
     lead_rules_json TEXT,
     poll_since TEXT,
+    last_suggest_at TEXT,
     updated_by TEXT,
     updated_at TEXT
   )`,
@@ -216,6 +245,7 @@ const SQLITE_STATEMENTS = [
     kind TEXT NOT NULL,
     post_id TEXT,
     comment_id TEXT,
+    reply_comment_id TEXT,
     actor_id TEXT,
     actor_name TEXT,
     message TEXT,
@@ -297,6 +327,20 @@ const SQLITE_STATEMENTS = [
     fetched_at TEXT NOT NULL,
     PRIMARY KEY (page_id, post_id)
   )`,
+  `CREATE TABLE IF NOT EXISTS CommentAiSuggestions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    page_id TEXT NOT NULL,
+    nhom TEXT NOT NULL,
+    ten_ngan TEXT NOT NULL,
+    so_luong INTEGER NOT NULL DEFAULT 0,
+    vi_du_json TEXT,
+    tu_khoa TEXT,
+    cach_tra_loi TEXT,
+    kieu_goi_y TEXT NOT NULL DEFAULT 'guided',
+    da_co_mau_phu INTEGER NOT NULL DEFAULT 0,
+    trang_thai TEXT NOT NULL DEFAULT 'moi',
+    created_at TEXT
+  )`,
   'CREATE INDEX IF NOT EXISTS IX_CommentAiTemplates_page ON CommentAiTemplates(page_id)',
   'CREATE INDEX IF NOT EXISTS IX_CommentAiLogs_page_created ON CommentAiLogs(page_id, created_at DESC)',
   'CREATE UNIQUE INDEX IF NOT EXISTS UX_CommentAiLogs_comment ON CommentAiLogs(comment_id, kind) WHERE comment_id IS NOT NULL',
@@ -305,7 +349,8 @@ const SQLITE_STATEMENTS = [
   'CREATE UNIQUE INDEX IF NOT EXISTS UX_CommentAiLeads_page_url ON CommentAiLeads(page_id, post_url) WHERE post_url IS NOT NULL',
   'CREATE INDEX IF NOT EXISTS IX_PageReplies_page_parent ON PageReplies(page_id, parent_id)',
   'CREATE INDEX IF NOT EXISTS IX_CommentAiNameCache_page_from ON CommentAiNameCache(page_id, from_id, created_at DESC)',
-  'CREATE INDEX IF NOT EXISTS IX_CommentAiWebhookEvents_page_received ON CommentAiWebhookEvents(page_id, received_at DESC)'
+  'CREATE INDEX IF NOT EXISTS IX_CommentAiWebhookEvents_page_received ON CommentAiWebhookEvents(page_id, received_at DESC)',
+  'CREATE INDEX IF NOT EXISTS IX_CommentAiSuggestions_page_status ON CommentAiSuggestions(page_id, trang_thai, created_at DESC)'
 ];
 
 const useSqlite = () => process.env.USE_SQLITE === 'true' || process.env.DB_TYPE === 'sqlite';
@@ -317,8 +362,19 @@ async function ensureCommentAiSchema() {
         await pool.request().query(statement);
       }
       if (useSqlite()) {
+        const settingColumns = await pool.request().query("SELECT name FROM pragma_table_info('CommentAiPageSettings')");
+        const existingSettingColumns = new Set(settingColumns.recordset.map((column) => column.name));
+        if (!existingSettingColumns.has('last_suggest_at')) {
+          await pool.request().query('ALTER TABLE CommentAiPageSettings ADD COLUMN last_suggest_at TEXT');
+        }
+        if (!existingSettingColumns.has('facebook_sources_json')) {
+          await pool.request().query('ALTER TABLE CommentAiPageSettings ADD COLUMN facebook_sources_json TEXT');
+        }
         const logColumns = await pool.request().query("SELECT name FROM pragma_table_info('CommentAiLogs')");
         const existingLogColumns = new Set(logColumns.recordset.map((column) => column.name));
+        if (!existingLogColumns.has('reply_comment_id')) {
+          await pool.request().query('ALTER TABLE CommentAiLogs ADD COLUMN reply_comment_id TEXT');
+        }
         if (!existingLogColumns.has('post_context_available')) {
           await pool.request().query('ALTER TABLE CommentAiLogs ADD COLUMN post_context_available INTEGER');
         }
@@ -336,6 +392,32 @@ async function ensureCommentAiSchema() {
             await pool.request().query(`ALTER TABLE CommentAiProcessedComments ADD COLUMN ${column} TEXT`);
           }
         }
+        await pool.request().query(`
+          UPDATE CommentAiLogs
+             SET reply_comment_id = (
+               SELECT PageReplies.comment_id
+                 FROM PageReplies
+                WHERE PageReplies.page_id = CommentAiLogs.page_id
+                  AND PageReplies.parent_id = CommentAiLogs.comment_id
+                ORDER BY PageReplies.created_at DESC
+                LIMIT 1
+             )
+           WHERE reply_comment_id IS NULL
+             AND comment_id IS NOT NULL
+             AND EXISTS (
+               SELECT 1 FROM PageReplies
+                WHERE PageReplies.page_id = CommentAiLogs.page_id
+                  AND PageReplies.parent_id = CommentAiLogs.comment_id
+             )
+        `);
+      } else {
+        await pool.request().query(`
+          UPDATE l
+             SET reply_comment_id = r.comment_id
+            FROM dbo.CommentAiLogs l
+            JOIN dbo.PageReplies r ON r.page_id=l.page_id AND r.parent_id=l.comment_id
+           WHERE l.reply_comment_id IS NULL
+        `);
       }
     }).catch((error) => {
       schemaPromise = null;

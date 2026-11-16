@@ -1,0 +1,20 @@
+{
+  "name": "comment-ai-only-client",
+  "version": "1.0.0",
+  "description": "Giao diện độc lập cho module AI bình luận Facebook",
+  "scripts": {
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
+    "start": "next start"
+  },
+  "keywords": [],
+  "license": "UNLICENSED",
+  "type": "module",
+  "dependencies": {
+    "axios": "^1.20.0",
+    "lucide-react": "^1.49.0",
+    "next": "^16.3.7",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  }
+}

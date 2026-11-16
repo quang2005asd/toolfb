@@ -13,8 +13,14 @@ export const commentAiApi = {
   getSettings: async (pageId) => (await api.get('/settings', q(pageId))).data,
   getStudioTone: async (pageId) => (await api.get('/studio-tone', q(pageId))).data,
   saveSettings: async (pageId, body) => (await api.put('/settings', body, q(pageId))).data,
+  refreshFacebookInfo: async (pageId) => (await api.post('/settings/facebook-refresh', {}, q(pageId))).data,
   subscribe: async (pageId) => (await api.post('/subscribe', {}, q(pageId))).data,
+  scan: async (pageId) => (await api.post('/scan', {}, q(pageId))).data,
   preview: async (pageId, body) => (await api.post('/preview', body, q(pageId))).data,
+
+  listSuggestions: async (pageId) => (await api.get('/suggestions', q(pageId))).data,
+  scanSuggestions: async (pageId) => (await api.post('/suggestions/scan', {}, { ...q(pageId), timeout: 90000 })).data,
+  updateSuggestion: async (pageId, id, trangThai) => (await api.put(`/suggestions/${id}`, { trangThai }, q(pageId))).data,
 
   listTemplates: async (pageId) => (await api.get('/templates', q(pageId))).data,
   generateTemplateDrafts: async (pageId, body) => (await api.post('/templates/generate', body, { ...q(pageId), timeout: 120000 })).data,
@@ -46,7 +52,8 @@ export const commentAiApi = {
   saveLeadRules: async (pageId, body) => (await api.put('/lead-rules', body, q(pageId))).data,
 
   listLogs: async (pageId, params) => (await api.get('/logs', q(pageId, params))).data,
-  deleteLog: async (pageId, id) => (await api.delete(`/logs/${id}`, q(pageId))).data,
+  deleteLog: async (pageId, id, action = 'reply') => (await api.delete(`/logs/${id}`, { ...q(pageId), data: { action } })).data,
+  deleteLogs: async (pageId, ids, action = 'reply') => (await api.post('/logs/delete-bulk', { ids, action }, q(pageId))).data,
 
   diagnostics: async (pageId, full) => (await api.get('/diagnostics', { ...q(pageId, full ? { full: 1 } : {}), timeout: 90000 })).data
 };

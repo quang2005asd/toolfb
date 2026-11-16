@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Check, Edit2, Plus, Sparkles, Trash2, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Check, ChevronDown, Edit2, Plus, Sparkles, Trash2, X } from 'lucide-react';
 import CommentAiShell, { Notice, formatTime } from '../../components/comment-ai/CommentAiShell';
 import commentAiApi, { apiMessage } from '../../services/commentAiApi';
 import useAuth from '../../hooks/useAuth';
@@ -14,20 +14,21 @@ const VARS = [
 ];
 
 const TEMPLATE_VARS = VARS.filter(([key]) => key !== 'ten');
-const EMPTY_FORM = { name: '', keywords: '', content: '', mode: 'guided', aiInstruction: '', vars: {} };
+const EMPTY_FORM = { name: '', keywords: '', content: '', mode: 'guided', vars: {} };
 const PREFILL_KEY = 'commentAiPrefill';
 
 function TemplatesPanel({ pageId }) {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
+  const contentRef = useRef(null);
   const [templates, setTemplates] = useState([]);
   const [requireApproval, setRequireApproval] = useState(false);
   const [legacyVars, setLegacyVars] = useState({});
-  const [legacyInstruction, setLegacyInstruction] = useState('');
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState(null);
+  const [isVarsOpen, setIsVarsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
   const [suggestions, setSuggestions] = useState(null);
@@ -54,10 +55,6 @@ function TemplatesPanel({ pageId }) {
       setTemplates(list.templates || []);
       setRequireApproval(Boolean(settings.settings?.requireApproval));
       setLegacyVars(settings.settings?.vars || {});
-      setLegacyInstruction([
-        settings.settings?.tone,
-        settings.settings?.shop ? `Thông tin cửa hàng:\n${settings.settings.shop}` : ''
-      ].filter(Boolean).join('\n'));
     } catch (err) {
       setNotice({ type: 'error', text: apiMessage(err, 'Không tải được danh sách mẫu.') });
     } finally {
@@ -67,21 +64,40 @@ function TemplatesPanel({ pageId }) {
 
   useEffect(() => { load(); }, [load]);
 
-  // Nhận câu trả lời được chuyển từ trang Hoạt động ("Lưu thành mẫu")
+  // Nhận câu trả lời được chuyển từ trang Hoạt động hoặc Đề xuất
   useEffect(() => {
     const raw = window.sessionStorage.getItem(PREFILL_KEY);
     if (!raw) return;
     window.sessionStorage.removeItem(PREFILL_KEY);
     try {
       const data = JSON.parse(raw);
-      setForm({ ...EMPTY_FORM, name: data.name || '', content: data.content || '', keywords: data.keywords || '' });
+      setForm({
+        ...EMPTY_FORM,
+        name: data.name || '',
+        content: data.content || '',
+        keywords: data.keywords || '',
+        mode: data.mode === 'exact' ? 'exact' : 'guided'
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch { /* bỏ qua */ }
   }, []);
 
-  const resetForm = () => { setForm(EMPTY_FORM); setEditingId(null); };
+  const resetForm = () => {
+    setForm(EMPTY_FORM);
+    setEditingId(null);
+    setIsVarsOpen(false);
+  };
 
   const insertVar = (key) => {
-    setForm((prev) => ({ ...prev, content: `${prev.content}{${key}}` }));
+    const el = contentRef.current;
+    const token = `{${key}}`;
+    const start = el?.selectionStart ?? form.content.length;
+    const end = el?.selectionEnd ?? start;
+    setForm((p) => ({ ...p, content: p.content.slice(0, start) + token + p.content.slice(end) }));
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(start + token.length, start + token.length);
+    });
   };
 
   const submit = async () => {
@@ -114,14 +130,14 @@ function TemplatesPanel({ pageId }) {
 
   const startEdit = (t) => {
     setEditingId(t.id);
+    const hasVars = t.vars && Object.values(t.vars).some((v) => String(v || '').trim() !== '');
+    setIsVarsOpen(Boolean(hasVars));
     setForm({
-      ...EMPTY_FORM,
       name: t.name,
       keywords: t.keywords || '',
       content: t.content,
       mode: t.mode,
-      aiInstruction: t.aiInstruction || legacyInstruction,
-      vars: t.vars || legacyVars
+      vars: t.vars || {}
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -151,7 +167,13 @@ function TemplatesPanel({ pageId }) {
 
   const useSuggestion = (s) => {
     setEditingId(null);
-    setForm({ ...EMPTY_FORM, name: s.name, keywords: s.keywords, content: s.content, mode: 'guided' });
+    setForm({
+      ...EMPTY_FORM,
+      name: s.name,
+      keywords: s.keywords,
+      content: s.content,
+      mode: s.mode === 'exact' ? 'exact' : 'guided'
+    });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -196,42 +218,66 @@ function TemplatesPanel({ pageId }) {
           </div>
           <div>
             <label className="field-label" htmlFor="tpl-content">Nội dung mẫu</label>
-            <textarea id="tpl-content" className="field" rows={4} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} />
+            <textarea
+              id="tpl-content"
+              ref={contentRef}
+              className="field"
+              rows={4}
+              value={form.content}
+              onChange={(e) => setForm({ ...form, content: e.target.value })}
+            />
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, alignItems: 'center' }}>
               <small className="muted">Chèn biến:</small>
               {VARS.map(([key, label]) => (
-                <button key={key} type="button" className="button button-quiet" style={{ minHeight: 28, fontSize: 12 }} onClick={() => insertVar(key)}>{label}</button>
+                <button
+                  key={key}
+                  type="button"
+                  className="button button-quiet"
+                  style={{ minHeight: 28, fontSize: 12 }}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => insertVar(key)}
+                >
+                  {label}
+                </button>
               ))}
             </div>
           </div>
-          <div>
-            <label className="field-label" htmlFor="tpl-instruction">Hướng dẫn riêng cho AI (không bắt buộc)</label>
-            <textarea
-              id="tpl-instruction"
-              className="field"
-              rows={3}
-              maxLength={2000}
-              value={form.aiInstruction}
-              onChange={(e) => setForm({ ...form, aiInstruction: e.target.value })}
-              placeholder="Ví dụ: Báo giá theo mẫu, hỏi khách muốn màu nào; không tự thêm khuyến mãi."
-            />
-          </div>
-          <div>
-            <span className="field-label">Giá trị biến cho mẫu này</span>
-            <p className="muted" style={{ margin: '0 0 10px', fontSize: 13 }}>Các giá trị này được dùng chung khi AI trả lời bình luận và tin nhắn Inbox bằng mẫu.</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-              {TEMPLATE_VARS.map(([key, label]) => (
-                <div key={key}>
-                  <label className="field-label" htmlFor={`tpl-var-${key}`}>{label}</label>
-                  <input
-                    id={`tpl-var-${key}`}
-                    className="field"
-                    value={form.vars?.[key] || ''}
-                    onChange={(e) => setForm({ ...form, vars: { ...form.vars, [key]: e.target.value } })}
-                  />
-                </div>
-              ))}
-            </div>
+          <div style={{ border: '1px solid var(--line)', borderRadius: 8, padding: '10px 14px' }}>
+            <button
+              type="button"
+              className="button button-quiet"
+              onClick={() => setIsVarsOpen((prev) => !prev)}
+              aria-expanded={isVarsOpen}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 600, padding: 0, border: 'none', background: 'none' }}
+            >
+              <ChevronDown
+                size={16}
+                style={{
+                  transform: isVarsOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.2s ease'
+                }}
+              />
+              <span>Giá trị biến cho mẫu này (tùy chọn)</span>
+            </button>
+            <p className="muted" style={{ margin: '4px 0 0', fontSize: 13 }}>
+              Không bắt buộc điền; nếu để trống, AI sẽ dùng giá trị mặc định của Fanpage.
+            </p>
+            {isVarsOpen && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginTop: 12 }}>
+                {TEMPLATE_VARS.map(([key, label]) => (
+                  <div key={key}>
+                    <label className="field-label" htmlFor={`tpl-var-${key}`}>{label}</label>
+                    <input
+                      id={`tpl-var-${key}`}
+                      className="field"
+                      value={form.vars?.[key] || ''}
+                      placeholder={legacyVars[key] || '(chưa có mặc định)'}
+                      onChange={(e) => setForm({ ...form, vars: { ...form.vars, [key]: e.target.value } })}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
             <select className="field" style={{ width: 'auto' }} value={form.mode} onChange={(e) => setForm({ ...form, mode: e.target.value })} aria-label="Kiểu dùng mẫu">

@@ -273,6 +273,15 @@ async function syncFacebookPages(userId, accessToken, fbAccountInfo = null) {
     throw error;
   }
 
+  const commentAiService = require('./CommentAiService');
+  await Promise.all(usablePages.map(async (page) => {
+    try {
+      await commentAiService.refreshFacebookPageInfo(String(page.id));
+    } catch (error) {
+      console.warn(`[syncFacebookPages] Bỏ qua lấy thông tin AI cho Page ${page.id}:`, error.message);
+    }
+  }));
+
   return usablePages.map((page) => ({
     id: String(page.id),
     name: page.name || 'Facebook Page',
@@ -420,6 +429,11 @@ async function saveManualFacebookPage(userId, pageId, pageToken) {
         INSERT INTO dbo.FacebookPages (facebook_user_id, page_id, page_name, category, page_link, page_access_token_encrypted, tasks_json, updated_at)
         VALUES (@userId, @pageId, @pageName, @category, @link, @pageToken, @tasks, SYSUTCDATETIME());
     `);
+  try {
+    await require('./CommentAiService').refreshFacebookPageInfo(String(pageData.id || pageId));
+  } catch (error) {
+    console.warn(`[saveManualFacebookPage] Bỏ qua lấy thông tin AI cho Page ${pageId}:`, error.message);
+  }
   return {
     id: String(pageData.id || pageId),
     name: pageData.name || 'Facebook Page',
