@@ -93,7 +93,7 @@ export default function MetaAppSettings() {
               {info.configured ? <CheckCircle2 size={16} aria-hidden="true" /> : <AlertTriangle size={16} aria-hidden="true" />}
               <span>
                 {info.configured
-                  ? <>Đang dùng app <strong>ID {info.appId}</strong> ({info.origin === 'env' ? 'khai báo trong file .env trên máy chủ' : 'lưu trong Cài đặt'}). Người dùng chỉ cần bấm <strong>Kết nối Facebook</strong> ở trang Kênh.</>
+                  ? <>Đang dùng app <strong>{info.name ? `“${info.name}” · ` : ''}ID {info.appId}</strong> ({info.origin === 'env' ? 'khai báo trong file .env trên máy chủ' : 'lưu trong Cài đặt'}). Người dùng chỉ cần bấm <strong>Kết nối Facebook</strong> ở trang Kênh. App phải ở chế độ <strong>Đang hoạt động (Live)</strong> — app ở chế độ Phát triển chỉ cho nick có vai trò trong app đăng nhập (Facebook báo “Hiện không dùng được tính năng này”).</>
                   : 'Chưa có Meta App chung — người dùng phải tự tạo Meta App riêng mới kết nối được Facebook. Nhập app của tool (ví dụ “Tool Social”) bên dưới.'}
               </span>
             </div>

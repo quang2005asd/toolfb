@@ -50,6 +50,12 @@ export default function FacebookConnectChooser({ open, system, canConfigure, onC
             Kết nối Fanpage để hẹn giờ đăng bài, xem báo cáo, quản lý tin nhắn và bình luận. Bạn đăng nhập ngay trên Facebook —
             tool <em>không hỏi mật khẩu</em> và chỉ dùng những quyền bạn cấp.
           </p>
+          {appReady && (
+            <p className="fb-connect-app-name">
+              Facebook sẽ hỏi quyền cho app <strong>{system?.name ? `“${system.name}”` : 'của tool'}</strong> (ID {system?.appId}).
+              {' '}Nếu Facebook báo “Hiện không dùng được tính năng này” / “Ứng dụng không hoạt động”: app chưa ở chế độ Đang hoạt động hoặc chưa được Meta duyệt — chỉ nick có vai trò trong app mới đăng nhập được.
+            </p>
+          )}
 
           {!appReady && (
             <div className="fb-login-cause is-main" role="alert">

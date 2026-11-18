@@ -41,7 +41,7 @@ async function inspectApp(creds, force) {
   const cached = appCache.get(key);
   if (!force && cached && Date.now() - cached.at < APP_CACHE_MS) return cached.value;
 
-  const value = { credentialsValid: false, credentialsError: null, domainOk: null, domainMessage: null, roles: null };
+  const value = { credentialsValid: false, credentialsError: null, domainOk: null, domainMessage: null, roles: null, name: null };
   try {
     await axios.get(`${GRAPH}/oauth/access_token`, {
       params: { client_id: creds.appId, client_secret: creds.appSecret, grant_type: 'client_credentials' },
@@ -64,6 +64,8 @@ async function inspectApp(creds, force) {
       value.domainOk = fb.code !== 191;
       if (!value.domainOk) value.domainMessage = fb.message;
     }
+    // Tên app trên Meta (vd. "Tool Social", "clone 2") — hiện cho người dùng biết đang đăng nhập qua app nào
+    value.name = await tokenService.fetchAppName(creds.appId, creds.appSecret);
     try {
       const response = await axios.get(`${GRAPH}/${creds.appId}/roles`, {
         params: { access_token: `${creds.appId}|${creds.appSecret}`, limit: 200 },
@@ -168,7 +170,7 @@ async function getLoginStatus(appUserId, { force = false } = {}) {
   }
   const systemUsable = system.configured && system.credentialsValid;
   const primaryOwn = apps.find((item) => item.credentialsValid) || apps[0] || null;
-  const primary = systemUsable ? { ...system, label: 'App chung của tool' } : primaryOwn;
+  const primary = systemUsable ? { ...system, label: system.name ? `App chung “${system.name}”` : 'App chung của tool' } : primaryOwn;
   const creds = systemUsable
     ? { appId: system.appId, configured: true }
     : primaryOwn ? { ...userApps.find((item) => item.appId === primaryOwn.appId), configured: true } : { appId: '', appSecret: '', configured: false };

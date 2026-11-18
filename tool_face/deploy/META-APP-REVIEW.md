@@ -83,6 +83,9 @@ Video quay màn hình: giao diện tool là tiếng Việt, nên **thêm phụ �
 **pages_read_engagement**
 > Used to read the Page's own posts and their engagement (reactions, comments count) to show publishing results and statistics on the tool's dashboard.
 
+**read_insights**
+> Used only to show the Page admin their own Page performance on the Reports screen: daily views (page_media_view, split into paid / organic and followers / non-followers), viewers, post engagements and new followers, compared with the previous period. Data is shown only to admins of that Page and is not shared. The screencast shows the Reports screen for a connected Page.
+
 **pages_manage_engagement**
 > After a post is published, the admin can schedule the Page's own first comments (for example contact details or a link) to be posted under that post. The screencast shows a scheduled Page comment appearing under the published post.
 
@@ -94,16 +97,24 @@ Video quay màn hình: giao diện tool là tiếng Việt, nên **thêm phụ �
 
 ### Kịch bản video (một video cho mỗi nhóm quyền, hoặc một video dài có chú thích)
 
-1. Mở `https://ten-mien-cua-ban.com`, đăng nhập tool.
-2. **Kênh → Đăng nhập Facebook**: quay rõ hộp thoại cấp quyền của Facebook.
-3. Danh sách Fanpage và tài khoản Instagram hiện ra (pages_show_list, instagram_basic).
-4. **Viết bài** → đăng ngay / hẹn giờ → mở Fanpage cho thấy bài đã lên (pages_manage_posts), bình luận của Page dưới bài (pages_manage_engagement).
-5. Tài khoản Tester nhắn Messenger cho Page → tin hiện trong **Tin nhắn** → trả lời từ tool → mở Messenger cho thấy câu trả lời (pages_messaging, pages_manage_metadata).
-6. Làm tương tự với Instagram Direct (instagram_manage_messages).
-7. Mở **Trả lời tự động**, bật và cho thấy câu trả lời tự động.
-8. **Kênh → gỡ kết nối Fanpage** và mở trang `/data-deletion` (xử lý dữ liệu).
+1. Mở `https://ten-mien-cua-ban.com`, đăng nhập tool bằng tài khoản dành cho người duyệt (xem mục "Tài khoản cho người duyệt").
+2. **Kênh → Kết nối Facebook → Quyền đầy đủ → Kết nối**: quay rõ hộp thoại cấp quyền của Facebook (danh sách quyền, chọn Fanpage).
+3. Quay lại tool: hộp **"Bạn muốn thêm những Fanpage nào?"** → chọn Fanpage → Lưu; danh sách Fanpage và tài khoản Instagram hiện ra (pages_show_list, business_management, instagram_basic).
+4. **Viết bài → Viết thường** → đăng ngay / hẹn giờ → mở Fanpage cho thấy bài đã lên (pages_manage_posts), bình luận của Page dưới bài (pages_manage_engagement).
+5. **Báo cáo**: cho thấy lượt xem, người xem, tương tác của Fanpage vừa kết nối (read_insights, pages_read_engagement).
+6. Tài khoản Tester nhắn Messenger cho Page → tin hiện trong **Tin nhắn** → trả lời từ tool → mở Messenger cho thấy câu trả lời (pages_messaging, pages_manage_metadata).
+7. Làm tương tự với Instagram Direct (instagram_manage_messages).
+8. Mở **Trả lời tự động**, bật và cho thấy câu trả lời tự động; mở **AI Bình luận** cho thấy bình luận của khách dưới bài (pages_read_user_content).
+9. **Kênh → gỡ kết nối Fanpage** và mở trang `/data-deletion` (xử lý dữ liệu).
+
+### Tài khoản cho người duyệt
+
+Tạo một tài khoản tool riêng (vd. `metareview`, vai trò Thành viên) và ghi vào ô **hướng dẫn cho người duyệt** của form:
+> Log in at https://ten-mien-cua-ban.com/login with username `metareview` / password `<mật khẩu>`. Go to Channels → "Kết nối Facebook" (Connect Facebook) → "Quyền đầy đủ" (Full permissions) → "Kết nối" (Connect), log in with your Facebook test user and select a Page. The UI is in Vietnamese; the screencast has English captions for every step.
 
 ### Sau khi được duyệt
 
-- Bật app sang **Đang hoạt động (Live)** ở thanh trên cùng trang app.
-- Trong tool: **Kênh → Đăng nhập lại Facebook** để token mang quyền mới, rồi **Kênh → Instagram → Kiểm tra tin nhắn** — bước cuối phải chuyển xanh khi có khách nhắn.
+- Bật app sang **Đang hoạt động (Live)** ở thanh trên cùng trang app (nếu chưa).
+- Trong tool: **Kênh → Kết nối Facebook** (hoặc "Cấp thêm quyền") để token mang quyền mới, rồi **Kênh → Instagram → Kiểm tra tin nhắn** — bước cuối phải chuyển xanh khi có khách nhắn.
+- Từ đây **mọi nick Facebook** bấm Kết nối Facebook là dùng được, không cần thêm làm Người thử nghiệm.
+- (Tùy chọn) Tạo **Facebook Login for Business → Cấu hình** (đầy đủ / tối giản) và dán Configuration ID vào tool → Cài đặt → Meta App chung để hộp cấp quyền gọn như SO9.

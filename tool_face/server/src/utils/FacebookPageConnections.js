@@ -359,7 +359,8 @@ async function disconnectFbAccount(userId, fbAccountId) {
   return true;
 }
 
-async function syncAllConnectedFbAccounts(userId) {
+// excludeFbUserId: bỏ qua một nick (dùng khi sắp gỡ nick đó — đồng bộ các nick còn lại trước để nhận lại Fanpage)
+async function syncAllConnectedFbAccounts(userId, { excludeFbUserId = null } = {}) {
   await ensureSchema();
   const pool = await getPool();
   const accountsRes = await pool.request()
@@ -368,6 +369,7 @@ async function syncAllConnectedFbAccounts(userId) {
 
   const results = [];
   for (const acc of accountsRes.recordset) {
+    if (excludeFbUserId && String(acc.fb_user_id) === String(excludeFbUserId)) continue;
     try {
       const token = decryptToken(acc.access_token_encrypted);
       const pages = await syncFacebookPages(userId, token, {

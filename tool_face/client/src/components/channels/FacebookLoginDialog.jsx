@@ -166,19 +166,33 @@ function SwitchNickBody({ state, onRemoveNick }) {
 }
 
 // Facebook chặn đăng nhập ("Ứng dụng không hoạt động") hoặc người dùng đóng cửa sổ trước khi xong
-function IncompleteBody({ state, apps, onOwnApp, onLoginWith, onSwitchNick }) {
+// Các câu Facebook hiện khi chặn đăng nhập bằng một app (nick không có vai trò / app chưa sẵn sàng)
+const BLOCKED_TEXT = '“Ứng dụng không hoạt động” / “Hiện không dùng được tính năng này”';
+
+function IncompleteBody({ state, status, apps, canConfigure, onOwnApp, onLoginWith, onSwitchNick }) {
   if (state.system) {
     // Đăng nhập bằng app chung của tool
+    const systemApp = status?.system;
+    const appLabel = systemApp?.name ? `“${systemApp.name}” (ID ${systemApp.appId})` : systemApp?.appId ? `ID ${systemApp.appId}` : 'app chung';
     return (
       <>
-        <p className="fb-login-lead">Tool chưa nhận được kết quả đăng nhập từ Facebook. Nếu bạn vẫn đang đăng nhập ở cửa sổ Facebook, cứ hoàn tất — tool sẽ tự cập nhật.</p>
+        <p className="fb-login-lead">Tool chưa nhận được kết quả đăng nhập từ Facebook qua app chung <strong>{appLabel}</strong>. Nếu bạn vẫn đang đăng nhập ở cửa sổ Facebook, cứ hoàn tất — tool sẽ tự cập nhật.</p>
         <div className="fb-login-cause is-main">
-          <strong>Facebook báo “Ứng dụng không hoạt động” / “Tính năng không khả dụng”?</strong>
-          <span>App chung của tool đang chờ Meta duyệt (App Review). Trong thời gian này Facebook chỉ cho những nick có vai trò trong app kết nối. Chọn một cách:</span>
+          <strong>Facebook báo {BLOCKED_TEXT}?</strong>
+          <span>
+            Facebook đang chặn đăng nhập qua app {appLabel} cho nick này. Thường do app còn ở <em>chế độ Phát triển</em> (chưa chuyển sang <em>Đang hoạt động / Live</em>) hoặc chưa được Meta duyệt (App Review)
+            — khi đó Facebook chỉ cho nick có vai trò trong app (Quản trị viên / Nhà phát triển / Người thử nghiệm) đăng nhập. Chọn một cách:
+          </span>
           <ol className="fb-guide-substeps">
+            <li>Đăng nhập đúng nick <em>quản trị viên</em> của app: bấm <em>Đổi nick Facebook</em> bên dưới (cửa sổ ẩn danh / InPrivate thường đang dùng nick khác) rồi Thử lại.</li>
             <li>Gửi tên (hoặc link trang cá nhân) nick Facebook của bạn cho Quản trị viên tool để được thêm làm <em>Người thử nghiệm</em> của app; chấp nhận lời mời tại <Ext href="https://developers.facebook.com/requests/">developers.facebook.com/requests</Ext> rồi bấm Thử lại.</li>
-            <li>Facebook đang vào nhầm nick? Bấm <em>Đổi nick Facebook</em>, chọn đúng trang cá nhân rồi thử lại.</li>
             <li>Dùng Meta App của riêng bạn (Nâng cao) — nick tạo app là quản trị viên nên kết nối được ngay.</li>
+            {canConfigure && (
+              <li>
+                <em>Quản trị viên:</em> dùng app đã chuyển sang <em>Đang hoạt động (Live)</em> làm app chung ở <a href="/settings/?tab=meta-app">Cài đặt → Meta App chung</a>, hoặc vào{' '}
+                <Ext href={`https://developers.facebook.com/apps/${systemApp?.appId || ''}/`}>app này trên developers.facebook.com</Ext> chuyển sang chế độ Đang hoạt động (cần URL chính sách quyền riêng tư, biểu tượng, danh mục).
+              </li>
+            )}
           </ol>
           <div className="fb-own-app-actions">
             <button type="button" className="button button-secondary fb-guide-action" onClick={() => onSwitchNick()}><RefreshCw size={15} /> Đổi nick Facebook</button>
@@ -197,7 +211,7 @@ function IncompleteBody({ state, apps, onOwnApp, onLoginWith, onSwitchNick }) {
     <>
       <p className="fb-login-lead">Tool chưa nhận được kết quả đăng nhập từ Facebook{used ? <> qua Meta App <strong>{appName(used)}</strong></> : null}. Nếu bạn vẫn đang đăng nhập ở cửa sổ Facebook, cứ hoàn tất — tool sẽ tự cập nhật.</p>
       <div className="fb-login-cause is-main">
-        <strong>Facebook báo “Ứng dụng không hoạt động”?</strong>
+        <strong>Facebook báo {BLOCKED_TEXT}?</strong>
         <span>Nick đang đăng nhập trong cửa sổ Facebook <em>không có vai trò</em> trong Meta App này. Chọn một cách:</span>
         <ol className="fb-guide-substeps">
           <li>Đăng nhập đúng <em>nick quản trị viên</em> của app: bấm <em>Đổi nick Facebook</em> bên dưới → trong cửa sổ Facebook chọn đúng trang cá nhân (<em>Xem tất cả trang cá nhân</em>) hoặc đăng xuất rồi đăng nhập nick đó → bấm Đăng nhập lại.</li>
@@ -316,18 +330,19 @@ export default function FacebookLoginDialog({ state, status, onRetry, onLoginWit
     tone = 'info';
     title = 'Đang chờ đăng nhập Facebook…';
     const used = state.system ? null : apps.find((app) => app.appId === state.appId);
+    const systemName = state.system && status?.system?.name ? status.system.name : null;
     body = (
       <>
-        <p className="fb-login-lead">Hoàn tất đăng nhập trong cửa sổ Facebook vừa mở{used ? <> (Meta App <strong>{appName(used)}</strong>)</> : null}. Ở bước hỏi quyền, chọn Fanpage muốn kết nối rồi bấm <em>Tiếp tục</em> — sau đó tool cho bạn chọn lại Fanpage muốn dùng.</p>
+        <p className="fb-login-lead">Hoàn tất đăng nhập trong cửa sổ Facebook vừa mở{used ? <> (Meta App <strong>{appName(used)}</strong>)</> : systemName ? <> (app chung <strong>“{systemName}”</strong>)</> : null}. Ở bước hỏi quyền, chọn Fanpage muốn kết nối rồi bấm <em>Tiếp tục</em> — sau đó tool cho bạn chọn lại Fanpage muốn dùng.</p>
         <div className="fb-login-cause">
           <strong>Cửa sổ Facebook đang vào nhầm nick?</strong>
           <span>Facebook dùng nick (trang cá nhân) đang đăng nhập trong trình duyệt — nhập đúng mật khẩu mà tài khoản có nhiều trang cá nhân thì Facebook vẫn mở trang cá nhân dùng gần nhất. Bấm để đổi nick ngay trong cửa sổ Facebook.</span>
           <button type="button" className="button button-secondary fb-guide-action" onClick={() => onSwitchNick()}><RefreshCw size={15} /> Đổi nick Facebook</button>
         </div>
         <div className="fb-login-cause is-main">
-          <strong>Facebook báo “Ứng dụng không hoạt động”?</strong>
+          <strong>Facebook báo {BLOCKED_TEXT}?</strong>
           <span>Bấm nút bên dưới — tool đóng cửa sổ Facebook và hướng dẫn cách xử lý.</span>
-          <button ref={primaryRef} type="button" className="button button-primary fb-guide-action" onClick={onAppNotActive}><ShieldAlert size={15} /> Facebook báo “Ứng dụng không hoạt động”</button>
+          <button ref={primaryRef} type="button" className="button button-primary fb-guide-action" onClick={onAppNotActive}><ShieldAlert size={15} /> Facebook báo lỗi / không cho đăng nhập</button>
         </div>
       </>
     );
@@ -339,7 +354,7 @@ export default function FacebookLoginDialog({ state, status, onRetry, onLoginWit
     );
   } else if (phase === 'incomplete') {
     title = 'Chưa đăng nhập được Facebook';
-    body = <IncompleteBody state={state} apps={apps} onOwnApp={onOwnApp} onLoginWith={onLoginWith} onSwitchNick={onSwitchNick} />;
+    body = <IncompleteBody state={state} status={status} apps={apps} canConfigure={Boolean(status?.canConfigure)} onOwnApp={onOwnApp} onLoginWith={onLoginWith} onSwitchNick={onSwitchNick} />;
     actions = (
       <>
         <button ref={primaryRef} type="button" className="button button-primary" onClick={onRetry}><LogIn size={15} /> Thử lại</button>

@@ -10,7 +10,7 @@ function buildSteps(status) {
   if (app.source === 'system') {
     appStep = app.domainOk === false
       ? { state: 'error', hint: `App chung chưa khai báo miền ${app.domain}` }
-      : { state: 'done', hint: 'App chung của tool' };
+      : { state: 'done', hint: status.system?.name ? `App chung “${status.system.name}”` : 'App chung của tool' };
   } else {
     const validApps = apps.filter((item) => item.credentialsValid);
     appStep = !apps.length
@@ -59,7 +59,17 @@ function StepIcon({ state, index }) {
 
 const STATE_TEXT = { done: 'đã xong', current: 'cần làm', error: 'có lỗi', todo: 'chưa tới' };
 
-function FeatureList({ accounts }) {
+// Nick kết nối qua app nào: cùng một người kết nối qua 2 Meta App sẽ thành 2 nick (Facebook cấp ID khác nhau cho mỗi app)
+export function accountAppLabel(account, status) {
+  if (!account) return null;
+  if (!account.metaAppId) return 'qua app cũ (kết nối từ trước, không rõ app)';
+  if (status?.system?.appId && String(account.metaAppId) === String(status.system.appId)) return 'qua app chung';
+  const own = (status?.apps || []).find((app) => String(app.appId) === String(account.metaAppId));
+  if (own) return `qua Meta App riêng ${own.label || `ID ${own.appId}`}`;
+  return `qua app cũ ID ${account.metaAppId} — không còn dùng`;
+}
+
+function FeatureList({ accounts, status }) {
   const valid = accounts.filter((account) => account.valid);
   if (!valid.length) return null;
   return (
@@ -67,7 +77,11 @@ function FeatureList({ accounts }) {
       {valid.map((account) => (
         <div key={account.id} className="fb-connect-account">
           {(valid.length > 1 || account.level === 'minimal') && (
-            <span className="fb-connect-account-name">{account.name}{account.level === 'minimal' ? ' · quyền tối giản' : ''}</span>
+            <span className="fb-connect-account-name">
+              {account.name}
+              {accountAppLabel(account, status) ? ` · ${accountAppLabel(account, status)}` : ''}
+              {account.level === 'minimal' ? ' · quyền tối giản' : ''}
+            </span>
           )}
           <ul>
             {account.features.map((feature) => {
@@ -133,6 +147,9 @@ export default function FacebookConnectPanel({ status, error, checking, onLogin,
   const usesSystem = app.source === 'system';
   const steps = buildSteps(status);
   const validAccounts = accounts.filter((account) => account.valid);
+  // Bản ghi nick cũ (kết nối qua app không còn dùng) trùng tên với một nick khác → gợi ý gỡ bản ghi cũ
+  const staleSameName = accounts.filter((account) => accountAppLabel(account, status)?.startsWith('qua app cũ')
+    && accounts.some((other) => other.id !== account.id && other.name === account.name && !accountAppLabel(other, status)?.startsWith('qua app cũ')));
   const refreshButton = (
     <button type="button" className="button button-quiet" onClick={onRefresh} disabled={checking} title="Kiểm tra lại với Facebook">
       <RefreshCw size={15} className={checking ? 'spin' : ''} /> {checking ? 'Đang kiểm tra…' : 'Kiểm tra lại'}
@@ -158,7 +175,7 @@ export default function FacebookConnectPanel({ status, error, checking, onLogin,
           {level === 'ready' ? <CheckCircle2 size={17} aria-hidden="true" /> : <AlertTriangle size={17} aria-hidden="true" />}
           <p>
             <strong>{level === 'ready' ? 'Facebook đã sẵn sàng' : `Thiếu quyền: ${missingFeatures.join(', ')}`}</strong>
-            <span> · {validAccounts.length} nick · {usesSystem ? 'app chung' : `${apps.length} Meta App riêng`} · tool tự kiểm tra token mỗi 30 phút</span>
+            <span> · {validAccounts.length} nick · {usesSystem ? (status.system?.name ? `app chung “${status.system.name}”` : 'app chung') : `${apps.length} Meta App riêng`} · tool tự kiểm tra token mỗi 30 phút</span>
           </p>
           <div className="fb-connect-compact-actions">
             <button type="button" className="button button-secondary" onClick={onLogin}><UserPlus size={14} /> {level === 'partial' ? 'Cấp thêm quyền' : 'Thêm nick'}</button>
@@ -269,7 +286,13 @@ export default function FacebookConnectPanel({ status, error, checking, onLogin,
           {body}
         </div>
       </div>
-      <FeatureList accounts={accounts} />
+      {staleSameName.length > 0 && (
+        <p className="fb-connect-sub fb-connect-dup">
+          <AlertTriangle size={14} aria-hidden="true" /> Nick “{staleSameName[0].name}” đang có 2 bản ghi vì đã kết nối qua 2 Meta App khác nhau.
+          {' '}Vào tab <strong>Nick Facebook đã kết nối</strong>, gỡ bản ghi ghi “qua app cũ” — Fanpage vẫn được giữ qua bản ghi mới.
+        </p>
+      )}
+      <FeatureList accounts={accounts} status={status} />
       <div className="fb-connect-actions">{actions}</div>
     </section>
   );

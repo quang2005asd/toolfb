@@ -30,7 +30,7 @@ import PlatformIcon from '../../components/PlatformIcon';
 import InstagramChannels from '../../components/channels/InstagramChannels';
 import TikTokChannels from '../../components/channels/TikTokChannels';
 import TokenHealthBanner from '../../components/channels/TokenHealthBanner';
-import FacebookConnectPanel from '../../components/channels/FacebookConnectPanel';
+import FacebookConnectPanel, { accountAppLabel } from '../../components/channels/FacebookConnectPanel';
 import FacebookGuideModal from '../../components/channels/FacebookGuideModal';
 import FacebookLoginDialog from '../../components/channels/FacebookLoginDialog';
 import FacebookConnectChooser from '../../components/channels/FacebookConnectChooser';
@@ -552,15 +552,15 @@ export default function ChannelsPage() {
   };
 
   const handleDisconnectAccount = async (accId, accName) => {
-    if (!confirm(`Bạn có chắc muốn xóa tài khoản Facebook "${accName}"? Toàn bộ Fanpage thuộc tài khoản này sẽ bị xóa khỏi hệ thống.`)) return;
+    if (!confirm(`Gỡ nick Facebook "${accName}" khỏi tool?\n\nFanpage mà nick Facebook khác (đã kết nối) vẫn quản lý sẽ được giữ lại qua nick đó; Fanpage chỉ thuộc nick này sẽ bị gỡ.`)) return;
     setLoading(true);
     setError('');
     setNotice('');
     try {
-      await channelApi.disconnectAccount(accId);
-      setNotice(`Đã xóa tài khoản Facebook "${accName}" thành công.`);
+      const res = await channelApi.disconnectAccount(accId);
+      setNotice(res?.message || `Đã gỡ nick Facebook "${accName}".`);
       await loadData();
-      loadFbStatus();
+      loadFbStatus(true);
     } catch (err) {
       setError(err.response?.data?.message || 'Không thể xóa tài khoản Facebook.');
     } finally {
@@ -1547,15 +1547,15 @@ export default function ChannelsPage() {
                     {isManual ? 'Các Page kết nối bằng Token thủ công' : `Facebook ID: ${acc.id}`}
                   </div>
                   {(() => {
-                    const metaAppId = tokenInfo?.accounts?.find((item) => String(item.id) === String(acc.id))?.metaAppId;
-                    if (isManual || !metaAppId) return null;
-                    const isSystemApp = fbStatus?.system?.appId && String(fbStatus.system.appId) === String(metaAppId);
-                    const appInfo = (fbStatus?.apps || []).find((item) => item.appId === metaAppId);
+                    if (isManual) return null;
+                    const tokenRow = tokenInfo?.accounts?.find((item) => String(item.id) === String(acc.id));
+                    if (!tokenRow) return null;
+                    const label = accountAppLabel({ metaAppId: tokenRow.metaAppId }, fbStatus);
+                    const stale = label?.startsWith('qua app cũ');
                     return (
-                      <div className="muted" style={{ fontSize: 11.5, marginBottom: 10 }}>
-                        {isSystemApp
-                          ? 'Kết nối qua app chung của tool'
-                          : <>Meta App riêng: {appInfo?.label ? `${appInfo.label} · ` : ''}ID {metaAppId}{appInfo ? '' : ' (đã gỡ khỏi tool)'}</>}
+                      <div className={stale ? 'channel-app-stale' : 'muted'} style={{ fontSize: 11.5, marginBottom: 10 }}>
+                        Kết nối {label}
+                        {stale && <><br />Đã kết nối lại qua app chung? Gỡ bản ghi này — Fanpage vẫn được giữ qua bản ghi mới.</>}
                       </div>
                     );
                   })()}

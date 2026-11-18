@@ -155,12 +155,24 @@ async function getSystemApp() {
   return systemAppFrom(settings);
 }
 
+// Tên app trên Meta (đọc bằng app token); không đọc được thì null
+async function fetchAppName(appId, appSecret) {
+  if (!appId || !appSecret) return null;
+  try {
+    const response = await axios.get(`${GRAPH}/${appId}`, { params: { fields: 'name', access_token: `${appId}|${appSecret}` }, timeout: 15000 });
+    return response.data?.name ? String(response.data.name).slice(0, 120) : null;
+  } catch {
+    return null;
+  }
+}
+
 // Thông tin app chung cho trang Cài đặt (không trả Khóa bí mật)
 async function getSystemAppInfo() {
   const app = await getSystemApp();
   return {
     configured: app.configured,
     appId: app.appId || null,
+    name: app.configured ? await fetchAppName(app.appId, app.appSecret) : null,
     origin: app.origin,
     configFull: app.configFull || '',
     configMinimal: app.configMinimal || '',
@@ -819,6 +831,7 @@ module.exports = {
   clearSystemApp,
   connectUserToken,
   ensureTokenSchema,
+  fetchAppName,
   getAccountCredentials,
   getMetaAppCredentials,
   getPageAppCredentials,

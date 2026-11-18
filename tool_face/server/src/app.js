@@ -1309,9 +1309,28 @@ app.get('/api/channels/accounts', requireAuth, async (req, res) => {
 
 app.delete('/api/channels/accounts/:fbAccountId', requireAuth, async (req, res) => {
   try {
-    await disconnectFbAccount(req.user.sub, req.params.fbAccountId);
-    await messengerService.purgeDisconnectedPageData().catch((error) => console.warn('[Purge Page Data]', error.message));
-    return res.json({ success: true, message: 'Đã xóa tài khoản Facebook và toàn bộ Fanpage trực thuộc.' });
+    const fbAccountId = String(req.params.fbAccountId);
+    // Cùng một người kết nối qua 2 Meta App sẽ có 2 ID nick khác nhau (Facebook cấp ID riêng cho từng app) và cùng
+    // quản lý các Fanpage đó. Trước khi gỡ: đồng bộ các nick còn lại để Fanpage chúng quản lý được chuyển sang nick đó
+    // (không bị xóa). Chỉ dọn tin nhắn / cài đặt của Fanpage khi mọi nick còn lại đồng bộ thành công —
+    // tránh xóa nhầm dữ liệu khi Facebook tạm lỗi.
+    const handover = await syncAllConnectedFbAccounts(req.user.sub, { excludeFbUserId: fbAccountId })
+      .catch((error) => [{ success: false, error: error.message }]);
+    const handoverOk = handover.every((item) => item.success !== false);
+    await disconnectFbAccount(req.user.sub, fbAccountId);
+    if (handoverOk) {
+      await messengerService.purgeDisconnectedPageData().catch((error) => console.warn('[Purge Page Data]', error.message));
+    } else {
+      console.warn(`[Delete FB Account] Không đồng bộ được nick còn lại của user ${req.user.sub} — giữ dữ liệu tin nhắn, không dọn.`);
+    }
+    const kept = await getConnectedPages(req.user.sub).catch(() => []);
+    return res.json({
+      success: true,
+      keptPages: kept.length,
+      message: kept.length
+        ? `Đã gỡ nick. ${kept.length} Fanpage vẫn được giữ qua nick Facebook còn lại.`
+        : 'Đã gỡ nick Facebook và các Fanpage trực thuộc.'
+    });
   } catch (error) {
     return sendApiError(res, 'Delete Account Error', error, 'Không thể xóa tài khoản Facebook.');
   }

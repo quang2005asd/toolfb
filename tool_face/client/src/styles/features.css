@@ -371,3 +371,12 @@
   .bulk-item-media { width: 56px; height: 56px; }
   .bulk-footer-bar .button { flex: 1 1 100%; justify-content: center; }
 }
+
+/* Nick trùng do kết nối qua 2 Meta App (bản ghi cũ nên gỡ) */
+.fb-connect-dup { display: flex; align-items: flex-start; gap: 6px; margin: 8px 0 0; color: var(--ink); }
+.fb-connect-dup svg { flex: none; margin-top: 2px; color: var(--amber); }
+.channel-app-stale { color: var(--amber); font-weight: 600; line-height: 1.5; }
+
+/* Tên app chung trong hộp Kết nối Facebook */
+.fb-connect-app-name { margin: 0 0 12px; padding: 8px 12px; border-radius: 10px; background: var(--panel-elevated); border: 1px solid var(--line); font-size: 12px; line-height: 1.55; color: var(--muted); }
+.fb-connect-app-name strong { color: var(--ink); }
