@@ -28,11 +28,11 @@ const LONG_LIVED_MIN_SECONDS = 7 * 24 * 60 * 60;
 const LOGIN_LEVELS = ['full', 'minimal'];
 const DEFAULT_LOGIN_SCOPES = [
   'public_profile', 'pages_show_list', 'pages_read_engagement', 'pages_read_user_content', 'pages_manage_posts',
-  'pages_manage_metadata', 'pages_manage_engagement', 'pages_messaging', 'read_insights', 'business_management',
+  'pages_manage_metadata', 'pages_manage_engagement', 'pages_messaging', 'read_insights',
   'instagram_basic', 'instagram_manage_messages'
 ].join(',');
 const MINIMAL_LOGIN_SCOPES = [
-  'public_profile', 'pages_show_list', 'pages_read_engagement', 'pages_manage_posts', 'read_insights', 'business_management'
+  'public_profile', 'pages_show_list', 'pages_read_engagement', 'pages_manage_posts', 'read_insights'
 ].join(',');
 
 // Quyền Fanpage mà các tính năng của từng mức quyền cần (Instagram & Business là tùy chọn)

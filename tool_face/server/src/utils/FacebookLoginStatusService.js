@@ -25,7 +25,6 @@ const FEATURES = [
   { key: 'inbox', label: 'Hộp thư Messenger & trả lời tự động', scopes: ['pages_messaging', 'pages_manage_metadata'], levels: ['full'] },
   { key: 'instagram', label: 'Tin nhắn Instagram', scopes: ['instagram_basic', 'instagram_manage_messages'], levels: ['full'] },
   { key: 'comments', label: 'Bình luận mồi & AI Bình luận', scopes: ['pages_read_user_content', 'pages_manage_engagement'], levels: ['full'] },
-  { key: 'business', label: 'Fanpage thuộc Meta Business', scopes: ['business_management'], optional: true, levels: ['full', 'minimal'] }
 ];
 
 const appCache = new Map(); // khóa app -> { at, value }

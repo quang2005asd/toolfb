@@ -16,8 +16,7 @@ export const USE_CASES = [
       { scope: 'pages_manage_posts', purpose: 'Đăng, lên lịch và sửa bài viết trên Fanpage' },
       { scope: 'pages_read_user_content', purpose: 'Đọc bình luận, bài viết của khách trên Fanpage (AI Bình luận)' },
       { scope: 'pages_manage_engagement', purpose: 'Trả lời, ẩn, xóa bình luận (AI Bình luận, bình luận mồi)' },
-      { scope: 'pages_manage_metadata', purpose: 'Đăng ký Webhook và đọc cài đặt của Fanpage' },
-      { scope: 'business_management', purpose: 'Fanpage nằm trong Meta Business Suite (thêm nếu danh sách có)', optional: true }
+      { scope: 'pages_manage_metadata', purpose: 'Đăng ký Webhook và đọc cài đặt của Fanpage' }
     ]
   },
   {

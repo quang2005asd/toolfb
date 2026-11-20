@@ -33,7 +33,7 @@ Thay `ten-mien-cua-ban.com` bằng tên miền thật. Mở app tại [developer
   - **Page**: `messages`, `message_echoes`
   - **Instagram**: `messages`
 - Tool xác thực chữ ký webhook bằng App Secret: app chung của tool nhập ở **tool → Cài đặt → Meta App chung** (trang này cũng liệt kê sẵn mọi địa chỉ cần khai báo). Meta App riêng của người dùng (Kênh → Nâng cao) cũng được nhận — sự kiện ký bằng app riêng chỉ giao cho Fanpage của những tài khoản đã thêm app đó.
-- Quyền cần xin trong App Review (mức đầy đủ): `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`, `pages_read_user_content`, `pages_manage_engagement`, `pages_manage_metadata`, `pages_messaging`, `read_insights` (trang Báo cáo), `business_management`, `instagram_basic`, `instagram_manage_messages`. Mức tối giản chỉ cần `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`, `read_insights`.
+- Quyền cần xin trong App Review (mức đầy đủ): `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`, `pages_read_user_content`, `pages_manage_engagement`, `pages_manage_metadata`, `pages_messaging`, `read_insights` (trang Báo cáo), `instagram_basic`, `instagram_manage_messages`. Mức tối giản chỉ cần `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`, `read_insights`.
 
 ### A4. Trong lúc chờ xác minh: thêm người thử nghiệm
 
@@ -92,14 +92,11 @@ Video quay màn hình: giao diện tool là tiếng Việt, nên **thêm phụ �
 **pages_read_user_content**
 > Used to read comments that users leave on the Page's posts so the admin can review them alongside the post results.
 
-**business_management**
-> Required to list and manage Pages that the admin accesses through a Meta Business portfolio rather than as a personal Page role.
-
 ### Kịch bản video (một video cho mỗi nhóm quyền, hoặc một video dài có chú thích)
 
 1. Mở `https://ten-mien-cua-ban.com`, đăng nhập tool bằng tài khoản dành cho người duyệt (xem mục "Tài khoản cho người duyệt").
 2. **Kênh → Kết nối Facebook → Quyền đầy đủ → Kết nối**: quay rõ hộp thoại cấp quyền của Facebook (danh sách quyền, chọn Fanpage).
-3. Quay lại tool: hộp **"Bạn muốn thêm những Fanpage nào?"** → chọn Fanpage → Lưu; danh sách Fanpage và tài khoản Instagram hiện ra (pages_show_list, business_management, instagram_basic).
+3. Quay lại tool: hộp **"Bạn muốn thêm những Fanpage nào?"** → chọn Fanpage → Lưu; danh sách Fanpage và tài khoản Instagram hiện ra (pages_show_list, instagram_basic).
 4. **Viết bài → Viết thường** → đăng ngay / hẹn giờ → mở Fanpage cho thấy bài đã lên (pages_manage_posts), bình luận của Page dưới bài (pages_manage_engagement).
 5. **Báo cáo**: cho thấy lượt xem, người xem, tương tác của Fanpage vừa kết nối (read_insights, pages_read_engagement).
 6. Tài khoản Tester nhắn Messenger cho Page → tin hiện trong **Tin nhắn** → trả lời từ tool → mở Messenger cho thấy câu trả lời (pages_messaging, pages_manage_metadata).
