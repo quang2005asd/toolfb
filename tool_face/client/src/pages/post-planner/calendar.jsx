@@ -119,7 +119,7 @@ export default function CalendarPage() {
                 >
                   <PlatformIcon platform={post.platform === 'tiktok' ? 'tiktok' : 'facebook'} size={12} />
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {post.content || `Bài #${post.id}`}
+                    {post.content ? <span translate="no">{post.content}</span> : `Bài #${post.id}`}
                   </span>
                 </div>
               ))}

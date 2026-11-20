@@ -386,3 +386,16 @@
 /* Tên app chung trong hộp Kết nối Facebook */
 .fb-connect-app-name { margin: 0 0 12px; padding: 8px 12px; border-radius: 10px; background: var(--panel-elevated); border: 1px solid var(--line); font-size: 12px; line-height: 1.55; color: var(--muted); }
 .fb-connect-app-name strong { color: var(--ink); }
+
+/* Nút chuyển ngôn ngữ VI / EN (thanh trên cùng, trang đăng nhập) */
+html[data-lang-pending] body { visibility: hidden; }
+.lang-toggle { display: inline-flex; align-items: center; gap: 2px; height: 38px; padding: 0 4px 0 10px; border-radius: 12px; background: #ffffff; border: 1px solid rgba(215, 208, 195, 0.85); color: #475569; }
+.lang-toggle > svg { flex: none; margin-right: 4px; }
+.lang-toggle button { height: 30px; min-width: 34px; padding: 0 8px; border: 0; border-radius: 9px; background: transparent; color: inherit; font: inherit; font-size: 12px; font-weight: 800; letter-spacing: .02em; cursor: pointer; }
+.lang-toggle button:hover { color: #2563eb; }
+.lang-toggle button.is-active { background: #2563eb; color: #ffffff; }
+.lang-toggle button:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
+[data-theme="dark"] .lang-toggle, body.dark-mode .lang-toggle { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.14); color: #cbd5e1; }
+[data-theme="dark"] .lang-toggle button:hover, body.dark-mode .lang-toggle button:hover { color: #00f2fe; }
+[data-theme="dark"] .lang-toggle button.is-active, body.dark-mode .lang-toggle button.is-active { background: rgba(0, 242, 254, 0.18); color: #00f2fe; }
+@media (max-width: 640px) { .lang-toggle > svg { display: none; } .lang-toggle { padding-left: 4px; } }

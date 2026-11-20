@@ -777,7 +777,7 @@ export default function DashboardHomePage() {
                             onMouseEnter={(e) => handleShowPreview(post, e)}
                             onMouseLeave={handleHidePreview}
                           >
-                            {post.content || <span style={{ color: 'var(--muted)', fontStyle: 'italic' }}>Không có văn bản (Nội dung media)</span>}
+                            {post.content ? <span translate="no">{post.content}</span> : <span style={{ color: 'var(--muted)', fontStyle: 'italic' }}>Không có văn bản (Nội dung media)</span>}
                           </strong>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4, flexWrap: 'wrap' }}>
                             <small style={{ color: 'var(--blue)', fontWeight: 700 }}>
@@ -1022,7 +1022,7 @@ export default function DashboardHomePage() {
 
             <div className="custom-glass-tooltip-body">
               {post.content ? (
-                post.content
+                <span translate="no">{post.content}</span>
               ) : (
                 <em style={{ color: 'var(--muted)' }}>Bài viết đa phương tiện, không có nội dung văn bản.</em>
               )}

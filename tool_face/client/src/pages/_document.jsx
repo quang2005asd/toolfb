@@ -4,6 +4,12 @@ export default function Document() {
   return (
     <Html lang="vi">
       <Head>
+        {/* Đã chọn English: ẩn trang tới khi bộ dịch chạy xong để không nháy chữ tiếng Việt (tự hiện lại sau 2,5 giây) */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: "try{var l=new URLSearchParams(location.search).get('lang');if(l==='en'||(l!=='vi'&&localStorage.getItem('toolfb_lang')==='en')){var d=document.documentElement;d.setAttribute('data-lang-pending','');d.setAttribute('lang','en');setTimeout(function(){d.removeAttribute('data-lang-pending')},2500)}}catch(e){}"
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link

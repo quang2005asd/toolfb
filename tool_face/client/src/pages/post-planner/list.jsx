@@ -287,7 +287,7 @@ function PostDetailModal({ postId, onClose, onRefresh, channelName }) {
               {/* Nội dung bài đăng */}
               <div>
                 <label className="field-label">Nội dung bài viết:</label>
-                <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: 12, fontSize: 13.5, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: 12, fontSize: 13.5, lineHeight: 1.6, whiteSpace: 'pre-wrap' }} translate="no">
                   {post.content}
                 </div>
               </div>
@@ -454,7 +454,7 @@ function PostDetailModal({ postId, onClose, onRefresh, channelName }) {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {post.comments.map((cm, idx) => (
                       <div key={idx} style={{ padding: '8px 12px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: 8, fontSize: 12.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>#{idx + 1}: {cm.content}</span>
+                        <span>#{idx + 1}: <span translate="no">{cm.content}</span></span>
                         <span className="muted" style={{ fontSize: 11 }}>Sau {cm.delay_minutes} phút ({cm.status})</span>
                       </div>
                     ))}
@@ -754,7 +754,7 @@ export default function PostListPage() {
                       style={{ cursor: 'pointer' }}
                       onClick={() => setSelectedPostId(post.id)}
                     >
-                      {post.content || 'Chưa có nội dung'}
+                      {post.content ? <span translate="no">{post.content}</span> : 'Chưa có nội dung'}
                     </div>
                   </td>
                   {showAuthor && (

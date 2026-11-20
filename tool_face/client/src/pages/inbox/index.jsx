@@ -580,7 +580,7 @@ export default function InboxPage() {
                         <time dateTime={item.updatedTime || undefined}>{relativeTime(item.updatedTime)}</time>
                       </span>
                       <span className="inbox-conversation-bottom">
-                        <span className="inbox-snippet">{item.snippet || 'Tệp đính kèm'}</span>
+                        <span className="inbox-snippet">{item.snippet ? <span translate="no">{item.snippet}</span> : 'Tệp đính kèm'}</span>
                         {item.unreadCount > 0 && <span className="inbox-unread-badge">{item.unreadCount > 99 ? '99+' : item.unreadCount}</span>}
                       </span>
                       {pageFilter === 'all' && pages.length > 1 && item.pageName && <span className="inbox-page-tag">{item.pageName}</span>}
@@ -654,7 +654,7 @@ export default function InboxPage() {
                             ))}
                             {(message.text || !hasContent) && (
                               <div className={`inbox-bubble${message.pending ? ' is-pending' : ''}${message.isAutoReply ? ' is-auto' : ''}`} title={message.createdTime ? new Date(message.createdTime).toLocaleString('vi-VN') : ''}>
-                                {message.text || <em className="muted">Tin nhắn không hỗ trợ hiển thị</em>}
+                                {message.text ? <span translate="no">{message.text}</span> : <em className="muted">Tin nhắn không hỗ trợ hiển thị</em>}
                               </div>
                             )}
                             {endsGroup && (

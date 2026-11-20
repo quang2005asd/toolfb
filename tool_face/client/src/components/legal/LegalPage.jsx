@@ -3,6 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { API_BASE_URL } from '../../services/apiBase';
+import { LANG_KEY } from '../../i18n/language';
 
 // Trang pháp lý công khai (Meta yêu cầu khi duyệt app): Tiếng Việt / English, thông tin đơn vị lấy từ server
 const NAV = [
@@ -37,7 +38,10 @@ export default function LegalPage({ path, content, banner }) {
   useEffect(() => {
     if (!router.isReady) return;
     const requested = router.query.lang;
+    let stored = null;
+    try { stored = window.localStorage.getItem(LANG_KEY); } catch { /* bộ nhớ bị chặn */ }
     if (requested === 'en' || requested === 'vi') setLang(requested);
+    else if (stored === 'en' || stored === 'vi') setLang(stored); // ngôn ngữ đã chọn ở nút VI / EN của tool
     else if (typeof navigator !== 'undefined' && navigator.language && !navigator.language.toLowerCase().startsWith('vi')) setLang('en');
   }, [router.isReady, router.query.lang]);
 
@@ -63,6 +67,7 @@ export default function LegalPage({ path, content, banner }) {
 
   const switchLang = (next) => {
     setLang(next);
+    try { window.localStorage.setItem(LANG_KEY, next); } catch { /* bộ nhớ bị chặn */ }
     router.replace({ pathname: path, query: { ...router.query, lang: next } }, undefined, { shallow: true });
   };
 

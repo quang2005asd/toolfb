@@ -63,7 +63,7 @@ function CustomerDetail({ pageId, id, isAdmin, onChanged }) {
         {customer.history.map((h) => (
           <div key={h.id} style={{ marginTop: 8 }}>
             <small className="muted">{formatTime(h.created_at)}{h.sentiment ? ` · ${SENTIMENT_LABEL[h.sentiment] || ''}` : ''}</small>
-            <div>{h.message}</div>
+            <div translate="no">{h.message}</div>
             {h.reply && <div style={{ color: 'var(--blue)' }}>↳ {h.reply}</div>}
           </div>
         ))}

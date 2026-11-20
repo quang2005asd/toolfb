@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import useAuth from '../../hooks/useAuth';
 import { useTheme } from '../../context/ThemeContext';
 import RoleBadge from '../RoleBadge';
+import LanguageToggle from '../LanguageToggle';
 import useMessengerUnread from '../../hooks/useMessengerUnread';
 import { PERMISSIONS, hasPermission } from '../../utils/permissions';
 import {
@@ -231,6 +232,7 @@ export default function MainLayout({ children, title = 'Không gian làm việc'
       <div className="workspace-main">
         <header className="topbar">
           <div className="topbar-spacer" />
+          <LanguageToggle />
           <button
             className="theme-toggle-btn"
             type="button"

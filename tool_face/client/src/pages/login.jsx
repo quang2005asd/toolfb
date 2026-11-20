@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import LanguageToggle from '../components/LanguageToggle';
 import {
   AlertCircle,
   ArrowRight,
@@ -260,7 +261,8 @@ export default function LoginPage() {
 
   return (
     <main className="login-shell">
-      <div style={{ position: 'fixed', top: 20, right: 24, zIndex: 100 }}>
+      <div style={{ position: 'fixed', top: 20, right: 24, zIndex: 100, display: 'flex', gap: 8, alignItems: 'center' }}>
+        <LanguageToggle />
         <button
           className="theme-toggle-btn"
           type="button"

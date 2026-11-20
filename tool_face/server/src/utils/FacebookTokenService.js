@@ -29,7 +29,7 @@ const LOGIN_LEVELS = ['full', 'minimal'];
 const DEFAULT_LOGIN_SCOPES = [
   'public_profile', 'pages_show_list', 'pages_read_engagement', 'pages_read_user_content', 'pages_manage_posts',
   'pages_manage_metadata', 'pages_manage_engagement', 'pages_messaging', 'read_insights', 'business_management',
-  'instagram_basic', 'instagram_manage_messages', 'instagram_manage_comments', 'instagram_content_publish'
+  'instagram_basic', 'instagram_manage_messages'
 ].join(',');
 const MINIMAL_LOGIN_SCOPES = [
   'public_profile', 'pages_show_list', 'pages_read_engagement', 'pages_manage_posts', 'read_insights', 'business_management'

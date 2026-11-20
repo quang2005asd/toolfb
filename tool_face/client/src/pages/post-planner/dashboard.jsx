@@ -135,7 +135,7 @@ function TopPosts({ posts, loading }) {
               <td>
                 <div className="report-post">
                   {post.full_picture ? <img src={post.full_picture} alt="" width={40} height={40} /> : <span className="report-post-thumb" aria-hidden="true" />}
-                  <span title={post.message}>{post.message || '(Không có nội dung chữ)'}</span>
+                  <span title={post.message} translate={post.message ? 'no' : undefined}>{post.message || '(Không có nội dung chữ)'}</span>
                 </div>
               </td>
               <td>{post.pageName}</td>

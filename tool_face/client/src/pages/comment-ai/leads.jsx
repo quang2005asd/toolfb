@@ -49,7 +49,7 @@ function LeadRow({ lead, pageId, templateId, user, onUpdate, onRemove, setNotice
         {lead.groupId ? `Nhóm ${lead.groupId} · ` : ''}{formatTime(lead.postedAt)}{lead.updatedBy ? ` · sửa bởi ${lead.updatedBy}` : ''}
       </small>
       <div style={{ whiteSpace: 'pre-wrap' }}>
-        {long && !expanded ? `${lead.content.slice(0, 240)}…` : lead.content}
+        <span translate="no">{long && !expanded ? `${lead.content.slice(0, 240)}…` : lead.content}</span>
         {long && (
           <button type="button" className="button button-quiet" style={{ minHeight: 24, marginLeft: 6 }} onClick={() => setExpanded(!expanded)}>
             {expanded ? 'Thu gọn' : 'Xem hết'}

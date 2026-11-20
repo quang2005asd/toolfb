@@ -155,6 +155,7 @@ File mẫu cấu hình:
 - Next.js Pages Router, `output: 'export'` (không có API route, không có server-side rendering), JavaScript thuần. Đọc `client/AGENTS.md` trước khi dùng API Next.js lạ — bản 16 khác nhiều so với tài liệu cũ.
 - Gọi API qua `src/services/*Api.js` (dùng `API_BASE` trong `apiBase.js`), không viết cứng `http://localhost:5000`.
 - Dùng class sẵn có trong `globals.css` (`panel`, `button button-primary`, `field`, `status-pill`…) để giao diện đồng nhất ở cả chế độ sáng / tối.
+- **Tiếng Anh (nút VI / EN)**: giao diện vẫn viết tiếng Việt trong component; khi chọn EN, `src/i18n/translator.js` thay chữ hiển thị theo từ điển `src/i18n/en.json` (`?lang=en` trên đường dẫn cũng bật tiếng Anh — gửi người duyệt Meta link `/login?lang=en`). Thêm / sửa chữ hiển thị thì chạy `npm run i18n:missing` trong `client/` và bổ sung câu còn thiếu vào `en.json` (chuỗi ghép biến dùng `{0}`, `{1}`). Nội dung do người dùng / khách viết (tin nhắn, bài đăng) phải bọc `translate="no"` để không bị dịch.
 
 ---
 

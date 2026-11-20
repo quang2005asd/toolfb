@@ -309,7 +309,7 @@ function TemplatesPanel({ pageId }) {
                 <div style={{ flex: '1 1 320px' }}>
                   <b>{s.name}</b> <span className="status-pill publishing">{s.count} bình luận</span>
                   <small className="muted" style={{ display: 'block' }}>Từ khóa: {s.keywords}</small>
-                  <div style={{ whiteSpace: 'pre-wrap' }}>{s.content}</div>
+                  <div style={{ whiteSpace: 'pre-wrap' }} translate="no">{s.content}</div>
                   {s.examples.length > 0 && <small className="muted">Ví dụ: {s.examples.join(' | ')}</small>}
                 </div>
                 <button type="button" className="button button-secondary" onClick={() => useSuggestion(s)}>Dùng làm mẫu</button>
@@ -340,7 +340,7 @@ function TemplatesPanel({ pageId }) {
                   {t.status === 'approved' && t.approvedBy ? ` · duyệt bởi ${t.approvedBy}` : ''}
                 </small>
                 <small className="muted" style={{ display: 'block' }}>{t.uses ? `Đã dùng ${t.uses} lần · gần nhất ${formatTime(t.lastUsed)}` : 'Chưa dùng lần nào'}</small>
-                <div style={{ whiteSpace: 'pre-wrap', marginTop: 4 }}>{t.content}</div>
+                <div style={{ whiteSpace: 'pre-wrap', marginTop: 4 }} translate="no">{t.content}</div>
                 {t.status === 'rejected' && t.reviewNote && <div style={{ color: '#ef4444', marginTop: 4 }}>Lý do: {t.reviewNote}</div>}
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'flex-start' }}>

@@ -5,12 +5,30 @@ import { useRouter } from 'next/router';
 import axios from 'axios';
 import { AuthProvider } from '../context/AuthContext';
 import { ThemeProvider } from '../context/ThemeContext';
+import { readLang } from '../i18n/language';
 
 axios.defaults.withCredentials = true;
 
 export default function App({ Component, pageProps }) {
   const router = useRouter();
   const [navigating, setNavigating] = useState(false);
+
+  // Giao diện tiếng Anh: tải từ điển (tách riêng, chỉ tải khi chọn English) rồi bật bộ dịch sau khi trang đã hiện
+  useEffect(() => {
+    const reveal = () => document.documentElement.removeAttribute('data-lang-pending');
+    if (readLang() !== 'en') {
+      reveal();
+      return undefined;
+    }
+    let cancelled = false;
+    Promise.all([import('../i18n/translator'), import('../i18n/en.json')])
+      .then(([translator, dictionary]) => {
+        if (!cancelled) translator.startTranslator(dictionary.default || dictionary);
+      })
+      .catch(() => {})
+      .finally(reveal);
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     // 1. Eagerly prefetch main functional routes during idle time
