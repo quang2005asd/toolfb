@@ -59,14 +59,76 @@ function StepIcon({ state, index }) {
 
 const STATE_TEXT = { done: 'đã xong', current: 'cần làm', error: 'có lỗi', todo: 'chưa tới' };
 
+// App đã cấp token cho nick: ghi lúc kết nối (metaAppId), nick cũ chưa ghi thì lấy từ Facebook (tokenAppId)
+const accountAppId = (account) => String(account?.metaAppId || account?.tokenAppId || '');
+const viaSystemApp = (account, status) => Boolean(status?.system?.appId) && accountAppId(account) === String(status.system.appId);
+
 // Nick kết nối qua app nào: cùng một người kết nối qua 2 Meta App sẽ thành 2 nick (Facebook cấp ID khác nhau cho mỗi app)
 export function accountAppLabel(account, status) {
   if (!account) return null;
-  if (!account.metaAppId) return 'qua app cũ (kết nối từ trước, không rõ app)';
-  if (status?.system?.appId && String(account.metaAppId) === String(status.system.appId)) return 'qua app chung';
-  const own = (status?.apps || []).find((app) => String(app.appId) === String(account.metaAppId));
+  const appId = accountAppId(account);
+  if (!appId) return 'qua app cũ (kết nối từ trước, không rõ app)';
+  if (viaSystemApp(account, status)) return 'qua app chung';
+  const own = (status?.apps || []).find((app) => String(app.appId) === appId);
   if (own) return `qua Meta App riêng ${own.label || `ID ${own.appId}`}`;
-  return `qua app cũ ID ${account.metaAppId} — không còn dùng`;
+  return `qua app cũ ID ${appId} — không còn dùng`;
+}
+
+// Vì sao nick thiếu quyền — mỗi nguyên nhân một cách xử lý khác nhau:
+//   other-app: token do Meta App khác app chung cấp → quyền thêm trong app chung không áp dụng, phải kết nối lại qua app chung
+//   declined:  người dùng đã tắt quyền trong hộp thoại Facebook → Cấp thêm quyền và bật lại
+//   not-asked: Facebook chưa từng hỏi quyền đó (token cấp trước khi app có quyền / cấu hình đăng nhập thiếu quyền)
+function missingCauses(status) {
+  const causes = [];
+  for (const account of status.accounts.filter((item) => item.valid)) {
+    const features = account.features.filter((feature) => !feature.optional && feature.ok === false);
+    if (!features.length) continue;
+    const scopes = [...new Set(features.flatMap((feature) => feature.missing))];
+    const declined = [...new Set(features.flatMap((feature) => feature.declined || []))];
+    let kind = 'unknown';
+    if (status.app.source === 'system' && accountAppId(account) && !viaSystemApp(account, status)) kind = 'other-app';
+    else if (declined.length) kind = 'declined';
+    else if (features.every((feature) => Array.isArray(feature.declined))) kind = 'not-asked';
+    // Nick này đã có bản ghi khác qua app chung (cùng tên) → chỉ cần gỡ bản ghi cũ
+    const hasSystemTwin = status.accounts.some((other) => other.id !== account.id && other.name === account.name && viaSystemApp(other, status));
+    causes.push({ account, scopes, declined, kind, hasSystemTwin });
+  }
+  return causes;
+}
+
+function CauseList({ causes, status }) {
+  if (!causes.length) return null;
+  const systemName = status.system?.name ? ` “${status.system.name}”` : '';
+  return (
+    <ul className="fb-connect-causes">
+      {causes.map(({ account, scopes, declined, kind, hasSystemTwin }) => {
+        const nick = <strong>{account.name}</strong>;
+        const list = <code>{scopes.join(', ')}</code>;
+        let text;
+        if (kind === 'other-app') {
+          text = (
+            <>Nick {nick} đang dùng token cấp {accountAppLabel(account, status)}, không phải app chung{systemName}. Quyền bạn thêm trong app chung chỉ có hiệu lực với token do app chung cấp.
+              {' '}{hasSystemTwin
+                ? <>Nick này đã có bản ghi qua app chung — vào tab <em>Nick Facebook đã kết nối</em> gỡ bản ghi “Kết nối {accountAppLabel(account, status)}” (Fanpage được giữ).</>
+                : <>Cách sửa: bấm <em>Kết nối lại qua app chung</em> và đăng nhập nick này, rồi vào tab <em>Nick Facebook đã kết nối</em> gỡ bản ghi cũ (Fanpage được giữ qua bản ghi mới).</>}</>
+          );
+        } else if (kind === 'declined') {
+          text = <>Nick {nick} đã tắt quyền <code>{declined.join(', ')}</code> lúc đăng nhập Facebook. Cách sửa: bấm <em>Cấp thêm quyền</em> → trong hộp thoại Facebook chọn <em>Chỉnh sửa quyền truy cập</em> → bật lại quyền này.</>;
+        } else if (kind === 'not-asked') {
+          text = (
+            <>Facebook chưa từng hỏi nick {nick} quyền {list} — token được cấp khi app chưa có quyền này. Thêm quyền trong Meta App không tự cập nhật token đã cấp: bấm <em>Cấp thêm quyền</em> để Facebook hỏi lại.
+              {viaSystemApp(account, status) && status.system?.loginForBusiness
+                ? <> App chung đang đăng nhập bằng Configuration ID nên Facebook chỉ hỏi các quyền có trong cấu hình đó: thêm {list} vào cấu hình (Facebook Login for Business → Cấu hình) hoặc xóa Configuration ID ở Cài đặt → Meta App chung.</>
+                : <> Facebook vẫn không hỏi? Kiểm tra quyền {list} đã nằm trong Trường hợp sử dụng của app (developers.facebook.com → app → Trường hợp sử dụng → Tùy chỉnh).</>}
+            </>
+          );
+        } else {
+          text = <>Nick {nick} thiếu quyền {list}. Bấm <em>Cấp thêm quyền</em>, trong hộp thoại Facebook chọn <em>Chỉnh sửa quyền truy cập</em> và bật các quyền còn thiếu.</>;
+        }
+        return <li key={account.id}><AlertTriangle size={14} aria-hidden="true" /><span>{text}</span></li>;
+      })}
+    </ul>
+  );
 }
 
 function FeatureList({ accounts, status }) {
@@ -147,9 +209,14 @@ export default function FacebookConnectPanel({ status, error, checking, onLogin,
   const usesSystem = app.source === 'system';
   const steps = buildSteps(status);
   const validAccounts = accounts.filter((account) => account.valid);
-  // Bản ghi nick cũ (kết nối qua app không còn dùng) trùng tên với một nick khác → gợi ý gỡ bản ghi cũ
-  const staleSameName = accounts.filter((account) => accountAppLabel(account, status)?.startsWith('qua app cũ')
-    && accounts.some((other) => other.id !== account.id && other.name === account.name && !accountAppLabel(other, status)?.startsWith('qua app cũ')));
+  // Cùng một nick có thêm bản ghi qua app chung → bản ghi qua app khác (Meta App riêng / app cũ) là thừa, gợi ý gỡ
+  const staleSameName = usesSystem
+    ? accounts.filter((account) => !viaSystemApp(account, status)
+      && accounts.some((other) => other.id !== account.id && other.name === account.name && viaSystemApp(other, status)))
+    : [];
+  const causes = level === 'partial' ? missingCauses(status) : [];
+  // Mọi nick thiếu quyền đều do token của app khác → việc cần làm là kết nối lại qua app chung, không phải cấp thêm quyền
+  const grantLabel = causes.length && causes.every((cause) => cause.kind === 'other-app') ? 'Kết nối lại qua app chung' : 'Cấp thêm quyền';
   const refreshButton = (
     <button type="button" className="button button-quiet" onClick={onRefresh} disabled={checking} title="Kiểm tra lại với Facebook">
       <RefreshCw size={15} className={checking ? 'spin' : ''} /> {checking ? 'Đang kiểm tra…' : 'Kiểm tra lại'}
@@ -178,11 +245,12 @@ export default function FacebookConnectPanel({ status, error, checking, onLogin,
             <span> · {validAccounts.length} nick · {usesSystem ? (status.system?.name ? `app chung “${status.system.name}”` : 'app chung') : `${apps.length} Meta App riêng`} · tool tự kiểm tra token mỗi 30 phút</span>
           </p>
           <div className="fb-connect-compact-actions">
-            <button type="button" className="button button-secondary" onClick={onLogin}><UserPlus size={14} /> {level === 'partial' ? 'Cấp thêm quyền' : 'Thêm nick'}</button>
+            <button type="button" className="button button-secondary" onClick={onLogin}><UserPlus size={14} /> {level === 'partial' ? grantLabel : 'Thêm nick'}</button>
             {pickButton}
             <button type="button" className="button button-quiet" onClick={() => setExpanded(true)} aria-expanded="false"><ChevronDown size={14} /> Chi tiết</button>
           </div>
         </div>
+        <CauseList causes={causes} status={status} />
       </section>
     );
   }
@@ -262,10 +330,10 @@ export default function FacebookConnectPanel({ status, error, checking, onLogin,
     title = level === 'ready' ? 'Facebook đã sẵn sàng — đủ quyền cho mọi tính năng đã chọn' : 'Một số tính năng chưa dùng được vì token thiếu quyền';
     body = level === 'ready'
       ? <p className="fb-connect-sub">Tool tự kiểm tra và lấy lại token mỗi 30 phút.</p>
-      : <p>Bấm “Cấp thêm quyền”, ở hộp thoại Facebook chọn “Chỉnh sửa quyền truy cập” và bật các quyền còn thiếu.</p>;
+      : <CauseList causes={causes} status={status} />;
     actions = (
       <>
-        {level === 'partial' && <button type="button" className="button button-primary" onClick={onLogin}><LogIn size={15} /> Cấp thêm quyền</button>}
+        {level === 'partial' && <button type="button" className="button button-primary" onClick={onLogin}><LogIn size={15} /> {grantLabel}</button>}
         {level === 'partial' && <button type="button" className="button button-secondary" onClick={() => onOpenGuide('permissions')}><BookOpen size={15} /> Hướng dẫn cấp quyền</button>}
         {level === 'ready' && <button type="button" className="button button-secondary" onClick={onLogin}><UserPlus size={15} /> Thêm nick Facebook</button>}
         {pickButton}
@@ -289,7 +357,7 @@ export default function FacebookConnectPanel({ status, error, checking, onLogin,
       {staleSameName.length > 0 && (
         <p className="fb-connect-sub fb-connect-dup">
           <AlertTriangle size={14} aria-hidden="true" /> Nick “{staleSameName[0].name}” đang có 2 bản ghi vì đã kết nối qua 2 Meta App khác nhau.
-          {' '}Vào tab <strong>Nick Facebook đã kết nối</strong>, gỡ bản ghi ghi “qua app cũ” — Fanpage vẫn được giữ qua bản ghi mới.
+          {' '}Vào tab <strong>Nick Facebook đã kết nối</strong>, gỡ bản ghi “Kết nối {accountAppLabel(staleSameName[0], status)}” — Fanpage vẫn được giữ qua bản ghi qua app chung.
         </p>
       )}
       <FeatureList accounts={accounts} status={status} />

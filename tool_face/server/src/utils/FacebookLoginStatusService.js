@@ -83,6 +83,17 @@ async function inspectApp(creds, force) {
   return value;
 }
 
+// Quyền nick đã cấp cho app: granted = đang có, declined = người dùng đã tắt trong hộp thoại Facebook.
+// Quyền không nằm trong cả hai = Facebook chưa từng hỏi (app chưa có quyền đó lúc đăng nhập / cấu hình đăng nhập không gồm quyền đó).
+async function readPermissions(token) {
+  const response = await axios.get(`${GRAPH}/me/permissions`, { params: { access_token: token }, timeout: 15000 });
+  const rows = response.data?.data || [];
+  return {
+    granted: rows.filter((item) => item.status === 'granted').map((item) => item.permission),
+    declined: rows.filter((item) => item.status === 'declined').map((item) => item.permission)
+  };
+}
+
 async function inspectAccount(row, creds, force) {
   const cacheKey = `${row.app_user_id}:${row.fb_user_id}:${String(row.access_token_encrypted || '').slice(-24)}`;
   const cached = accountCache.get(cacheKey);
@@ -91,6 +102,8 @@ async function inspectAccount(row, creds, force) {
   const token = decryptToken(row.access_token_encrypted);
   let valid = !['expired', 'invalid'].includes(row.token_status);
   let scopes = null;
+  let declined = null;
+  let tokenAppId = null;
   let error = null;
   if (!token) {
     valid = false;
@@ -105,6 +118,8 @@ async function inspectAccount(row, creds, force) {
         const data = response.data?.data || {};
         valid = data.is_valid !== false;
         scopes = Array.isArray(data.scopes) ? data.scopes : null;
+        // App đã cấp token này (có thể khác app chung nếu nick kết nối qua Meta App riêng / app cũ)
+        tokenAppId = data.app_id ? String(data.app_id) : null;
         if (!valid) error = data.error?.message || 'Token không còn hiệu lực.';
       } catch (err) {
         error = graphError(err).message;
@@ -112,14 +127,20 @@ async function inspectAccount(row, creds, force) {
     }
     if (scopes === null && valid) {
       try {
-        const response = await axios.get(`${GRAPH}/me/permissions`, { params: { access_token: token }, timeout: 15000 });
-        scopes = (response.data?.data || []).filter((item) => item.status === 'granted').map((item) => item.permission);
+        const permissions = await readPermissions(token);
+        scopes = permissions.granted;
+        declined = permissions.declined;
         error = null;
       } catch (err) {
         const fb = graphError(err);
         if (fb.code === 190) valid = false;
         error = error || fb.message;
       }
+    }
+    // Thiếu quyền: hỏi thêm Facebook quyền nào bị tắt, quyền nào chưa từng được hỏi — để chỉ đúng cách xử lý
+    const wanted = FEATURES.flatMap((feature) => feature.scopes);
+    if (valid && scopes && declined === null && wanted.some((scope) => !scopes.includes(scope))) {
+      declined = await readPermissions(token).then((permissions) => permissions.declined).catch(() => null);
     }
   }
 
@@ -134,7 +155,9 @@ async function inspectAccount(row, creds, force) {
       optional: Boolean(feature.optional) || notRequested,
       notRequested,
       ok: valid && scopes ? missing.length === 0 : null,
-      missing
+      missing,
+      // null = không đọc được; [] = không quyền nào bị tắt (thiếu vì Facebook chưa từng hỏi)
+      declined: declined === null ? null : missing.filter((scope) => declined.includes(scope))
     };
   });
   const value = {
@@ -145,6 +168,7 @@ async function inspectAccount(row, creds, force) {
     valid,
     error,
     scopes,
+    tokenAppId,
     features
   };
   accountCache.set(cacheKey, { at: Date.now(), value });

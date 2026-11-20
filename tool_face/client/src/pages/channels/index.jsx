@@ -54,6 +54,7 @@ const UPCOMING_PLATFORMS = ['Zalo OA', 'YouTube'];
 export default function ChannelsPage() {
   const router = useRouter();
   const { can } = useAuth();
+  const isAdmin = can(PERMISSIONS.SETTINGS_SYSTEM);
   const platform = PLATFORMS.some((item) => item.id === router.query.platform) ? router.query.platform : 'facebook';
   const [instagramCount, setInstagramCount] = useState(null);
   const [tiktokCount, setTiktokCount] = useState(null);
@@ -203,7 +204,7 @@ export default function ChannelsPage() {
       const longLived = token === 'long' || token === 'never';
       setFbLogin(null);
       setNotice({
-        text: `✅ Đã ${loginNick ? `kết nối nick ${loginNick.name}` : 'đăng nhập Facebook'} (${connected} Fanpage).${longLived ? ' Token dài hạn — token Fanpage sẽ không hết hạn.' : ''}${missingScopes.length ? ' Một số tính năng còn thiếu quyền — xem bảng trạng thái phía trên.' : ''}`,
+        text: `✅ Đã ${loginNick ? `kết nối nick ${loginNick.name}` : 'đăng nhập Facebook'} (${connected} Fanpage).${longLived ? ' Token dài hạn — token Fanpage sẽ không hết hạn.' : ''}${missingScopes.length && isAdmin ? ' Một số tính năng còn thiếu quyền — xem bảng trạng thái phía trên.' : ''}`,
         nick: loginNick && { ...loginNick, saved: true }
       });
       // Như SO9: kết nối xong hỏi ngay "Bạn muốn thêm những Fanpage nào?"
@@ -863,17 +864,20 @@ export default function ChannelsPage() {
         <InstagramChannels onCountChange={setInstagramCount} />
       ) : (
       <>
-      <FacebookConnectPanel
-        status={fbStatus}
-        error={fbStatusError}
-        checking={fbStatusChecking}
-        onLogin={startFacebookLogin}
-        onOpenGuide={setGuideTab}
-        onOwnApp={() => setFbLogin({ phase: 'own-app' })}
-        onPasteToken={openPasteToken}
-        onPickPages={openPagePicker}
-        onRefresh={() => loadFbStatus(true)}
-      />
+      {/* Bảng trạng thái Meta App / token / quyền chỉ dành cho Quản trị viên; Thành viên chỉ cần nút "Kết nối Facebook" */}
+      {isAdmin && (
+        <FacebookConnectPanel
+          status={fbStatus}
+          error={fbStatusError}
+          checking={fbStatusChecking}
+          onLogin={startFacebookLogin}
+          onOpenGuide={setGuideTab}
+          onOwnApp={() => setFbLogin({ phase: 'own-app' })}
+          onPasteToken={openPasteToken}
+          onPickPages={openPagePicker}
+          onRefresh={() => loadFbStatus(true)}
+        />
+      )}
       <FacebookConnectChooser
         open={chooserOpen}
         system={fbStatus?.system}

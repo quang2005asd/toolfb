@@ -373,6 +373,12 @@
 }
 
 /* Nick trùng do kết nối qua 2 Meta App (bản ghi cũ nên gỡ) */
+.fb-connect-causes { display: grid; gap: 6px; margin: 4px 0 0; padding: 0; list-style: none; }
+.fb-connect-compact .fb-connect-causes { margin-top: 8px; padding-left: 29px; }
+.fb-connect-causes li { display: flex; align-items: flex-start; gap: 6px; font-size: 12.5px; line-height: 1.6; color: var(--ink); }
+.fb-connect-causes svg { flex: none; margin-top: 3px; color: var(--amber); }
+.fb-connect-causes code { font-size: 11.5px; overflow-wrap: anywhere; }
+@media (max-width: 640px) { .fb-connect-compact .fb-connect-causes { padding-left: 0; } }
 .fb-connect-dup { display: flex; align-items: flex-start; gap: 6px; margin: 8px 0 0; color: var(--ink); }
 .fb-connect-dup svg { flex: none; margin-top: 2px; color: var(--amber); }
 .channel-app-stale { color: var(--amber); font-weight: 600; line-height: 1.5; }
